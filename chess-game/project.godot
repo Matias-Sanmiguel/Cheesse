@@ -1,0 +1,18 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="Cheesse"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+config/icon="res://icon.svg"
+run/main_scene="res://scenes/Main.tscn"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
+[dotnet]
+
+project/assembly_name="Chess.Game"

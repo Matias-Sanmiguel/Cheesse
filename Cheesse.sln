@@ -1,0 +1,35 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chess.Core", "chess-core\Chess.Core.csproj", "{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chess.Tests", "chess-tests\Chess.Tests.csproj", "{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chess.Game", "chess-game\Chess.Game.csproj", "{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		ExportDebug|Any CPU = ExportDebug|Any CPU
+		ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{8F3A1C2E-6B47-4D19-9A55-1C0E7B2D4F10}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{A91C4E77-2D08-4F63-B1A4-6E5D9C3A8B21}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{C4D8E0A2-71B5-4A36-8F19-0B6C2E7D5A43}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+	EndGlobalSection
+EndGlobal

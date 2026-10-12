@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+.mono/
+mono_crash.*.json

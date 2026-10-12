@@ -1,0 +1,17 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://adapters/infra/GameCompositionRoot.cs" id="1_root"]
+[ext_resource type="PackedScene" uid="uid://boardscene" path="res://scenes/Board.tscn" id="2_board"]
+[ext_resource type="PackedScene" uid="uid://hudscene" path="res://scenes/Hud.tscn" id="3_hud"]
+[ext_resource type="Script" path="res://adapters/input/InputAdapter.cs" id="4_input"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_root")
+
+[node name="Board" parent="." instance=ExtResource("2_board")]
+position = Vector2(320, 40)
+
+[node name="Hud" parent="." instance=ExtResource("3_hud")]
+
+[node name="Input" type="Node" parent="."]
+script = ExtResource("4_input")
