@@ -36,8 +36,8 @@ public class GameRulesTests
     [Test]
     public void Ongoing_when_king_is_safe_and_has_legal_moves()
     {
-        // Solo dos reyes, separados.
-        // El blanco puede moverse y no esta en jaque.
+        // Dos reyes separados y una torre blanca.
+        // El blanco tiene movimientos legales y no esta en jaque.
 
         var board = Board.Empty()
             .WithPiece(
