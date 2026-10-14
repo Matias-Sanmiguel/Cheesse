@@ -1,3 +1,5 @@
+using Chess.Core.Rules;
+
 namespace Chess.Core.Model;
 
 public sealed class Board
@@ -83,5 +85,5 @@ public sealed class Board
     }
 
     public bool IsAttacked(Square square, PlayerColor by) =>
-        throw new NotImplementedException("CORE-F2");
+        AttackDetector.IsAttacked(this, square, by);
 }
