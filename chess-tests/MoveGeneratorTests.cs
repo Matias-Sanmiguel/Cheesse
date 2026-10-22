@@ -72,22 +72,35 @@ public class MoveGeneratorTests
             side, from, left, right);
     }
 
+
     [TestCase(PlayerColor.White, 0, 6, 1, 7)]
     [TestCase(PlayerColor.White, 7, 6, 6, 7)]
     [TestCase(PlayerColor.Black, 0, 1, 1, 0)]
     [TestCase(PlayerColor.Black, 7, 1, 6, 0)]
-    public void Pawn_at_file_edge_stays_on_board_and_leaves_promotion_pending(
+    public void Pawn_at_file_edge_generates_all_promotion_options(
         PlayerColor side, int file, int rank, int captureFile, int nextRank)
     {
         var from = new Square(file, rank);
+        var forward = new Square(file, nextRank);
         var capture = new Square(captureFile, nextRank);
-        var board = Board.Empty()
-            .WithPiece(from, new Piece(PieceType.Pawn, side))
-            .WithPiece(capture, new Piece(PieceType.Rook, Opponent(side)));
+        var board = Board.Empty().WithPiece(from, new Piece(PieceType.Pawn, side)).WithPiece(capture, new Piece(PieceType.Rook, Opponent(side)));
 
-        AssertDestinations(board, side, from, new Square(file, nextRank), capture);
-        Assert.That(MoveGenerator.Generate(board, side).All(move => move.Promotion is null), Is.True);
+        PieceType[] promotionTypes = { PieceType.Queen, PieceType.Rook, PieceType.Bishop, PieceType.Knight };
+
+        var expected = new List<Move>();
+
+        foreach (var promotion in promotionTypes)
+        {
+            expected.Add(new Move(from, forward, promotion));
+            expected.Add(new Move(from, capture, promotion));
+        }
+
+        var actual = MoveGenerator.Generate(board, side).Where(move => move.From == from).ToArray();
+
+        Assert.That(actual, Is.EquivalentTo(expected));
+        Assert.That(actual, Has.Length.EqualTo(8));
     }
+
 
     [TestCase(PlayerColor.White, 7)]
     [TestCase(PlayerColor.Black, 0)]

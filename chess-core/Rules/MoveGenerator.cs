@@ -60,6 +60,10 @@ public static class MoveGenerator
             }
         }
 
+        moves.AddRange(SpecialMoves.Promotions(board, side));
+        moves.AddRange(SpecialMoves.EnPassant(board, side));
+        moves.AddRange(SpecialMoves.Castling(board, side));
+
         return moves;
     }
 
@@ -69,6 +73,10 @@ public static class MoveGenerator
         var startingRank = side == PlayerColor.White ? 1 : 6;
         var nextRank = from.Rank + direction;
         if (!IsOnBoard(from.File, nextRank))
+            return;
+
+        int promotionRank = side == PlayerColor.White ? 7 : 0;
+        if (nextRank == promotionRank)
             return;
 
         var forward = new Square(from.File, nextRank);
@@ -142,7 +150,6 @@ public static class MoveGenerator
     private static bool IsOnBoard(int file, int rank) =>
         file is >= 0 and < 8 && rank is >= 0 and < 8;
 
-    
     public static IReadOnlyList<Move> Legal(
         Board board,
         PlayerColor side)
