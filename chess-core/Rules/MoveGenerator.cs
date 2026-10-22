@@ -150,7 +150,6 @@ public static class MoveGenerator
     private static bool IsOnBoard(int file, int rank) =>
         file is >= 0 and < 8 && rank is >= 0 and < 8;
 
-
     public static IReadOnlyList<Move> Legal(
         Board board,
         PlayerColor side)
