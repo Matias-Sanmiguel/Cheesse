@@ -36,11 +36,12 @@ public sealed class Board
 
         var next = (Piece?[])_squares.Clone();
         var piece = next[move.From.Index];
+        var originalPiece = piece;
         next[move.From.Index] = null;
 
         //Verficamos si estamos haciendo una captura al paso
         if (piece is Piece movingPawn && movingPawn.Type == PieceType.Pawn && EnPassant == move.To && move.From.File != move.To.File && next[move.To.Index] == null) {
-            
+
             //Buscamos la casilla donde está el peón rival
             Square capturedSquare = new Square(move.To.File, move.From.Rank);
 
@@ -62,7 +63,7 @@ public sealed class Board
         Square? newEnPassant = null;
 
         //Verificamos si el movimiento es un doble avance de peón
-        if (piece is Piece pawn && pawn.Type == PieceType.Pawn && move.From.File == move.To.File) {
+        if (originalPiece is Piece pawn && pawn.Type == PieceType.Pawn && move.From.File == move.To.File) {
 
             //Fila inicial y dirección según el color
             int initialRank = pawn.Color == PlayerColor.White ? 1 : 6;
@@ -70,7 +71,7 @@ public sealed class Board
 
             //Verificamos que avance dos casillas desde su fila inicial
             if (move.From.Rank == initialRank && move.To.Rank - move.From.Rank == direction * 2){
-                
+
                 int middleRank = (move.From.Rank + move.To.Rank) / 2;
 
                 Square middleSquare = new Square(move.From.File, middleRank);

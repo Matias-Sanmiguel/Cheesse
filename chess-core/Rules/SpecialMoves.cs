@@ -4,10 +4,20 @@ namespace Chess.Core.Rules;
 
 public static class SpecialMoves
 {
-    public static IReadOnlyList<Move> Castling(Board board, PlayerColor side) =>
-        throw new NotImplementedException("CORE-F4");
+    public static IReadOnlyList<Move> Castling(Board board, PlayerColor side)
+    {
+        var moves = new List<Move>();
 
-    
+        //Establecemos la fila donde vamos a buscar al rey
+        int rank = side == PlayerColor.White ? 0 : 7;
+
+        //El rey empiza en la columna E fila 4
+        Square kingSquare = new Square(4, rank);
+
+        return moves;
+    }
+
+
     public static IReadOnlyList<Move> EnPassant(Board board, PlayerColor side) {
 
         var moves = new List<Move>();
@@ -71,7 +81,7 @@ public static class SpecialMoves
             Square from = new Square(file, pawnRank);
             Piece? piece = board.At(from);
 
-            //Si no hay una pieza mia, no es un peón o no es de mi color, salto a la siguiente columna 
+            //Si no hay una pieza mia, no es un peón o no es de mi color, salto a la siguiente columna
             if (piece == null || piece.Value.Type != PieceType.Pawn || piece.Value.Color != side) {
                 continue;
             }
