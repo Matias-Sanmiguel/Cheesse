@@ -32,58 +32,122 @@ public sealed class Board
 
     public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant);
 
-    public Board WithMove(Move move) {
 
+    public Board WithMove(Move move)
+    {
         var next = (Piece?[])_squares.Clone();
-        var piece = next[move.From.Index];
-        var originalPiece = piece;
+
+        Piece? piece = next[move.From.Index];
+        Piece? capturedPiece = next[move.To.Index];
+
+        if (piece == null) throw new InvalidOperationException("No hay una pieza en la casilla de origen.");
+
+        Piece moving = piece.Value;
+
         next[move.From.Index] = null;
 
-        //Verficamos si estamos haciendo una captura al paso
-        if (piece is Piece movingPawn && movingPawn.Type == PieceType.Pawn && EnPassant == move.To && move.From.File != move.To.File && next[move.To.Index] == null) {
-
-            //Buscamos la casilla donde está el peón rival
+        //Captura al paso (enPassant)
+        if (moving.Type == PieceType.Pawn && EnPassant == move.To && move.From.File != move.To.File && capturedPiece == null)
+        {
             Square capturedSquare = new Square(move.To.File, move.From.Rank);
+            Piece? capturedPawn = next[capturedSquare.Index];
 
-            Piece? capturedPiece = next[capturedSquare.Index];
-
-            //Si es un peón rival, lo eliminamos
-            if (capturedPiece is Piece captured && captured.Type == PieceType.Pawn && captured.Color != movingPawn.Color) {
+            if (capturedPawn is Piece pawn && pawn.Type == PieceType.Pawn && pawn.Color != moving.Color)
+            {
                 next[capturedSquare.Index] = null;
             }
         }
 
-        //Transformamos el peón en la pieza elegida (Promoción)
-        if (piece is Piece moving && move.Promotion is PieceType promotion)
-            piece = moving with { Type = promotion };
+        //Promoción
+        Piece placedPiece = moving;
 
-        //Ponemos a nuestra pieza en el destino
-        next[move.To.Index] = piece;
+        if (moving.Type == PieceType.Pawn && move.Promotion is PieceType promotion && move.To.Rank == (moving.Color == PlayerColor.White ? 7 : 0))
+        {
+            placedPiece = moving with { Type = promotion };
+        }
 
+        next[move.To.Index] = placedPiece;
+
+        //Enroque: mover también la torre
+        int homeRank = moving.Color == PlayerColor.White ? 0 : 7;
+
+        if (moving.Type == PieceType.King && move.From.File == 4 && move.From.Rank == homeRank && move.To.Rank == homeRank && (move.To.File == 6 || move.To.File == 2))
+        {
+            bool kingside = move.To.File == 6;
+
+            Square rookFrom = new Square(kingside ? 7 : 0, homeRank);
+            Square rookTo = new Square(kingside ? 5 : 3, homeRank);
+
+            if (next[rookFrom.Index] is Piece rook && rook.Type == PieceType.Rook && rook.Color == moving.Color)
+            {
+                next[rookFrom.Index] = null;
+                next[rookTo.Index] = rook;
+            }
+        }
+
+        CastlingRights newCastling = Castling;
+
+        //Si se mueve el rey, pierde ambos derechos
+        if (moving.Type == PieceType.King)
+        {
+            newCastling = moving.Color == PlayerColor.White ? newCastling with { WhiteKingside = false, WhiteQueenside = false } : newCastling with { BlackKingside = false, BlackQueenside = false };
+        }
+
+        //Si se mueve una torre desde su casilla inicial
+        if (moving.Type == PieceType.Rook)
+        {
+            newCastling = WithoutRookRight(newCastling, move.From, moving.Color);
+        }
+
+        //Si se captura una torre en su casilla inicial
+        if (capturedPiece is Piece capturedRook && capturedRook.Type == PieceType.Rook)
+        {
+            newCastling = WithoutRookRight(newCastling, move.To, capturedRook.Color);
+        }
+
+        //Actualizar en passant
         Square? newEnPassant = null;
 
-        //Verificamos si el movimiento es un doble avance de peón
-        if (originalPiece is Piece pawn && pawn.Type == PieceType.Pawn && move.From.File == move.To.File) {
+        if (moving.Type == PieceType.Pawn && move.From.File == move.To.File)
+        {
+            int initialRank = moving.Color == PlayerColor.White ? 1 : 6;
+            int direction = moving.Color == PlayerColor.White ? 1 : -1;
 
-            //Fila inicial y dirección según el color
-            int initialRank = pawn.Color == PlayerColor.White ? 1 : 6;
-            int direction = pawn.Color == PlayerColor.White ? 1 : -1;
-
-            //Verificamos que avance dos casillas desde su fila inicial
-            if (move.From.Rank == initialRank && move.To.Rank - move.From.Rank == direction * 2){
-
+            if (move.From.Rank == initialRank && move.To.Rank - move.From.Rank == direction * 2)
+            {
                 int middleRank = (move.From.Rank + move.To.Rank) / 2;
-
                 Square middleSquare = new Square(move.From.File, middleRank);
 
-                // Verificamos que el camino original estuviera libre
-                if (At(middleSquare) == null && At(move.To) == null) {
+                if (At(middleSquare) == null && At(move.To) == null)
+                {
                     newEnPassant = middleSquare;
                 }
             }
         }
-        return new Board(next, Castling, newEnPassant);
+
+        return new Board(next, newCastling, newEnPassant);
     }
+
+
+    private static CastlingRights WithoutRookRight(CastlingRights rights, Square square, PlayerColor color)
+    {
+        if (color == PlayerColor.White && square.Rank == 0)
+        {
+            if (square.File == 0) return rights with { WhiteQueenside = false };
+
+            if (square.File == 7) return rights with { WhiteKingside = false };
+        }
+
+        if (color == PlayerColor.Black && square.Rank == 7)
+        {
+            if (square.File == 0) return rights with { BlackQueenside = false };
+
+            if (square.File == 7) return rights with { BlackKingside = false };
+        }
+
+        return rights;
+    }
+
 
     public bool IsAttacked(Square square, PlayerColor by) =>
         AttackDetector.IsAttacked(this, square, by);

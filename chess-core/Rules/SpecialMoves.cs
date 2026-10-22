@@ -4,18 +4,61 @@ namespace Chess.Core.Rules;
 
 public static class SpecialMoves
 {
+
     public static IReadOnlyList<Move> Castling(Board board, PlayerColor side)
     {
         var moves = new List<Move>();
 
-        //Establecemos la fila donde vamos a buscar al rey
         int rank = side == PlayerColor.White ? 0 : 7;
-
-        //El rey empiza en la columna E fila 4
         Square kingSquare = new Square(4, rank);
+
+        Piece? king = board.At(kingSquare); //Compruebo que el rey esté en la casilla inicial
+
+        if (king == null || king.Value.Type != PieceType.King || king.Value.Color != side)
+        {
+            return moves;
+        }
+
+        //El rey no puede estar actualmente en jaque.
+        PlayerColor opponent = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+
+        if (board.IsAttacked(kingSquare, opponent))
+            return moves;
+
+        //Enroque corto
+        bool canCastleShort = side == PlayerColor.White ? board.Castling.WhiteKingside : board.Castling.BlackKingside;
+
+        Square shortRookSquare = new Square(7, rank);
+        Piece? shortRook = board.At(shortRookSquare);
+
+        Square fSquare = new Square(5, rank);
+        Square gSquare = new Square(6, rank);
+
+        if (canCastleShort && shortRook is Piece rookShort && rookShort.Type == PieceType.Rook && rookShort.Color == side && board.At(fSquare) == null && board.At(gSquare) == null &&
+            !board.IsAttacked(fSquare, opponent) && !board.IsAttacked(gSquare, opponent))
+        {
+            moves.Add(new Move(kingSquare, gSquare));
+        }
+
+        //Enroque largo
+        bool canCastleLong = side == PlayerColor.White ? board.Castling.WhiteQueenside : board.Castling.BlackQueenside;
+
+        Square longRookSquare = new Square(0, rank);
+        Piece? longRook = board.At(longRookSquare);
+
+        Square bSquare = new Square(1, rank);
+        Square cSquare = new Square(2, rank);
+        Square dSquare = new Square(3, rank);
+
+        if (canCastleLong && longRook is Piece rookLong && rookLong.Type == PieceType.Rook && rookLong.Color == side &&
+            board.At(bSquare) == null && board.At(cSquare) == null && board.At(dSquare) == null && !board.IsAttacked(dSquare, opponent) && !board.IsAttacked(cSquare, opponent))
+        {
+            moves.Add(new Move(kingSquare, cSquare));
+        }
 
         return moves;
     }
+
 
 
     public static IReadOnlyList<Move> EnPassant(Board board, PlayerColor side) {
