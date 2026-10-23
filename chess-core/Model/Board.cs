@@ -6,14 +6,35 @@ public sealed class Board
 {
     private readonly Piece?[] _squares;
 
-    private Board(Piece?[] squares, CastlingRights castling, Square? enPassant)
+    private Board(Piece?[] squares, CastlingRights castling, Square? enPassant,
+        PlayerColor turn = PlayerColor.White, int halfmoveClock = 0, int fullmoveNumber = 1)
     {
         _squares = squares;
         Castling = castling;
         EnPassant = enPassant;
+        Turn = turn;
+        HalfmoveClock = halfmoveClock;
+        FullmoveNumber = fullmoveNumber;
     }
 
+    public PlayerColor Turn { get; }
+
+    public int HalfmoveClock { get; }
+
+    public int FullmoveNumber { get; }
+
     public CastlingRights Castling { get; }
+
+    public Board WithState(PlayerColor turn, int halfmoveClock, int fullmoveNumber)
+    {
+        if (!Enum.IsDefined(turn))
+            throw new ArgumentOutOfRangeException(nameof(turn));
+        ArgumentOutOfRangeException.ThrowIfNegative(halfmoveClock);
+        ArgumentOutOfRangeException.ThrowIfLessThan(fullmoveNumber, 1);
+
+        return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
+            turn, halfmoveClock, fullmoveNumber);
+    }
 
     public Square? EnPassant { get; } //Guarda la casilla a la que puede ir para capturar al paso, por ejemplo si el peón va de d7 a d5, el otro peón puede ir a d6 para capturarlo
 
@@ -25,12 +46,12 @@ public sealed class Board
     {
         var next = (Piece?[])_squares.Clone();
         next[square.Index] = piece;
-        return new Board(next, Castling, EnPassant);
+        return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber);
     }
 
-    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant);
+    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber);
 
-    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant);
+    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant, Turn, HalfmoveClock, FullmoveNumber);
 
 
     public Board WithMove(Move move)
@@ -125,7 +146,13 @@ public sealed class Board
             }
         }
 
-        return new Board(next, newCastling, newEnPassant);
+        int halfmoveClock = moving.Type == PieceType.Pawn || capturedPiece is not null
+            ? 0
+            : HalfmoveClock + 1;
+        int fullmoveNumber = FullmoveNumber + (moving.Color == PlayerColor.Black ? 1 : 0);
+        PlayerColor nextTurn = moving.Color == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+
+        return new Board(next, newCastling, newEnPassant, nextTurn, halfmoveClock, fullmoveNumber);
     }
 
 
