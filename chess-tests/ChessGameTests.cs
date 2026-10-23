@@ -18,6 +18,31 @@ public class ChessGameTests
     }
 
     [Test]
+    public void Game_created_from_position_updates_status_and_publishes_check()
+    {
+        var events = new RecordingEvents();
+        var board = Board.Empty()
+            .WithPiece(new Square(4, 1), new Piece(PieceType.King, PlayerColor.White))
+            .WithPiece(new Square(0, 0), new Piece(PieceType.Rook, PlayerColor.White))
+            .WithPiece(new Square(7, 7), new Piece(PieceType.King, PlayerColor.Black));
+        var game = new ChessGame(events, new UnusedRepository(), new FixedClock(), board, PlayerColor.White);
+        var move = new Move(new Square(0, 0), new Square(7, 0));
+
+        Assert.That(game.Board, Is.SameAs(board));
+        Assert.That(game.Turn, Is.EqualTo(PlayerColor.White));
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
+
+        Assert.That(game.TryMove(move), Is.True);
+
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Check));
+        Assert.That(events.Items, Is.EqualTo(new object[]
+        {
+            new PieceMoved(move, new Piece(PieceType.Rook, PlayerColor.White)),
+            new CheckRaised(PlayerColor.Black),
+        }));
+    }
+
+    [Test]
     public void Legal_move_updates_board_turn_history_and_publishes_event()
     {
         var events = new RecordingEvents();

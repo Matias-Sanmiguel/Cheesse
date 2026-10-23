@@ -12,12 +12,24 @@ public sealed class ChessGame
     private readonly IReadOnlyList<Move> _readOnlyHistory;
 
     public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock)
+        : this(events, repository, clock, CreateInitialBoard(), PlayerColor.White)
+    {
+    }
+
+    public ChessGame(
+        IEventPublisher events,
+        IGameRepository repository,
+        IClock clock,
+        Board board,
+        PlayerColor turn)
     {
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Repository = repository ?? throw new ArgumentNullException(nameof(repository));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        Board = board ?? throw new ArgumentNullException(nameof(board));
+        Turn = turn;
+        Status = GameRules.Evaluate(Board, Turn);
         _readOnlyHistory = _history.AsReadOnly();
-        Board = CreateInitialBoard();
     }
 
     public IEventPublisher Events { get; }
