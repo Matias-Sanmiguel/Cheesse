@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://bs2ld14vde4n2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vfxe2"]
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.14117648, 0.12156863, 0.101960786, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6666667, 0.52156866, 0.32156864, 1)
+corner_detail = 14
+
+[node name="GameOverOverlay" type="CanvasLayer" unique_id=1432907638]
+
+[node name="Overlay" type="ColorRect" parent="." unique_id=334535478]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.4)
+
+[node name="Center" type="CenterContainer" parent="Overlay" unique_id=1845168567]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Overlay/Center" unique_id=1499674182]
+custom_minimum_size = Vector2(380, 300)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vfxe2")
+
+[node name="Content" type="VBoxContainer" parent="Overlay/Center/Panel" unique_id=1277673520]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Overlay/Center/Panel/Content" unique_id=129679622]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "WHITE WINS"
+horizontal_alignment = 1
+
+[node name="Reason" type="Label" parent="Overlay/Center/Panel/Content" unique_id=864099182]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "CHECKMATE"
+horizontal_alignment = 1
+
+[node name="Rematch" type="Button" parent="Overlay/Center/Panel/Content" unique_id=1458186921]
+layout_mode = 2
+text = "REMATCH"
+
+[node name="MainMenu" type="Button" parent="Overlay/Center/Panel/Content" unique_id=957929304]
+layout_mode = 2
+text = "MAIN MENU"

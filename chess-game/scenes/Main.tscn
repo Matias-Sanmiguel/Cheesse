@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://d10emj4f1dqkh" path="res://adapters/input/InputAdapter.cs" id="4_input"]
 [ext_resource type="PackedScene" path="res://scenes/Menu.tscn" id="5_menu"]
 [ext_resource type="PackedScene" uid="uid://d25mb4d7ym7qp" path="res://scenes/PromotionDialog.tscn" id="6_c01mt"]
+[ext_resource type="PackedScene" uid="uid://bs2ld14vde4n2" path="res://scenes/GameOverOverlay.tscn" id="7_nxtc6"]
+[ext_resource type="Script" uid="uid://rbv2iejosqwd" path="res://adapters/ui/GameOverOverlay.cs" id="8_jlsqs"]
 
 [node name="Main" type="Node" unique_id=1056071238]
 script = ExtResource("1_root")
@@ -23,3 +25,6 @@ script = ExtResource("4_input")
 [node name="Menu" parent="." unique_id=224615606 instance=ExtResource("5_menu")]
 
 [node name="PromotionDialog" parent="." unique_id=73769717 instance=ExtResource("6_c01mt")]
+
+[node name="GameOverOverlay" parent="." unique_id=1432907638 instance=ExtResource("7_nxtc6")]
+script = ExtResource("8_jlsqs")
