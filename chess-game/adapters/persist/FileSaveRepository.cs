@@ -14,10 +14,15 @@ public sealed class FileSaveRepository : IGameRepository
     private const int SaveVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    public bool HasSave => FileAccess.FileExists(SavePath);
+
+    // UI mode belongs to the adapter; the chess domain remains independent.
+    public bool AgainstRandom { get; set; }
+
     public void Save(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game));
+        var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game), AgainstRandom);
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -82,6 +87,7 @@ public sealed class FileSaveRepository : IGameRepository
                 return false;
 
             game.RestoreFrom(restored);
+            AgainstRandom = data.AgainstRandom;
             return true;
         }
         catch (Exception error) when (error is JsonException or FormatException or
@@ -92,5 +98,5 @@ public sealed class FileSaveRepository : IGameRepository
         }
     }
 
-    private sealed record SaveData(int Version, string? Fen, string? Pgn);
+    private sealed record SaveData(int Version, string? Fen, string? Pgn, bool AgainstRandom = false);
 }
