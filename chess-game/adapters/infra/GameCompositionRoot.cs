@@ -20,6 +20,7 @@ public partial class GameCompositionRoot : Node
     private InputAdapter _input = null!;
     private GameCaretaker? _caretaker;
     private RandomAI? _ai;
+    private PromotionDialog _promotionDialog = null!;
 
     public ChessGame? CurrentGame { get; private set; }
     public bool AgainstRandom => _ai is not null;
@@ -35,6 +36,7 @@ public partial class GameCompositionRoot : Node
         _board = GetNode<BoardView>("Board");
         _panel = GetNode<SidePanelView>("SidePanel");
         _input = GetNode<InputAdapter>("Input");
+        _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
         _menu.HumanRequested += StartHumanGame;
         _menu.RandomRequested += StartRandomGame;
         _menu.ContinueRequested += ContinueGame;
@@ -86,7 +88,7 @@ public partial class GameCompositionRoot : Node
         _ai = _repository.AgainstRandom ? new RandomAI() : null;
         _board.Attach(game, _bus);
         _panel.Attach(game, _caretaker, _bus, AgainstRandom, () => _repository.HasSave);
-        _input.Attach(game, _board, ApplyMove, () => !AgainstRandom || game.Turn == PlayerColor.White);
+        _input.Attach(game, _board, _promotionDialog, ApplyMove, () => !AgainstRandom || game.Turn == PlayerColor.White);
         _menu.Hide();
         _board.Show();
         _panel.Show();
@@ -130,6 +132,7 @@ public partial class GameCompositionRoot : Node
     public void ShowMenu()
     {
         _input.SetProcessUnhandledInput(false);
+        _input.ClearSelection();
         _board.Hide();
         _panel.Hide();
         _menu.SetMessage("");
