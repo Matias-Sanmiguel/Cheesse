@@ -1,4 +1,6 @@
+using Chess.Core.Events;
 using Chess.Core.Model;
+using Chess.Core.Ports;
 using Chess.Core.Services;
 using NUnit.Framework;
 using static Chess.Tests.GameTestSupport;
@@ -115,5 +117,129 @@ public class ChessGameTests
 
         Assert.Throws<NotSupportedException>(() => ((IList<Move>)game.History).Clear());
         Assert.That(game.History, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void Illegal_move_publishes_nothing()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events);
+
+        Assert.That(game.TryMove(Move("e2", "e5")), Is.False);
+        Assert.That(game.TryMove(Move("e7", "e5")), Is.False);
+
+        Assert.That(events.Published, Is.Empty);
+    }
+
+    [Test]
+    public void Quiet_move_publishes_only_piece_moved()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events);
+        var move = Move("e2", "e4");
+
+        Assert.That(game.TryMove(move), Is.True);
+        Assert.That(events.Published, Is.EqualTo(new object[]
+        {
+            new PieceMoved(move, new Piece(PieceType.Pawn, PlayerColor.White)),
+        }));
+    }
+
+    [Test]
+    public void Check_publishes_piece_moved_then_check_raised()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events, "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1");
+        var move = Move("e2", "e7");
+
+        Assert.That(game.TryMove(move), Is.True);
+        Assert.That(events.Published, Is.EqualTo(new object[]
+        {
+            new PieceMoved(move, new Piece(PieceType.Rook, PlayerColor.White)),
+            new CheckRaised(PlayerColor.Black),
+        }));
+    }
+
+    [Test]
+    public void Checkmate_publishes_piece_moved_check_raised_and_game_ended()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events);
+        Play(game, "f2f3", "e7e5", "g2g4");
+        events.Published.Clear();
+        var mate = Move("d8", "h4");
+
+        Assert.That(game.TryMove(mate), Is.True);
+        Assert.That(events.Published, Is.EqualTo(new object[]
+        {
+            new PieceMoved(mate, new Piece(PieceType.Queen, PlayerColor.Black)),
+            new CheckRaised(PlayerColor.White),
+            new GameEnded(GameStatus.Checkmate),
+        }));
+        Assert.That(game.TryMove(Move("e2", "e3")), Is.False);
+        Assert.That(events.Published, Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public void Promotion_checkmate_publishes_events_in_move_order()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events, "k7/1PK5/8/8/8/8/8/8 w - - 0 1");
+        var move = Move("b7", "b8", PieceType.Queen);
+
+        Assert.That(game.TryMove(move), Is.True);
+        Assert.That(events.Published, Is.EqualTo(new object[]
+        {
+            new PieceMoved(move, new Piece(PieceType.Pawn, PlayerColor.White)),
+            new CheckRaised(PlayerColor.Black),
+            new GameEnded(GameStatus.Checkmate),
+            new PromotionOccurred(Square("b8"), PieceType.Queen),
+        }));
+    }
+
+    [Test]
+    public void Fifty_move_draw_publishes_game_ended_and_fifty_move_draw()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events, "7k/8/8/8/8/8/8/R6K w - - 99 50");
+        var move = Move("a1", "a2");
+
+        Assert.That(game.TryMove(move), Is.True);
+        Assert.That(events.Published, Is.EqualTo(new object[]
+        {
+            new PieceMoved(move, new Piece(PieceType.Rook, PlayerColor.White)),
+            new GameEnded(GameStatus.DrawByFiftyMove),
+            new FiftyMoveDraw(),
+        }));
+    }
+
+    [Test]
+    public void Threefold_repetition_publishes_game_ended_and_draw_by_repetition()
+    {
+        var events = new RecordingPublisher();
+        var game = Create(events);
+        for (var cycle = 0; cycle < 2; cycle++)
+        {
+            Play(game, "g1f3", "g8f6", "f3g1");
+            events.Published.Clear();
+            Play(game, "f6g8");
+        }
+
+        var repeated = Move("f6", "g8");
+        Assert.That(events.Published, Has.Count.EqualTo(3));
+        Assert.That(events.Published[0], Is.EqualTo(new PieceMoved(repeated, new Piece(PieceType.Knight, PlayerColor.Black))));
+        Assert.That(events.Published[1], Is.EqualTo(new GameEnded(GameStatus.DrawByRepetition)));
+        Assert.That(events.Published[2], Is.InstanceOf<DrawByRepetition>());
+    }
+
+    private sealed class RecordingPublisher : IEventPublisher
+    {
+        public List<object> Published { get; } = [];
+
+        public void Publish<T>(T domainEvent)
+        {
+            if (domainEvent is not null)
+                Published.Add(domainEvent);
+        }
     }
 }

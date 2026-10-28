@@ -1,3 +1,4 @@
+using Chess.Core.Events;
 using Chess.Core.Ports;
 using Chess.Core.Rules;
 using Chess.Core.Services;
@@ -53,10 +54,29 @@ public sealed class ChessGame
         if (IsFinished || !MoveGenerator.Legal(Board, Turn).Contains(move))
             return false;
 
+        var moving = Board.At(move.From)!.Value;
         _snapshots.Add((Board, Status));
         Board = Board.WithMove(move);
         _history.Add(move);
         Status = GameRules.Evaluate(this);
+
+        Events.Publish(new PieceMoved(move, moving));
+
+        if (Status is GameStatus.Check or GameStatus.Checkmate)
+            Events.Publish(new CheckRaised(Turn));
+
+        if (IsFinished)
+            Events.Publish(new GameEnded(Status));
+
+        if (Status == GameStatus.DrawByRepetition)
+            Events.Publish(new DrawByRepetition(GameRules.PositionKey(Board, Turn)));
+
+        if (Status == GameStatus.DrawByFiftyMove)
+            Events.Publish(new FiftyMoveDraw());
+
+        if (move.Promotion is PieceType promoted)
+            Events.Publish(new PromotionOccurred(move.To, promoted));
+
         return true;
     }
 
