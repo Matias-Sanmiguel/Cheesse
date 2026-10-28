@@ -21,6 +21,7 @@ public partial class GameCompositionRoot : Node
     private GameCaretaker? _caretaker;
     private RandomAI? _ai;
     private PromotionDialog _promotionDialog = null!;
+    private GameOverOverlay _gameOver = null!;
 
     public ChessGame? CurrentGame { get; private set; }
     public bool AgainstRandom => _ai is not null;
@@ -47,6 +48,9 @@ public partial class GameCompositionRoot : Node
         _panel.NewGameRequested += () => StartNewGame(AgainstRandom);
         _panel.MenuRequested += ShowMenu;
         _panel.RandomChanged += SetRandomOpponent;
+        _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
+        _gameOver.RematchRequested += () => StartNewGame(AgainstRandom);
+        _gameOver.MainMenuRequested += ShowMenu;
         ShowMenu();
     }
 
@@ -93,6 +97,7 @@ public partial class GameCompositionRoot : Node
         _board.Show();
         _panel.Show();
         _bus.NotifyStateChanged();
+        UpdateGameOver();
     }
 
     private void ApplyMove(Move move)
@@ -101,6 +106,7 @@ public partial class GameCompositionRoot : Node
         {
             _panel.SetMessage("");
             _bus.NotifyStateChanged();
+            UpdateGameOver();
         }
     }
 
@@ -131,6 +137,7 @@ public partial class GameCompositionRoot : Node
 
     public void ShowMenu()
     {
+        _gameOver.Hide();
         _input.SetProcessUnhandledInput(false);
         _input.ClearSelection();
         _board.Hide();
@@ -169,5 +176,16 @@ public partial class GameCompositionRoot : Node
             _panel.SetMessage("No se pudo cargar. La partida actual se conserva.");
             _bus.NotifyStateChanged();
         }
+    }
+
+    private void UpdateGameOver()
+    {
+        if (CurrentGame is null || CurrentGame.Status is GameStatus.Ongoing or GameStatus.Check)
+        {
+            _gameOver.Hide();
+            return;
+        }
+
+        _gameOver.ShowResult(CurrentGame);
     }
 }
