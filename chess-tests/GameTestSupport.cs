@@ -29,7 +29,7 @@ internal static class GameTestSupport
     private sealed class Repository : IGameRepository
     {
         public void Save(ChessGame game) => throw new NotSupportedException();
-        public ChessGame Load(string id) => throw new NotSupportedException();
+        public bool Load(ChessGame game) => throw new NotSupportedException();
     }
 
     private sealed class Clock : IClock
