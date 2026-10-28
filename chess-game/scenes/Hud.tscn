@@ -4,16 +4,58 @@
 
 [node name="Hud" type="Control"]
 layout_mode = 3
-anchors_preset = 10
+anchors_preset = 15
 anchor_right = 1.0
-offset_bottom = 48.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_hud")
 
 [node name="Status" type="Label" parent="."]
-layout_mode = 0
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 640.0
-offset_bottom = 40.0
-text = "Nucleo pendiente"
+offset_left = 24.0
+offset_top = 42.0
+offset_right = 300.0
+offset_bottom = 84.0
+theme_override_font_sizes/font_size = 20
+text = "En juego"
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="Mode" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 110.0
+offset_right = 300.0
+offset_bottom = 170.0
+text = "Humano contra humano"
+mouse_filter = 2
+
+[node name="Save" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 210.0
+offset_right = 280.0
+offset_bottom = 258.0
+text = "Guardar partida"
+
+[node name="Menu" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 274.0
+offset_right = 280.0
+offset_bottom = 322.0
+text = "Menú principal"
+
+[node name="Message" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 342.0
+offset_right = 290.0
+offset_bottom = 410.0
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="Help" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 550.0
+offset_right = 290.0
+offset_bottom = 650.0
+text = "Elegí una pieza y después\nuna casilla de destino.\n\nSalir al menú no guarda\nla partida automáticamente."
+mouse_filter = 2
