@@ -116,4 +116,63 @@ public class ChessGameTests
         Assert.Throws<NotSupportedException>(() => ((IList<Move>)game.History).Clear());
         Assert.That(game.History, Has.Count.EqualTo(1));
     }
+
+    [Test]
+    public void Restore_copies_position_history_and_undo_without_replacing_ports_or_history_view()
+    {
+        var source = Create("r3k2r/3p4/8/4P3/8/8/8/R3K2R b KQkq - 37 42");
+        Play(source, "d7d5", "e5d6");
+        var target = Create();
+        Play(target, "e2e4");
+        var events = target.Events;
+        var repository = target.Repository;
+        var clock = target.Clock;
+        var historyView = target.History;
+
+        target.RestoreFrom(source);
+
+        Assert.That(FenSerializer.Write(target.Board), Is.EqualTo(FenSerializer.Write(source.Board)));
+        Assert.That(target.InitialBoard, Is.SameAs(source.InitialBoard));
+        Assert.That(target.Status, Is.EqualTo(source.Status));
+        Assert.That(target.History, Is.SameAs(historyView));
+        Assert.That(target.History, Is.EqualTo(source.History));
+        Assert.That(target.Events, Is.SameAs(events));
+        Assert.That(target.Repository, Is.SameAs(repository));
+        Assert.That(target.Clock, Is.SameAs(clock));
+        Assert.That(target.Undo(), Is.True);
+        Assert.That(target.Board.EnPassant, Is.EqualTo(Square("d6")));
+        Assert.That(source.History, Has.Count.EqualTo(2));
+        Assert.That(target.History, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void Restore_preserves_repetition_state_and_drops_previous_branch()
+    {
+        var source = Create();
+        Play(source, "g1f3", "g8f6", "f3g1", "f6g8");
+        var target = Create();
+        Play(target, "e2e4", "c7c5");
+        target.RestoreFrom(source);
+        Play(target, "g1f3", "g8f6", "f3g1", "f6g8");
+
+        Assert.That(target.Status, Is.EqualTo(GameStatus.DrawByRepetition));
+        Assert.That(source.Status, Is.EqualTo(GameStatus.Ongoing));
+        Assert.That(target.Undo(), Is.True);
+        Assert.That(target.Status, Is.EqualTo(GameStatus.Ongoing));
+    }
+
+    [Test]
+    public void Restoring_self_or_rejecting_null_keeps_current_state()
+    {
+        var game = Create();
+        Play(game, "e2e4");
+        var board = game.Board;
+        game.RestoreFrom(game);
+
+        Assert.That(game.Board, Is.SameAs(board));
+        Assert.That(game.History, Has.Count.EqualTo(1));
+        Assert.Throws<ArgumentNullException>(() => game.RestoreFrom(null!));
+        Assert.That(game.Board, Is.SameAs(board));
+        Assert.That(game.Undo(), Is.True);
+    }
 }
