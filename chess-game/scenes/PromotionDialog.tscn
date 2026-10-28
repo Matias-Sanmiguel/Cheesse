@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://d25mb4d7ym7qp"]
 
 [ext_resource type="Script" uid="uid://vqb72amifcae" path="res://adapters/ui/PromotionDialog.cs" id="1_h7fes"]
+[ext_resource type="Script" uid="uid://cxc7b4fdn8t0n" path="res://adapters/ui/PromotionWheel.cs" id="2_q85dc"]
 
 [node name="PromotionDialog" type="CanvasLayer" unique_id=73769717]
 script = ExtResource("1_h7fes")
@@ -11,7 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.6)
+color = Color(0, 0, 0, 0.2509804)
 
 [node name="Center" type="CenterContainer" parent="Overlay" unique_id=1143432666]
 layout_mode = 1
@@ -21,34 +22,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="Overlay/Center" unique_id=1187485901]
-custom_minimum_size = Vector2(320, 0)
+[node name="PromotionWheel" type="Control" parent="Overlay/Center" unique_id=1654863719]
+custom_minimum_size = Vector2(320, 320)
 layout_mode = 2
-
-[node name="Options" type="VBoxContainer" parent="Overlay/Center/Panel" unique_id=144439106]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Title" type="Label" parent="Overlay/Center/Panel/Options" unique_id=1755747493]
-layout_mode = 2
-text = "                 Choose your promotion"
-
-[node name="Queen" type="Button" parent="Overlay/Center/Panel/Options" unique_id=459170562]
-layout_mode = 2
-text = "♕ Queen"
-
-[node name="Rook" type="Button" parent="Overlay/Center/Panel/Options" unique_id=517089429]
-layout_mode = 2
-text = "♖ Rook"
-
-[node name="Bishop" type="Button" parent="Overlay/Center/Panel/Options" unique_id=2140296531]
-layout_mode = 2
-text = "	♗ Bishop"
-
-[node name="Knight" type="Button" parent="Overlay/Center/Panel/Options" unique_id=702803183]
-layout_mode = 2
-text = "	♘ Knight"
-
-[node name="Cancel" type="Button" parent="Overlay/Center/Panel/Options" unique_id=2079577219]
-layout_mode = 2
-text = "Cancel"
+script = ExtResource("2_q85dc")

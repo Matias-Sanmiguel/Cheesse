@@ -1,5 +1,4 @@
 
-using Chess.Core.Model;
 using Godot;
 
 namespace Cheesse.Game.Adapters.Ui;
@@ -12,21 +11,13 @@ public partial class PromotionDialog : CanvasLayer
 	[Signal]
 	public delegate void CancelledEventHandler();
 
-	private Button _queenButton = null!;
+	private PromotionWheel _wheel = null!;
 
 	public override void _Ready()
 	{
-		_queenButton = GetNode<Button>("Overlay/Center/Panel/Options/Queen");
-
-		GetNode<Button>("Overlay/Center/Panel/Options/Rook").Pressed += () => Choose(PieceType.Rook);
-
-		GetNode<Button>("Overlay/Center/Panel/Options/Bishop").Pressed += () => Choose(PieceType.Bishop);
-
-		GetNode<Button>("Overlay/Center/Panel/Options/Knight").Pressed += () => Choose(PieceType.Knight);
-
-		_queenButton.Pressed += () => Choose(PieceType.Queen);
-
-		GetNode<Button>("Overlay/Center/Panel/Options/Cancel").Pressed += Cancel;
+		_wheel = GetNode<PromotionWheel>("Overlay/Center/PromotionWheel");
+		_wheel.PieceSelected += OnPieceSelected;
+		_wheel.CancelRequested += Cancel;
 
 		Hide();
 	}
@@ -34,7 +25,6 @@ public partial class PromotionDialog : CanvasLayer
 	public void OpenDialog()
 	{
 		Show();
-		_queenButton.GrabFocus();
 	}
 
 	public override void _Input(InputEvent input)
@@ -49,15 +39,24 @@ public partial class PromotionDialog : CanvasLayer
 		}
 	}
 
-	private void Choose(PieceType pieceType)
+	private void OnPieceSelected(int pieceType)
 	{
 		Hide();
-		EmitSignal(SignalName.PieceChosen, (int)pieceType);
+		EmitSignal(SignalName.PieceChosen, pieceType);
 	}
 
 	private void Cancel()
 	{
 		Hide();
 		EmitSignal(SignalName.Cancelled);
+	}
+
+	public override void _ExitTree()
+	{
+		if (_wheel is null)
+			return;
+
+		_wheel.PieceSelected -= OnPieceSelected;
+		_wheel.CancelRequested -= Cancel;
 	}
 }
