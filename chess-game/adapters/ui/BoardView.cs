@@ -51,6 +51,8 @@ public partial class BoardView : Node2D
         var targets = _selected is Square selected && _game is not null
             ? _game.LegalMoves().Where(move => move.From == selected).Select(move => move.To).ToHashSet()
             : new HashSet<Square>();
+        var lastMove = _game?.History.LastOrDefault();
+        var hasLastMove = _game?.History.Count > 0;
         for (var rank = 0; rank < 8; rank++)
         {
             for (var file = 0; file < 8; file++)
@@ -60,6 +62,9 @@ public partial class BoardView : Node2D
                 var destination = new Rect2(origin, new Vector2(SquareSize, SquareSize));
                 var color = (file + rank) % 2 == 1 ? new Color("769656") : new Color("eeeed2");
                 DrawRect(destination, color);
+                if (hasLastMove && lastMove is Move move && (square == move.From || square == move.To))
+                    DrawRect(destination, new Color("C9B458", 0.55f));
+                DrawCoordinates(file, rank, origin, color);
                 if (_selected == square)
                     DrawRect(destination, new Color(0.95f, 0.73f, 0.2f, 0.55f));
                 if (targets.Contains(square))
@@ -71,6 +76,24 @@ public partial class BoardView : Node2D
                 var source = new Rect2((int)piece.Type * SquareSize, row * SquareSize, SquareSize, SquareSize);
                 DrawTextureRectRegion(_pieces, destination, source);
             }
+        }
+    }
+
+    private void DrawCoordinates(int file, int rank, Vector2 origin, Color squareColor)
+    {
+        var textColor = squareColor == new Color("769656") ? new Color("eeeed2") : new Color("769656");
+
+        var font = ThemeDB.FallbackFont;
+        const int fontSize = 15;
+
+        if (file == 0)
+        {
+            DrawString(font, origin + new Vector2(5, 16), (rank + 1).ToString(), HorizontalAlignment.Left, -1, fontSize, textColor);
+        }
+
+        if (rank == 0)
+        {
+            DrawString(font, origin + new Vector2(65, 76), ((char)('a' + file)).ToString(), HorizontalAlignment.Left, -1, fontSize, textColor);
         }
     }
 
