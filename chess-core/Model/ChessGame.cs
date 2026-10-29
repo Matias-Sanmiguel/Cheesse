@@ -8,7 +8,8 @@ namespace Chess.Core.Model;
 public sealed class ChessGame
 {
     private readonly List<Move> _history = [];
-    private readonly Stack<Snapshot> _previousStates = [];
+    private readonly Stack<MoveCommand> _previousStates = [];
+    private readonly Stack<MoveCommand> _undoneMoves = [];
     private readonly IReadOnlyList<Move> _readOnlyHistory;
 
     public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock)
@@ -51,13 +52,23 @@ public sealed class ChessGame
         if (!LegalMoves().Contains(move))
             return false;
 
+        var command = new MoveCommand(move, CaptureState());
+        _undoneMoves.Clear();
+        command.Execute(this);
+        return true;
+    }
+
+    private void ApplyMove(MoveCommand command)
+    {
+        var move = command.Move;
+
         var piece = Board.At(move.From)!.Value;
         var nextBoard = Board.WithMove(move);
         var nextTurn = Turn == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
         var nextStatus = GameRules.Evaluate(nextBoard, nextTurn);
 
         // Guardamos el tablero inmutable completo, incluidos enroque y al paso.
-        _previousStates.Push(new Snapshot(Board, Turn, Status));
+        _previousStates.Push(command);
         _history.Add(move);
         Board = nextBoard;
         Turn = nextTurn;
@@ -75,25 +86,31 @@ public sealed class ChessGame
         if (IsFinished)
             Events.Publish(new GameEnded(Status));
 
-        return true;
     }
 
     public bool Undo()
     {
-        if (!_previousStates.TryPop(out var previous))
+        if (!_previousStates.TryPop(out var command))
             return false;
 
-        Board = previous.Board;
-        Turn = previous.Turn;
-        Status = previous.Status;
-        _history.RemoveAt(_history.Count - 1);
+        command.Undo(this);
+        _undoneMoves.Push(command);
+        return true;
+    }
+
+    public bool Redo()
+    {
+        if (!_undoneMoves.TryPop(out var command))
+            return false;
+
+        command.Execute(this);
         return true;
     }
 
     public IReadOnlyList<Move> LegalMoves() =>
         IsFinished ? Array.Empty<Move>() : MoveGenerator.Legal(Board, Turn);
 
-    private bool IsFinished => Status is not (GameStatus.Ongoing or GameStatus.Check);
+    private bool IsFinished => !GameState.For(Status).CanMove;
 
     private static Board CreateInitialBoard()
     {
@@ -116,5 +133,19 @@ public sealed class ChessGame
         return board;
     }
 
-    private readonly record struct Snapshot(Board Board, PlayerColor Turn, GameStatus Status);
+    private GameMemento CaptureState() => new(Board, Turn, Status);
+
+    private readonly record struct GameMemento(Board Board, PlayerColor Turn, GameStatus Status);
+    private sealed record MoveCommand(Move Move, GameMemento Before)
+    {
+        public void Execute(ChessGame game) => game.ApplyMove(this);
+
+        public void Undo(ChessGame game)
+        {
+            game.Board = Before.Board;
+            game.Turn = Before.Turn;
+            game.Status = Before.Status;
+            game._history.RemoveAt(game._history.Count - 1);
+        }
+    }
 }

@@ -8,6 +8,43 @@ namespace Chess.Tests;
 public class ChessGameTests
 {
     [Test]
+    public void Redo_restores_undone_moves_and_new_move_clears_redo()
+    {
+        var game = CreateGame(new RecordingEvents());
+        var first = new Move(new Square(4, 1), new Square(4, 3));
+        var second = new Move(new Square(4, 6), new Square(4, 4));
+        Assert.That(game.TryMove(first), Is.True);
+        Assert.That(game.TryMove(second), Is.True);
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(game.History, Is.EqualTo(new[] { first, second }));
+        Assert.That(game.Turn, Is.EqualTo(PlayerColor.White));
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.TryMove(new Move(new Square(3, 6), new Square(3, 4))), Is.True);
+        Assert.That(game.Redo(), Is.False);
+    }
+
+    [Test]
+    public void Multiple_redos_replay_in_order_and_publish_move_events()
+    {
+        var events = new RecordingEvents();
+        var game = CreateGame(events);
+        var first = new Move(new Square(4, 1), new Square(4, 3));
+        var second = new Move(new Square(4, 6), new Square(4, 4));
+        Assert.That(game.TryMove(first), Is.True);
+        Assert.That(game.TryMove(second), Is.True);
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.Undo(), Is.True);
+        events.Items.Clear();
+
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(game.Redo(), Is.False);
+        Assert.That(game.History, Is.EqualTo(new[] { first, second }));
+        Assert.That(events.Items.OfType<PieceMoved>().Select(e => e.Move), Is.EqualTo(new[] { first, second }));
+    }
+
+    [Test]
     public void Initial_position_has_twenty_legal_moves()
     {
         var game = CreateGame(new RecordingEvents());

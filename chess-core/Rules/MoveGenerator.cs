@@ -26,6 +26,22 @@ public static class MoveGenerator
         (0, 1), (1, -1), (1, 0), (1, 1),
     ];
 
+    private delegate void MovementStrategy(Board board, Square from, PlayerColor side, List<Move> moves);
+
+    private static readonly IReadOnlyDictionary<PieceType, MovementStrategy> Strategies =
+        new Dictionary<PieceType, MovementStrategy>
+        {
+            [PieceType.Pawn] = AddPawnMoves,
+            [PieceType.Knight] = (b, f, s, m) => AddStepMoves(b, f, s, KnightOffsets, m),
+            [PieceType.Bishop] = (b, f, s, m) => AddSlidingMoves(b, f, s, DiagonalDirections, m),
+            [PieceType.Rook] = (b, f, s, m) => AddSlidingMoves(b, f, s, StraightDirections, m),
+            [PieceType.Queen] = (b, f, s, m) =>
+            {
+                AddSlidingMoves(b, f, s, DiagonalDirections, m);
+                AddSlidingMoves(b, f, s, StraightDirections, m);
+            },
+            [PieceType.King] = (b, f, s, m) => AddStepMoves(b, f, s, KingOffsets, m),
+        };
     public static IReadOnlyList<Move> Generate(Board board, PlayerColor side)
     {
         var moves = new List<Move>();
@@ -36,28 +52,8 @@ public static class MoveGenerator
             if (board.At(from) is not Piece piece || piece.Color != side)
                 continue;
 
-            switch (piece.Type)
-            {
-                case PieceType.Pawn:
-                    AddPawnMoves(board, from, side, moves);
-                    break;
-                case PieceType.Knight:
-                    AddStepMoves(board, from, side, KnightOffsets, moves);
-                    break;
-                case PieceType.Bishop:
-                    AddSlidingMoves(board, from, side, DiagonalDirections, moves);
-                    break;
-                case PieceType.Rook:
-                    AddSlidingMoves(board, from, side, StraightDirections, moves);
-                    break;
-                case PieceType.Queen:
-                    AddSlidingMoves(board, from, side, DiagonalDirections, moves);
-                    AddSlidingMoves(board, from, side, StraightDirections, moves);
-                    break;
-                case PieceType.King:
-                    AddStepMoves(board, from, side, KingOffsets, moves);
-                    break;
-            }
+            if (Strategies.TryGetValue(piece.Type, out var strategy))
+                strategy(board, from, side, moves);
         }
 
         return moves;
