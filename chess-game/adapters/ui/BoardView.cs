@@ -9,7 +9,7 @@ public partial class BoardView : Node2D
 {
     // Mantenemos 80 temporalmente.
     // Pasaremos a 96 despues de completar el merge.
-    private const int SquareSize = 80;
+    private const int SquareSize = 96;
 
     private static readonly Color LightSquare = new("eeeed2");
     private static readonly Color DarkSquare = new("769656");
