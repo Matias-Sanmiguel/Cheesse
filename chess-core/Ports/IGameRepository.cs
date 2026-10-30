@@ -6,5 +6,6 @@ public interface IGameRepository
 {
     void Save(ChessGame game);
 
-    ChessGame Load(string id);
+    /// <summary>Restores the open game; returns false without changing it when loading fails.</summary>
+    bool Load(ChessGame game);
 }

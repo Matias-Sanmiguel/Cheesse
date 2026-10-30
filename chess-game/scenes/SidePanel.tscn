@@ -1,0 +1,119 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://adapters/ui/SidePanelView.cs" id="1_panel"]
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0.09, 0.13, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.27, 0.35, 0.35, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+
+[node name="SidePanel" type="PanelContainer"]
+offset_left = 768.0
+offset_top = 40.0
+offset_right = 1216.0
+offset_bottom = 680.0
+theme_override_styles/panel = SubResource("PanelStyle")
+script = ExtResource("1_panel")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Content" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Cheesse"
+
+[node name="Turn" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Turno: blancas"
+
+[node name="Status" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "En juego"
+autowrap_mode = 2
+
+[node name="Separator" type="HSeparator" parent="Margin/Content"]
+layout_mode = 2
+
+[node name="History" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Undo" type="Button" parent="Margin/Content/History"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Deshacer"
+
+[node name="Redo" type="Button" parent="Margin/Content/History"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Rehacer"
+
+[node name="Files" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Save" type="Button" parent="Margin/Content/Files"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Guardar"
+
+[node name="Load" type="Button" parent="Margin/Content/Files"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "Cargar"
+
+[node name="NewGame" type="Button" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Nueva partida"
+
+[node name="Random" type="CheckButton" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+text = "Negras aleatorias"
+
+[node name="Spacer" type="Control" parent="Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Message" type="Label" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Menu" type="Button" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Menú principal"
+
+[node name="Help" type="Label" parent="Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Elegí una pieza y una casilla de destino.\nGuardá antes de salir al menú."
+autowrap_mode = 2

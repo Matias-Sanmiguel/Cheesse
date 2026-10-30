@@ -17,6 +17,11 @@ public partial class GodotEventBus : Node, IEventPublisher
     [Signal]
     public delegate void PromotionOccurredEventHandler();
 
+    [Signal]
+    public delegate void StateChangedEventHandler();
+
+    public void NotifyStateChanged() => EmitSignal(SignalName.StateChanged);
+
     public void Publish<T>(T domainEvent)
     {
         switch (domainEvent)
@@ -33,6 +38,9 @@ public partial class GodotEventBus : Node, IEventPublisher
             case Chess.Core.Events.PromotionOccurred:
                 EmitSignal(SignalName.PromotionOccurred);
                 break;
+            default:
+                return;
         }
+        NotifyStateChanged();
     }
 }

@@ -36,7 +36,7 @@ public sealed class ChessGame
 
     public IClock Clock { get; }
 
-    public Board InitialBoard { get; }
+    public Board InitialBoard { get; private set; }
 
     public Board Board { get; private set; }
 
@@ -58,6 +58,22 @@ public sealed class ChessGame
         _history.Add(move);
         Status = GameRules.Evaluate(this);
         return true;
+    }
+
+    /// <summary>Copies an already reconstructed game without replacing this instance or its ports.</summary>
+    public void RestoreFrom(ChessGame source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (ReferenceEquals(this, source))
+            return;
+
+        InitialBoard = source.InitialBoard;
+        Board = source.Board;
+        Status = source.Status;
+        _history.Clear();
+        _history.AddRange(source._history);
+        _snapshots.Clear();
+        _snapshots.AddRange(source._snapshots);
     }
 
     public bool Undo()
