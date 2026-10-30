@@ -15,10 +15,10 @@ corner_radius_bottom_left = 14
 corner_radius_bottom_right = 14
 
 [node name="SidePanel" type="PanelContainer"]
-offset_left = 768.0
+offset_left = 896.0
 offset_top = 40.0
-offset_right = 1216.0
-offset_bottom = 680.0
+offset_right = 1376.0
+offset_bottom = 860.0
 theme_override_styles/panel = SubResource("PanelStyle")
 script = ExtResource("1_panel")
 
