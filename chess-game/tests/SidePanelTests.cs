@@ -28,12 +28,12 @@ public partial class SidePanelTests : Node
 
             var board = root.GetNode<BoardView>("Board");
             var panel = root.GetNode<SidePanelView>("SidePanel");
-            var boardRect = new Rect2(board.GlobalPosition, new Vector2(640, 640));
+            var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768));
             var panelRect = panel.GetGlobalRect();
             Check(boardRect.End.X < panelRect.Position.X, "board stays to the left of the panel");
             Check(boardRect.Position == new Vector2(64, 40), "board centered in left area");
             Check(panelRect.Position.X >= 0 && panelRect.Position.Y >= 0 &&
-                panelRect.End.X <= 1280 && panelRect.End.Y <= 720, "panel fits 1280x720");
+                panelRect.End.X <= 1440 && panelRect.End.Y <= 900, "panel fits 1440x900");
             foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Random", "Menu" })
             {
                 var rect = root.GetNode<Control>(Content + name).GetGlobalRect();
@@ -192,17 +192,17 @@ public partial class SidePanelTests : Node
     private void Click(Node root, string name)
     {
         var square = Square(name);
-        var local = new Vector2(square.File * 80 + 40, (7 - square.Rank) * 80 + 40);
+        var local = new Vector2(square.File * 96 + 48, (7 - square.Rank) * 96 + 48);
         var position = root.GetNode<BoardView>("Board").GetGlobalTransformWithCanvas() * local;
         GetViewport().PushInput(new InputEventMouseButton
         {
             Position = position, GlobalPosition = position, ButtonIndex = MouseButton.Left,
             Pressed = true, ButtonMask = MouseButtonMask.Left,
-        });
+        }, true);
         GetViewport().PushInput(new InputEventMouseButton
         {
             Position = position, GlobalPosition = position, ButtonIndex = MouseButton.Left, Pressed = false,
-        });
+        }, true);
     }
 
     private async Task Frames()

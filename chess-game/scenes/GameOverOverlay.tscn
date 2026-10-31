@@ -16,11 +16,10 @@ corner_detail = 14
 [node name="GameOverOverlay" type="CanvasLayer" unique_id=1432907638]
 
 [node name="Overlay" type="ColorRect" parent="." unique_id=334535478]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 64.0
+offset_top = 40.0
+offset_right = 832.0
+offset_bottom = 808.0
 color = Color(0, 0, 0, 0.4)
 
 [node name="Center" type="CenterContainer" parent="Overlay" unique_id=1845168567]

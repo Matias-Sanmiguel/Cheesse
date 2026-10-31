@@ -44,7 +44,7 @@ public partial class InputAdapter : Node
         _selected = null;
         _pendingPromotions = null;
         _promotionDialog?.Hide();
-        _board?.SelectSquare(null);
+        _board?.ClearSelection();
     }
 
     public override void _UnhandledInput(InputEvent input)
@@ -65,7 +65,10 @@ public partial class InputAdapter : Node
             .AffineInverse() * mouse.Position;
 
         if (!_board.TryGetSquare(local, out var square))
+        {
+            ClearSelection();
             return;
+        }
 
         if (_selected is Square from)
         {
@@ -84,7 +87,7 @@ public partial class InputAdapter : Node
                 }
 
                 _selected = null;
-                _board.SelectSquare(null);
+                _board.ClearSelection();
                 GetViewport().SetInputAsHandled();
                 return;
             }
@@ -92,7 +95,8 @@ public partial class InputAdapter : Node
 
         _selected = _game.Board.At(square) is Piece piece &&piece.Color == _game.Turn ? square : null;
 
-        _board.SelectSquare(_selected);
+        _board.SetSelection(_selected, _game.LegalMoves()
+            .Where(move => move.From == _selected).Select(move => move.To));
         GetViewport().SetInputAsHandled();
     }
 

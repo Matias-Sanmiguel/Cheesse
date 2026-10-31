@@ -140,17 +140,17 @@ public partial class MenuTests : Node
 
     private void Click(Node root, string square)
     {
-        var local = new Vector2((square[0] - 'a') * 80 + 40, (7 - (square[1] - '1')) * 80 + 40);
+        var local = new Vector2((square[0] - 'a') * 96 + 48, (7 - (square[1] - '1')) * 96 + 48);
         var position = root.GetNode<BoardView>("Board").GetGlobalTransformWithCanvas() * local;
         GetViewport().PushInput(new InputEventMouseButton
         {
             Position = position, GlobalPosition = position, ButtonIndex = MouseButton.Left,
             Pressed = true, ButtonMask = MouseButtonMask.Left,
-        });
+        }, true);
         GetViewport().PushInput(new InputEventMouseButton
         {
             Position = position, GlobalPosition = position, ButtonIndex = MouseButton.Left, Pressed = false,
-        });
+        }, true);
     }
 
     private static void RemoveSave()

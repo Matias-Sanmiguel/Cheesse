@@ -64,6 +64,17 @@ public partial class GameCompositionRoot : Node
             ApplyMove(_ai.ChooseMove(game));
     }
 
+    public override void _Input(InputEvent input)
+    {
+        if (_menu.Visible || _promotionDialog.Visible) return;
+        if (input is InputEventKey { Pressed: true, Echo: false, CtrlPressed: true } key &&
+            (key.Keycode == Key.Z || key.PhysicalKeycode == Key.Z))
+        {
+            Undo();
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
     public void StartHumanGame() => StartNewGame(false);
     public void StartRandomGame() => StartNewGame(true);
 
@@ -88,11 +99,11 @@ public partial class GameCompositionRoot : Node
     private void EnterGame(ChessGame game)
     {
         CurrentGame = game;
-        _caretaker = new GameCaretaker(game);
+        _caretaker = game.Caretaker;
         _ai = _repository.AgainstRandom ? new RandomAI() : null;
         _board.Attach(game, _bus);
         _panel.Attach(game, _caretaker, _bus, AgainstRandom, () => _repository.HasSave);
-        _input.Attach(game, _board, _promotionDialog, ApplyMove, () => !AgainstRandom || game.Turn == PlayerColor.White);
+        _input.Attach(game, _board, _promotionDialog, ApplyMove, () => game.State.AcceptsMoves && !_gameOver.Visible && (!AgainstRandom || game.Turn == PlayerColor.White));
         _menu.Hide();
         _board.Show();
         _panel.Show();
@@ -116,6 +127,7 @@ public partial class GameCompositionRoot : Node
         _input.ClearSelection();
         _panel.SetMessage("");
         _bus.NotifyStateChanged();
+        UpdateGameOver();
     }
 
     private void Redo()
@@ -124,6 +136,7 @@ public partial class GameCompositionRoot : Node
         _input.ClearSelection();
         _panel.SetMessage("");
         _bus.NotifyStateChanged();
+        UpdateGameOver();
     }
 
     private void SetRandomOpponent(bool enabled)

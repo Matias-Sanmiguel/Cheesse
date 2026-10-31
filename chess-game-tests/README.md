@@ -42,6 +42,22 @@ The script fails if the test scene does not finish successfully.
 
     ./chess-game-tests/RunMenuTests.ps1 -Godot 'C:/path/to/Godot_console.exe' -TestScene SidePanelTests
 
-The isolated Godot test verifies layout at 1280x720, buttons, command/caretaker
+The isolated Godot test verifies layout at 1440x900, buttons, command/caretaker
 Undo and Redo, bus updates for turn/check/mate, save/load/new game, random-black
 toggle, branching history, and the actual white/black pixels of the SVG atlas.
+
+## Cross-platform UI runner
+
+With Python 3 and Godot .NET (the standard Godot executable cannot load C#):
+
+    python chess-game-tests/RunUiTests.py --godot godot-mono --scene MenuTests
+    python chess-game-tests/RunUiTests.py --godot godot-mono --scene SidePanelTests
+    python chess-game-tests/RunUiTests.py --godot godot-mono --scene MvpTests
+
+Each scene runs the production assembly and resources in an ignored sandbox with
+its own user directory. The runner checks both exit status and the PASS marker.
+The MVP scene checks off-board/illegal clicks, both players, Ctrl+Z, Undo/Redo
+across mate and draws, winner/rematch, underpromotion/cancellation, input blocking,
+and resizing to 1280x720. The pixel art layout uses a 1440x900 canvas and scales
+with the window. Persistence tests also verify that loading (including rejected
+saves) does not emit domain events for historical moves.

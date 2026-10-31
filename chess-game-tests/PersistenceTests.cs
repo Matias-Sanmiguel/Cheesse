@@ -65,6 +65,7 @@ public partial class PersistenceTests : Node
 
     private void RunCases(FileSaveRepository repository)
     {
+        Loading_does_not_publish_historical_events(repository);
         MissingSaveKeepsOpenGame(repository);
         RoundTrip(repository, FenSerializer.InitialPosition);
         RoundTrip(repository, FenSerializer.InitialPosition, "e2e4", "c7c5", "g1f3");
@@ -88,6 +89,25 @@ public partial class PersistenceTests : Node
         SaveFailureKeepsPreviousFile(repository);
         Check(!DirAccess.GetFilesAt("user://").Any(name =>
             name.StartsWith("cheesse-save.txt.") && name.EndsWith(".tmp")), "temporary files cleaned");
+    }
+
+    private void Loading_does_not_publish_historical_events(FileSaveRepository repository)
+    {
+        var source = Create(repository);
+        Play(source, "e2e4", "e7e5");
+        repository.Save(source);
+        var events = new Events();
+        var target = new ChessGame(events, repository, new Clock());
+        Check(repository.Load(target), "event test loads valid save");
+        Check(events.Count == 0, "loading emits no historical domain events");
+        string saved;
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read)) saved = file.GetAsText();
+        var data = JsonNode.Parse(saved)!;
+        data["Fen"] = FenSerializer.InitialPosition;
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write)) file.StoreString(data.ToJsonString());
+        Check(!repository.Load(target), "inconsistent save rejected after replay");
+        Check(events.Count == 0, "rejected load emits no historical domain events");
+        Check(target.History.Count == 2, "failed load preserves open history");
     }
 
     private void RoundTrip(FileSaveRepository repository, string fen, params string[] moves)
@@ -261,7 +281,8 @@ public partial class PersistenceTests : Node
 
     private sealed class Events : IEventPublisher
     {
-        public void Publish<T>(T domainEvent) { }
+        public int Count { get; private set; }
+        public void Publish<T>(T domainEvent) => Count++;
     }
 
     private sealed class Clock : IClock

@@ -1,3 +1,4 @@
+using Chess.Core.Events;
 using Chess.Core.Ports;
 using Chess.Core.Rules;
 using Chess.Core.Services;
@@ -7,7 +8,7 @@ namespace Chess.Core.Model;
 public sealed class ChessGame
 {
     private readonly List<Move> _history = [];
-    private readonly List<(Board Board, GameStatus Status)> _snapshots = [];
+    private readonly List<Board> _positions = [];
 
     public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock)
         : this(events, repository, clock, FenSerializer.Load(FenSerializer.InitialPosition))
@@ -27,7 +28,9 @@ public sealed class ChessGame
         InitialBoard = initialBoard;
         Board = initialBoard;
         History = _history.AsReadOnly();
+        _positions.Add(initialBoard);
         Status = GameRules.Evaluate(this);
+        Caretaker = new GameCaretaker(this);
     }
 
     public IEventPublisher Events { get; }
@@ -46,17 +49,35 @@ public sealed class ChessGame
 
     public IReadOnlyList<Move> History { get; }
 
-    internal IEnumerable<Board> Positions => _snapshots.Select(snapshot => snapshot.Board).Append(Board);
+    public GameCaretaker Caretaker { get; }
 
-    public bool TryMove(Move move)
+    public IGameState State => GameState.For(Status);
+
+    internal IEnumerable<Board> Positions => _positions;
+
+    public bool TryMove(Move move) => Caretaker.Execute(move);
+
+    internal bool ApplyMove(Move move)
     {
-        if (IsFinished || !MoveGenerator.Legal(Board, Turn).Contains(move))
+        if (!State.AcceptsMoves || !MoveGenerator.Legal(Board, Turn).Contains(move))
             return false;
 
-        _snapshots.Add((Board, Status));
+        var piece = Board.At(move.From)!.Value;
         Board = Board.WithMove(move);
+        _positions.Add(Board);
         _history.Add(move);
         Status = GameRules.Evaluate(this);
+        Events.Publish(new PieceMoved(move, piece));
+        if (move.Promotion is PieceType promotedTo)
+            Events.Publish(new PromotionOccurred(move.To, promotedTo));
+        if (Status is GameStatus.Check or GameStatus.Checkmate)
+            Events.Publish(new CheckRaised(Turn));
+        if (Status == GameStatus.DrawByRepetition)
+            Events.Publish(new DrawByRepetition(GameRules.PositionKey(Board, Turn)));
+        if (Status == GameStatus.DrawByFiftyMove)
+            Events.Publish(new FiftyMoveDraw());
+        if (!State.AcceptsMoves)
+            Events.Publish(new GameEnded(Status));
         return true;
     }
 
@@ -67,30 +88,32 @@ public sealed class ChessGame
         if (ReferenceEquals(this, source))
             return;
 
-        InitialBoard = source.InitialBoard;
-        Board = source.Board;
-        Status = source.Status;
-        _history.Clear();
-        _history.AddRange(source._history);
-        _snapshots.Clear();
-        _snapshots.AddRange(source._snapshots);
+        Restore(source.CreateMemento());
     }
 
-    public bool Undo()
+    public GameMemento CreateMemento() => new(InitialBoard, Board, Status, History, _positions);
+
+    public void Restore(GameMemento memento)
     {
-        if (_history.Count == 0)
-            return false;
-
-        var previous = _snapshots[^1];
-        Board = previous.Board;
-        Status = previous.Status;
-        _snapshots.RemoveAt(_snapshots.Count - 1);
-        _history.RemoveAt(_history.Count - 1);
-        return true;
+        ArgumentNullException.ThrowIfNull(memento);
+        RestorePosition(memento);
+        Caretaker.Reset(memento);
     }
+
+    internal void RestorePosition(GameMemento memento)
+    {
+        InitialBoard = memento.InitialBoard;
+        Board = memento.Board;
+        Status = memento.Status;
+        _history.Clear();
+        _history.AddRange(memento.History);
+        _positions.Clear();
+        _positions.AddRange(memento.Positions);
+    }
+
+    public bool Undo() => Caretaker.Undo();
+    public bool Redo() => Caretaker.Redo();
 
     public IReadOnlyList<Move> LegalMoves() =>
-        IsFinished ? [] : MoveGenerator.Legal(Board, Turn);
-
-    private bool IsFinished => Status is not (GameStatus.Ongoing or GameStatus.Check);
+        State.AcceptsMoves ? MoveGenerator.Legal(Board, Turn) : [];
 }

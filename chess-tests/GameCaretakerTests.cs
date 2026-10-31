@@ -8,6 +8,22 @@ namespace Chess.Tests;
 public class GameCaretakerTests
 {
     [Test]
+    public void Direct_commands_and_facade_share_one_undo_redo_history()
+    {
+        var game = Create();
+        Assert.That(game.TryMove(Move("e2", "e4")), Is.True);
+        ICommand command = new PlayMoveCommand(game, Move("e7", "e5"));
+        Assert.That(command.Execute(), Is.True);
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.History, Is.Empty);
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(command.Undo(), Is.True);
+        Assert.That(game.History, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public void Empty_history_disables_undo_and_redo()
     {
         var caretaker = new GameCaretaker(Create());
@@ -21,8 +37,8 @@ public class GameCaretakerTests
     public void Commands_execute_once_in_order_and_undo_their_own_move()
     {
         var game = Create();
-        var first = new MoveCommand(game, Move("e2", "e4"));
-        var other = new MoveCommand(game, Move("d2", "d4"));
+        var first = new PlayMoveCommand(game, Move("e2", "e4"));
+        var other = new PlayMoveCommand(game, Move("d2", "d4"));
 
         Assert.That(first.Execute(), Is.True);
         Assert.That(first.Execute(), Is.False);

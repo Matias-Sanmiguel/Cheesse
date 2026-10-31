@@ -14,6 +14,12 @@ public sealed class FileSaveRepository : IGameRepository
     private const int SaveVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    // Save validation must not notify observers of reconstructed historical moves.
+    private sealed class ReplayEvents : IEventPublisher
+    {
+        public void Publish<T>(T domainEvent) { }
+    }
+
     public bool HasSave => FileAccess.FileExists(SavePath);
 
     // UI mode belongs to the adapter; the chess domain remains independent.
@@ -74,7 +80,7 @@ public sealed class FileSaveRepository : IGameRepository
                 return false;
 
             var history = SanNotation.FromPgn(data.Pgn, out var initialBoard);
-            var restored = new ChessGame(game.Events, game.Repository, game.Clock, initialBoard);
+            var restored = new ChessGame(new ReplayEvents(), game.Repository, game.Clock, initialBoard);
             foreach (var move in history)
             {
                 if (!restored.TryMove(move))

@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Godot,
-    [ValidateSet('MenuTests', 'SidePanelTests')]
+    [ValidateSet('MenuTests', 'SidePanelTests', 'MvpTests')]
     [string]$TestScene = 'MenuTests'
 )
 
@@ -26,19 +26,19 @@ $sandboxBin = Join-Path $sandboxPath '.godot/mono/temp/bin/Debug'
 Copy-Item -Path (Join-Path $binPath '*') -Destination $sandboxBin -Recurse -Force
 
 $config = [System.IO.File]::ReadAllText((Join-Path $gamePath 'project.godot'))
-$projectName = if ($TestScene -eq 'MenuTests') { 'Cheesse Menu Tests' } else { 'Cheesse SidePanel Tests' }
+$projectName = 'Cheesse ' + $TestScene.Replace('Tests', '') + ' Tests'
 $config = $config.Replace('config/name="Cheesse"', ('config/name="' + $projectName + '"'))
 $config = $config.Replace('run/main_scene="res://scenes/Main.tscn"', ('run/main_scene="res://tests/' + $TestScene + '.tscn"'))
 $config = $config.Replace('config/icon="res://icon.svg"', '')
 [System.IO.File]::WriteAllText((Join-Path $sandboxPath 'project.godot'), $config)
 
 # Import the SVG atlas using Godot's real resource pipeline.
-& $Godot --headless --editor --path $sandboxPath --import --quit
+& $Godot --headless --editor --path $sandboxPath --import
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $testOutput = & $Godot --headless --path $sandboxPath --quit-after 600
 $testExitCode = $LASTEXITCODE
 $testOutput | Write-Output
 if ($testExitCode -ne 0) { exit $testExitCode }
-if (-not ($testOutput -match '^PASS: (menu|sidepanel)')) { throw 'UI tests did not complete.' }
+if (-not ($testOutput -match '^PASS: (menu|sidepanel|mvp)')) { throw 'UI tests did not complete.' }
 exit 0
