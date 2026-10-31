@@ -11,3 +11,6 @@ export.cfg
 export_presets.cfg
 .mono/
 mono_crash.*.json
+
+superpowers/
+.superpowers/
