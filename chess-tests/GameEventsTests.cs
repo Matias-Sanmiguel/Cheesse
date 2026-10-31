@@ -54,7 +54,7 @@ public class GameEventsTests
     }
 
     [Test]
-    public void Promotion_publishes_move_then_promotion_then_check()
+    public void Promotion_publishes_move_then_check_then_promotion()
     {
         var events = new Recorder();
         var game = WithEvents(events, "7k/P7/8/8/8/8/8/7K w - - 0 1");
@@ -62,7 +62,7 @@ public class GameEventsTests
         Assert.That(game.TryMove(move), Is.True);
         Assert.That(events.Items, Is.EqualTo(new object[] {
             new PieceMoved(move, new Piece(PieceType.Pawn, PlayerColor.White)),
-            new PromotionOccurred(Square("a8"), PieceType.Queen), new CheckRaised(PlayerColor.Black) }));
+            new CheckRaised(PlayerColor.Black), new PromotionOccurred(Square("a8"), PieceType.Queen) }));
     }
 
     [Test]
@@ -71,7 +71,7 @@ public class GameEventsTests
         var events = new Recorder();
         var game = WithEvents(events, "7k/8/8/8/8/8/8/R6K w - - 99 50");
         Assert.That(game.TryMove(Move("a1", "a2")), Is.True);
-        Assert.That(events.Items.Skip(1), Is.EqualTo(new object[] { new FiftyMoveDraw(), new GameEnded(GameStatus.DrawByFiftyMove) }));
+        Assert.That(events.Items.Skip(1), Is.EqualTo(new object[] { new GameEnded(GameStatus.DrawByFiftyMove), new FiftyMoveDraw() }));
         events.Items.Clear();
         Assert.That(game.TryMove(Move("h8", "g8")), Is.False);
         Assert.That(events.Items, Is.Empty);
@@ -86,7 +86,7 @@ public class GameEventsTests
         events.Items.Clear();
         Play(game, "f6g8");
         Assert.That(events.Items.Skip(1), Is.EqualTo(new object[] {
-            new DrawByRepetition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"),
-            new GameEnded(GameStatus.DrawByRepetition) }));
+            new GameEnded(GameStatus.DrawByRepetition),
+            new DrawByRepetition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -") }));
     }
 }

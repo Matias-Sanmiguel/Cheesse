@@ -68,16 +68,16 @@ public sealed class ChessGame
         _history.Add(move);
         Status = GameRules.Evaluate(this);
         Events.Publish(new PieceMoved(move, piece));
-        if (move.Promotion is PieceType promotedTo)
-            Events.Publish(new PromotionOccurred(move.To, promotedTo));
         if (Status is GameStatus.Check or GameStatus.Checkmate)
             Events.Publish(new CheckRaised(Turn));
+        if (!State.AcceptsMoves)
+            Events.Publish(new GameEnded(Status));
         if (Status == GameStatus.DrawByRepetition)
             Events.Publish(new DrawByRepetition(GameRules.PositionKey(Board, Turn)));
         if (Status == GameStatus.DrawByFiftyMove)
             Events.Publish(new FiftyMoveDraw());
-        if (!State.AcceptsMoves)
-            Events.Publish(new GameEnded(Status));
+        if (move.Promotion is PieceType promotedTo)
+            Events.Publish(new PromotionOccurred(move.To, promotedTo));
         return true;
     }
 
