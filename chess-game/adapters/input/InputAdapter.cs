@@ -91,6 +91,10 @@ public partial class InputAdapter : Node
                 GetViewport().SetInputAsHandled();
                 return;
             }
+
+            ClearSelection();
+            GetViewport().SetInputAsHandled();
+            return;
         }
 
         _selected = _game.Board.At(square) is Piece piece &&piece.Color == _game.Turn ? square : null;

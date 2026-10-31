@@ -29,6 +29,11 @@ public partial class MvpTests : Node
             Check(root.CurrentGame!.History.Count == 0, "off-board click clears selection");
 
             root.StartHumanGame();
+            Click(root, "e2");
+            Click(root, "d2");
+            Click(root, "d4");
+            Check(root.CurrentGame!.History.Count == 0, "illegal destination clears selection even on another own piece");
+            root.StartHumanGame();
             Move(root, "e2", "e5");
             Check(root.CurrentGame!.History.Count == 0, "illegal mouse move preserves position");
             Move(root, "e2", "e4");
