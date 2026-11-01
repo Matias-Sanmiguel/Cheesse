@@ -65,6 +65,10 @@ public partial class PersistenceTests : Node
 
     private void RunCases(FileSaveRepository repository)
     {
+        Claimed_draw_results_roundtrip(repository);
+        Invalid_positions_in_edited_saves_are_rejected(repository);
+        Clock_and_outcome_survive_save_and_restart(repository);
+        Text_import_and_export_preserve_results(repository);
         Loading_does_not_publish_historical_events(repository);
         MissingSaveKeepsOpenGame(repository);
         RoundTrip(repository, FenSerializer.InitialPosition);
@@ -89,6 +93,84 @@ public partial class PersistenceTests : Node
         SaveFailureKeepsPreviousFile(repository);
         Check(!DirAccess.GetFilesAt("user://").Any(name =>
             name.StartsWith("cheesse-save.txt.") && name.EndsWith(".tmp")), "temporary files cleaned");
+    }
+
+    private void Claimed_draw_results_roundtrip(FileSaveRepository repository)
+    {
+        foreach (var announced in new[] { false, true })
+        {
+            var source = Create(repository, "7k/8/8/8/8/8/8/R6K w - - 99 50");
+            var move = new Move(new Square(0, 0), new Square(0, 1));
+            if (!announced) Check(source.TryMove(move), "fifty-move threshold reached");
+            Check(source.ClaimDraw(source.Turn, announced ? move : null), "draw claimed now or by announced move");
+            repository.Save(source);
+            var target = Create(repository);
+            Check(repository.Load(target), "claimed draw save loads");
+            Check(target.Status == GameStatus.DrawByFiftyMove && target.Winner is null && target.History.Count == source.History.Count, "claimed result and unplayed announced move preserved");
+        }
+    }
+
+    private void Invalid_positions_in_edited_saves_are_rejected(FileSaveRepository repository)
+    {
+        var source = Create(repository);
+        repository.Save(source);
+        string valid;
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read)) valid = file.GetAsText();
+        var corrupt = JsonNode.Parse(valid)!;
+        const string fen = "4k3/8/8/8/8/8/8/K3K3 w - - 0 1";
+        corrupt["Fen"] = fen;
+        corrupt["Pgn"] = "[SetUp \"1\"] [FEN \"" + fen + "\"] [Result \"*\"] *";
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write)) file.StoreString(corrupt.ToJsonString());
+        Check(!repository.Load(source), "edited save with duplicate kings is rejected");
+    }
+
+    private void Clock_and_outcome_survive_save_and_restart(FileSaveRepository repository)
+    {
+        var clock = new MutableClock();
+        var source = new ChessGame(new Events(), repository, clock);
+        source.ConfigureClock(new TimeControl(300, 3));
+        clock.Seconds = 10;
+        Play(source, "e2e4");
+        clock.Seconds = 15;
+        source.Tick();
+        source.PauseClock();
+        repository.AgainstStockfish = true;
+        repository.EngineElo = 2200;
+        repository.Save(source);
+        var target = new ChessGame(new Events(), repository, new MutableClock { Seconds = 10000 });
+        Check(repository.Load(target), "timed game loads");
+        Check(target.TimeControl == new TimeControl(300, 3), "time control restored");
+        Check(Math.Abs(target.ClockState.WhiteSeconds - 293) < 0.01 && Math.Abs(target.ClockState.BlackSeconds - 295) < 0.01, "remaining clocks restored without offline time");
+        Check(repository.AgainstStockfish && repository.EngineElo == 2200, "Stockfish settings restored");
+        Check(target.ClockHistory.Count == target.History.Count + 1, "clock history restored");
+        Check(target.Resign(PlayerColor.Black), "black can resign");
+        repository.Save(target);
+        Check(repository.Load(source), "finished timed game loads");
+        Check(source.Status == GameStatus.Resigned && source.Winner == PlayerColor.White, "resignation and winner restored");
+        Check(!source.ClockState.Running, "finished clock stays paused");
+        repository.AgainstStockfish = false;
+        repository.EngineElo = 1800;
+    }
+
+    private void Text_import_and_export_preserve_results(FileSaveRepository repository)
+    {
+        var ports = Create(repository);
+        var imported = GameTextFiles.Import("[Result \"1-0\"]\n\n1. e4 e5 1-0", ".pgn", ports.Events, repository, ports.Clock);
+        Check(imported.Status == GameStatus.Resigned && imported.Winner == PlayerColor.White, "PGN resignation imported");
+        Check(GameTextFiles.Export(imported, ".pgn").Contains("1-0"), "PGN result exported");
+        var fen = GameTextFiles.Export(imported, ".fen");
+        var position = GameTextFiles.Import(fen, ".fen", ports.Events, repository, ports.Clock);
+        Check(position.History.Count == 0 && FenSerializer.Write(position.Board) == fen.Trim(), "FEN position roundtrips");
+        var invalid = false;
+        try { GameTextFiles.Import("8/8/8/8/8/8/8/8 w - - 0 1", ".fen", ports.Events, repository, ports.Clock); }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or FormatException) { invalid = true; }
+        Check(invalid, "invalid FEN kings rejected");
+    }
+
+    private sealed class MutableClock : IClock
+    {
+        public double Seconds { get; set; }
+        public double ElapsedSeconds => Seconds;
     }
 
     private void Loading_does_not_publish_historical_events(FileSaveRepository repository)
@@ -165,7 +247,8 @@ public partial class PersistenceTests : Node
         var target = Create(repository);
         Check(repository.Load(target), "load before repetition");
         Play(target, "g1f3", "g8f6", "f3g1", "f6g8");
-        Check(target.Status == GameStatus.DrawByRepetition, "repetition counts survive Load");
+        Check(target.CanClaimDraw && target.ClaimDraw(target.Turn), "repetition counts survive Load");
+        Check(target.Status == GameStatus.DrawByRepetition, "repetition claim closes loaded game");
         Check(target.Undo() && target.Status == GameStatus.Ongoing, "Undo reopens loaded repetition");
     }
 
@@ -183,7 +266,7 @@ public partial class PersistenceTests : Node
         var invalidFiles = new List<string> { "", "{", "null", "{}", "[]" };
         foreach (var (field, value) in new[]
         {
-            ("Version", (JsonNode)JsonValue.Create(2)!),
+            ("Version", (JsonNode)JsonValue.Create(99)!),
             ("Fen", (JsonNode)JsonValue.Create(FenSerializer.InitialPosition)!),
             ("Fen", (JsonNode)JsonValue.Create("invalid FEN")!),
             ("Pgn", (JsonNode)JsonValue.Create("1. e5 *")!),

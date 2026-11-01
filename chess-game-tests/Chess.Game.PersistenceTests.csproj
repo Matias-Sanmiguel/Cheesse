@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\chess-core\Chess.Core.csproj" />
+    <Compile Include="../chess-game/adapters/persist/GameTextFiles.cs" Link="GameTextFiles.cs" />
     <Compile Include="..\chess-game\adapters\persist\FileSaveRepository.cs" Link="FileSaveRepository.cs" />
   </ItemGroup>
 </Project>

@@ -31,16 +31,16 @@ theme_override_constants/margin_bottom = 24
 
 [node name="Content" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 20
 text = "Cheesse"
 
 [node name="Turn" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "Turno: blancas"
 
 [node name="Status" type="Label" parent="Margin/Content"]
@@ -48,6 +48,22 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "En juego"
 autowrap_mode = 2
+
+[node name="Clocks" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="White" type="Label" parent="Margin/Content/Clocks"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "Blancas  Sin reloj"
+
+[node name="Black" type="Label" parent="Margin/Content/Clocks"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "Negras  Sin reloj"
 
 [node name="Separator" type="HSeparator" parent="Margin/Content"]
 layout_mode = 2
@@ -57,14 +73,14 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Undo" type="Button" parent="Margin/Content/History"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
 text = "Deshacer"
 
 [node name="Redo" type="Button" parent="Margin/Content/History"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
@@ -75,45 +91,98 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Save" type="Button" parent="Margin/Content/Files"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Guardar"
 
 [node name="Load" type="Button" parent="Margin/Content/Files"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
 text = "Cargar"
 
+[node name="TextFiles" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Import" type="Button" parent="Margin/Content/TextFiles"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Importar FEN / PGN"
+
+[node name="Export" type="Button" parent="Margin/Content/TextFiles"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Exportar FEN / PGN"
+
+[node name="EndActions" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Resign" type="Button" parent="Margin/Content/EndActions"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Abandonar"
+
+[node name="Draw" type="Button" parent="Margin/Content/EndActions"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ofrecer tablas"
+
+[node name="Decline" type="Button" parent="Margin/Content/EndActions"]
+visible = false
+layout_mode = 2
+text = "Rechazar"
+
+[node name="Claim" type="Button" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+text = "Reclamar tablas"
+
 [node name="NewGame" type="Button" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "Nueva partida"
 
 [node name="Random" type="CheckButton" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 36)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
-text = "Negras aleatorias"
+text = "Negras con Stockfish"
 
-[node name="Spacer" type="Control" parent="Margin/Content"]
+[node name="Difficulty" type="OptionButton" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+tooltip_text = "Nivel de Stockfish; cambiarlo cancela la búsqueda en curso."
+
+[node name="MovesTitle" type="Label" parent="Margin/Content"]
+layout_mode = 2
+text = "Jugadas"
+
+[node name="Moves" type="RichTextLabel" parent="Margin/Content"]
+custom_minimum_size = Vector2(0, 110)
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 2
+scroll_following = true
+selection_enabled = true
 
 [node name="Message" type="Label" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 autowrap_mode = 2
 
 [node name="Menu" type="Button" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "Menú principal"
 
 [node name="Help" type="Label" parent="Margin/Content"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Elegí una pieza y una casilla de destino.\nGuardá antes de salir al menú."
+text = "Ctrl+Z: deshacer. Guardá antes de salir."
 autowrap_mode = 2

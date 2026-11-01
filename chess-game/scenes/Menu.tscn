@@ -82,6 +82,24 @@ custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 mouse_filter = 2
 
+[node name="TimeLabel" type="Label" parent="Center/Panel/Margin/Options"]
+layout_mode = 2
+text = "Tiempo por jugador + incremento por jugada"
+
+[node name="TimeControl" type="OptionButton" parent="Center/Panel/Margin/Options"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+tooltip_text = "El incremento se suma después de cada jugada legal."
+
+[node name="DifficultyLabel" type="Label" parent="Center/Panel/Margin/Options"]
+layout_mode = 2
+text = "Nivel de Stockfish"
+
+[node name="Difficulty" type="OptionButton" parent="Center/Panel/Margin/Options"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+tooltip_text = "Fuerza aproximada del motor. Máximo usa toda su fuerza."
+
 [node name="Human" type="Button" parent="Center/Panel/Margin/Options"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
@@ -93,7 +111,7 @@ text = "Nueva partida contra humano"
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Nueva partida contra el aleatorio"
+text = "Jugar contra Stockfish"
 
 [node name="Continue" type="Button" parent="Center/Panel/Margin/Options"]
 custom_minimum_size = Vector2(0, 56)

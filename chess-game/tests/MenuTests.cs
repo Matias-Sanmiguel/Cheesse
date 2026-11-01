@@ -60,7 +60,7 @@ public partial class MenuTests : Node
             Check(random.History.Count == 1, "white can move against random");
             Move(root, "e7", "e5");
             Check(random.History.Count == 1, "human cannot move the random opponent");
-            await Frames();
+            await WaitFor(() => random.History.Count == 2);
             Check(random.History.Count == 2 && random.Turn == PlayerColor.White, "random replies with one legal black move");
             Press(root, "SidePanel/Margin/Content/Files/Save");
             var expectedFen = FenSerializer.Write(random.Board);
@@ -70,7 +70,7 @@ public partial class MenuTests : Node
                 saved = file.GetAsText();
 
             Press(root, "SidePanel/Margin/Content/Menu");
-            await Frames();
+            await WaitFor(() => random.History.Count == 2);
             Check(random.History.Count == 2, "AI pauses in menu");
             Press(root, Options + "Continue");
             Check(root.CurrentGame is not null && !ReferenceEquals(root.CurrentGame, random), "Continue reconstructs save");
@@ -91,6 +91,8 @@ public partial class MenuTests : Node
             // Existing saves predate the optional opponent metadata and open in human mode.
             var legacy = JsonNode.Parse(saved)!;
             legacy.AsObject().Remove("AgainstRandom");
+            legacy.AsObject().Remove("AgainstStockfish");
+            legacy["Version"] = 1;
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString(legacy.ToJsonString());
             root.Free();
@@ -120,6 +122,16 @@ public partial class MenuTests : Node
         {
             GD.PushError(error.ToString());
             GetTree().Quit(1);
+        }
+    }
+
+    private async Task WaitFor(Func<bool> condition)
+    {
+        var deadline = Time.GetTicksMsec() + 15000;
+        while (!condition())
+        {
+            if (Time.GetTicksMsec() > deadline) throw new TimeoutException("Stockfish did not reply.");
+            await Frames();
         }
     }
 

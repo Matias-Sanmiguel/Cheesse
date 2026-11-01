@@ -72,10 +72,15 @@ public static class SanNotation
     public static string ToPgn(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        return ToPgn(game.History, game.InitialBoard);
+        return WritePgn(game.History, game.InitialBoard, game.Winner is PlayerColor winner
+            ? winner == PlayerColor.White ? "1-0" : "0-1"
+            : game.State.AcceptsMoves ? "*" : "1/2-1/2");
     }
 
     public static string ToPgn(IReadOnlyList<Move> history, Board initialBoard)
+        => WritePgn(history, initialBoard, null);
+
+    private static string WritePgn(IReadOnlyList<Move> history, Board initialBoard, string? outcome)
     {
         ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(initialBoard);
@@ -100,7 +105,7 @@ public static class SanNotation
             status = GameRules.Evaluate(board, board.Turn, positions);
         }
 
-        var result = Result(status, board.Turn);
+        var result = outcome ?? Result(status, board.Turn);
         tokens.Add(result);
         var pgn = new StringBuilder();
         pgn.Append("[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n");
@@ -140,7 +145,10 @@ public static class SanNotation
     }
 
     // Imports the main line. Comments, annotations and variations are not history moves.
-    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard)
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard) =>
+        FromPgn(pgn, out initialBoard, out _);
+
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard, out string result)
     {
         ArgumentNullException.ThrowIfNull(pgn);
         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -200,6 +208,10 @@ public static class SanNotation
             (tags.TryGetValue("Result", out var declaredResult) && declaredResult != termination))
             throw new FormatException("Missing or inconsistent PGN result.");
 
+        var naturalResult = Result(GameRules.Evaluate(board, board.Turn, positions), board.Turn);
+        if (naturalResult != "*" && termination != naturalResult)
+            throw new FormatException("PGN result conflicts with the final position.");
+        result = termination;
         return history.AsReadOnly();
     }
 
@@ -262,7 +274,9 @@ public static class SanNotation
     {
         GameStatus.Checkmate => turn == PlayerColor.White ? "0-1" : "1-0",
         GameStatus.Stalemate or GameStatus.DrawByFiftyMove or
-            GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial => "1/2-1/2",
+            GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial or
+            GameStatus.DrawByFivefoldRepetition or GameStatus.DrawBySeventyFiveMove or
+            GameStatus.DrawByAgreement or GameStatus.DrawByTimeout or GameStatus.DrawByResignation => "1/2-1/2",
         _ => "*",
     };
 }

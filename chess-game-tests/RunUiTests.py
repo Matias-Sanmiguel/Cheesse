@@ -1,5 +1,7 @@
 """Run production Godot UI scenes with isolated saves (Python 3 + Godot .NET)."""
 import argparse
+import os
+import sys
 import shutil
 import subprocess
 from pathlib import Path
@@ -8,7 +10,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default="godot-mono")
-    parser.add_argument("--scene", choices=["MenuTests", "SidePanelTests", "MvpTests"], default="MvpTests")
+    parser.add_argument("--scene", choices=["MenuTests", "SidePanelTests", "MvpTests", "ReleaseTests"], default="MvpTests")
     args = parser.parse_args()
     tests = Path(__file__).resolve().parent
     game = tests.parent / "chess-game"
@@ -24,12 +26,14 @@ def main():
     config = config.replace('config/icon="res://icon.svg"', '')
     (sandbox / "project.godot").write_text(config)
     subprocess.run([args.godot, "--headless", "--path", str(sandbox), "--import"], check=True, timeout=120)
-    result = subprocess.run([args.godot, "--headless", "--path", str(sandbox), "--quit-after", "600"],
-                            capture_output=True, text=True, timeout=120)
+    environment = os.environ.copy()
+    environment.setdefault("CHEESSE_STOCKFISH_PATH", str(game / "engines" / ("stockfish.exe" if sys.platform == "win32" else "stockfish")))
+    result = subprocess.run([args.godot, "--headless", "--path", str(sandbox), "--quit-after", "3600", "--max-fps", "60"],
+                            capture_output=True, text=True, timeout=120, env=environment)
     print(result.stdout, end="")
     print(result.stderr, end="")
     result.check_returncode()
-    expected = {"MenuTests": "menu", "SidePanelTests": "sidepanel", "MvpTests": "mvp"}[args.scene]
+    expected = {"MenuTests": "menu", "SidePanelTests": "sidepanel", "MvpTests": "mvp", "ReleaseTests": "release"}[args.scene]
     if f"PASS: {expected}," not in result.stdout:
         raise RuntimeError("UI test scene did not finish")
 

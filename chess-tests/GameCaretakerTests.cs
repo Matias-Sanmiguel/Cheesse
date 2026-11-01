@@ -136,6 +136,7 @@ public class GameCaretakerTests
         var game = Create();
         for (var cycle = 0; cycle < 2; cycle++)
             Play(game, "g1f3", "g8f6", "f3g1", "f6g8");
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         var caretaker = new GameCaretaker(game);
         Assert.That(caretaker.Undo(), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));

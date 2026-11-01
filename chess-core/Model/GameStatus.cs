@@ -9,4 +9,11 @@ public enum GameStatus
     DrawByFiftyMove,
     DrawByRepetition,
     DrawByInsufficientMaterial,
+    DrawByFivefoldRepetition,
+    DrawBySeventyFiveMove,
+    DrawByAgreement,
+    Resigned,
+    Timeout,
+    DrawByTimeout,
+    DrawByResignation,
 }

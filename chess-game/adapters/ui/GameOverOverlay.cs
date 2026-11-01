@@ -30,23 +30,8 @@ public partial class GameOverOverlay : CanvasLayer
 	{
 		if (game.Status is GameStatus.Ongoing or GameStatus.Check) return;
 
-		if (game.Status == GameStatus.Checkmate)
-		{
-			_title.Text = game.Turn == PlayerColor.White ? "BLACK WINS" : "WHITE WINS";
-			_reason.Text = "CHECKMATE";
-		}
-		else
-		{
-			_title.Text = "DRAW";
-			_reason.Text = game.Status switch
-			{
-				GameStatus.Stalemate => "STALEMATE",
-				GameStatus.DrawByFiftyMove => "FIFTY-MOVE RULE",
-				GameStatus.DrawByRepetition => "THREEFOLD REPETITION",
-				GameStatus.DrawByInsufficientMaterial => "INSUFFICIENT MATERIAL",
-				_ => "DRAW"
-			};
-		}
+        _title.Text = game.Winner == PlayerColor.White ? "WHITE WINS" : game.Winner == PlayerColor.Black ? "BLACK WINS" : "DRAW";
+        _reason.Text = SidePanelView.StatusText(game.Status);
 
 		Show();
 	}
