@@ -5,6 +5,7 @@ using Chess.Core.Ports;
 using Chess.Core.Services;
 using Godot;
 using FileAccess = Godot.FileAccess;
+using Cheesse.Game.Adapters.Appearance;
 
 namespace Cheesse.Game.Adapters.Persist;
 
@@ -24,11 +25,18 @@ public sealed class FileSaveRepository : IGameRepository
 
     // UI mode belongs to the adapter; the chess domain remains independent.
     public bool AgainstRandom { get; set; }
-
+    public VisualTheme Theme { get; set; } =
+    VisualTheme.Classic;
     public void Save(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game), AgainstRandom);
+        var data = new SaveData(
+            SaveVersion,
+            FenSerializer.Write(game.Board),
+            SanNotation.ToPgn(game),
+            AgainstRandom,
+            Theme
+        );
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -94,6 +102,8 @@ public sealed class FileSaveRepository : IGameRepository
 
             game.RestoreFrom(restored);
             AgainstRandom = data.AgainstRandom;
+            Theme = VisualThemeCatalog.Normalize(data.Theme);
+
             return true;
         }
         catch (Exception error) when (error is JsonException or FormatException or
@@ -104,5 +114,11 @@ public sealed class FileSaveRepository : IGameRepository
         }
     }
 
-    private sealed record SaveData(int Version, string? Fen, string? Pgn, bool AgainstRandom = false);
+    private sealed record SaveData(
+        int Version,
+        string? Fen,
+        string? Pgn,
+        bool AgainstRandom = false,
+        VisualTheme? Theme = null
+    );
 }
