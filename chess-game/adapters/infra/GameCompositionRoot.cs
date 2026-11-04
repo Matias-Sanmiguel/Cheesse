@@ -264,6 +264,6 @@ public partial class GameCompositionRoot : Node
                 return;
         }
 
-        _gameOver.ShowResult(game);
+        _gameOver.ShowResult(game, _ingame.TotalElapsedSeconds);
     }
 }
