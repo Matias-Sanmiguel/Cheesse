@@ -6,12 +6,13 @@ namespace Cheesse.Game.Adapters.Ui;
 /// Shared presentation primitives for pixel-art UI. No game logic belongs here.
 /// All textures are taken from the original 48px / UI asset pack and filtered with Nearest.
 /// </summary>
+internal enum UiFontWeight { Regular, Medium, SemiBold, Bold }
+
 internal static class PixelUiSkin
 {
     private const string Ui = "res://assets/ui/";
-    private const string LocalFont = Ui + "fonts/Pixeboy-z8XGD.ttf";
     private static readonly Dictionary<string, Texture2D> Textures = new();
-    private static Font? _font;
+    private static readonly Dictionary<UiFontWeight, Font> Fonts = new();
 
     public static readonly Color Ink = new("39251d");
     public static readonly Color Cream = new("ffedca");
@@ -33,12 +34,21 @@ internal static class PixelUiSkin
         return Textures[key] = ImageTexture.CreateFromImage(image);
     }
 
-    public static Font? Pixeboy()
+    /// <summary>Load the four project-bundled OFL Pixelify Sans weights once.</summary>
+    public static Font? FontFor(UiFontWeight weight)
     {
-        // Available when the supplied font has been installed into the local project.
-        if (_font is not null) return _font;
-        if (!ResourceLoader.Exists(LocalFont)) return null;
-        return _font = GD.Load<Font>(LocalFont);
+        if (Fonts.TryGetValue(weight, out var cached))
+            return cached;
+
+        string path = Ui + "fonts/PixelifySans-" + weight + ".ttf";
+        if (!ResourceLoader.Exists(path))
+            return null;
+
+        var font = GD.Load<Font>(path);
+        if (font is not null)
+            Fonts[weight] = font;
+
+        return font;
     }
 
     public static StyleBoxTexture NineSlice(string path, int sourceMargin = 8, int scale = 2)
@@ -69,7 +79,8 @@ internal static class PixelUiSkin
     }
 
     public static Label Label(string name, string text, Vector2 position, Vector2 size, int fontSize = 22,
-        bool pixel = false, bool light = false, HorizontalAlignment alignment = HorizontalAlignment.Left)
+        bool pixel = false, bool light = false, HorizontalAlignment alignment = HorizontalAlignment.Left,
+        UiFontWeight? weight = null)
     {
         var label = new Label
         {
@@ -82,15 +93,25 @@ internal static class PixelUiSkin
             MouseFilter = Control.MouseFilterEnum.Ignore,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
         };
-        StyleLabel(label, fontSize, light ? Cream : Ink, pixel);
+        StyleLabel(label, fontSize, light ? Cream : Ink, pixel, weight);
         return label;
     }
 
-    public static void StyleLabel(Label label, int fontSize, Color color, bool pixel = false)
+    /// <summary>
+    /// Bold for display headings, SemiBold for small headings, Medium for body
+    /// headings, and Regular for descriptions. Use explicit weight for form labels.
+    /// </summary>
+    public static void StyleLabel(Label label, int fontSize, Color color, bool pixel = false,
+        UiFontWeight? weight = null)
     {
         label.AddThemeFontSizeOverride("font_size", fontSize);
         label.AddThemeColorOverride("font_color", color);
-        if (pixel && Pixeboy() is { } font)
+
+        UiFontWeight selected = weight ?? (pixel
+            ? (fontSize >= 30 ? UiFontWeight.Bold : UiFontWeight.SemiBold)
+            : (fontSize >= 21 ? UiFontWeight.Medium : UiFontWeight.Regular));
+
+        if (FontFor(selected) is { } font)
             label.AddThemeFontOverride("font", font);
     }
 
@@ -130,13 +151,18 @@ internal static class PixelUiSkin
         foreach (var color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
             button.AddThemeColorOverride(color, Ink);
         button.AddThemeColorOverride("font_disabled_color", new Color("786a5c"));
-        if (Pixeboy() is { } font) button.AddThemeFontOverride("font", font);
+        // Large navigation CTAs get Bold; normal controls use SemiBold.
+        var weight = fontSize >= 38 ? UiFontWeight.Bold : UiFontWeight.SemiBold;
+        if (FontFor(weight) is { } font)
+            button.AddThemeFontOverride("font", font);
         button.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
     }
 
     public static void StyleOption(OptionButton select, int fontSize = 24)
     {
         StyleButton(select, fontSize, "medium");
+        if (FontFor(UiFontWeight.Medium) is { } selectFont)
+            select.AddThemeFontOverride("font", selectFont);
         select.AddThemeColorOverride("font_color", Ink);
         // Popup colors use an opaque texture-backed panel to remain readable on wood.
         var popup = select.GetPopup();
@@ -144,7 +170,8 @@ internal static class PixelUiSkin
         popup.AddThemeColorOverride("font_color", Ink);
         popup.AddThemeColorOverride("font_hover_color", Burgundy);
         popup.AddThemeFontSizeOverride("font_size", 22);
-        if (Pixeboy() is { } font) popup.AddThemeFontOverride("font", font);
+        if (FontFor(UiFontWeight.Medium) is { } popupFont)
+            popup.AddThemeFontOverride("font", popupFont);
     }
 
     public static TextureRect Image(string name, string path, Vector2 position, Vector2 size, int sourceScale = 1)
@@ -227,6 +254,8 @@ internal static class PixelUiSkin
         foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color" })
             opponent.AddThemeColorOverride(key, Ink);
         opponent.AddThemeFontSizeOverride("font_size", 19);
+        if (FontFor(UiFontWeight.Medium) is { } opponentFont)
+            opponent.AddThemeFontOverride("font", opponentFont);
         opponent.AddThemeIconOverride("checked", Texture("controls/toggle_on.png", 2));
         opponent.AddThemeIconOverride("unchecked", Texture("controls/toggle_off.png", 2));
 
