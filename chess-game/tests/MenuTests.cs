@@ -165,6 +165,22 @@ public partial class MenuTests : Node
                   setupOptions.HasNode("PicadaStyle") &&
                   !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
                 "setup retains its original previews and uses two real style selection cards");
+            Check(setupOptions.GetNode<Label>("Note").Position.Y == 424 &&
+                  setupOptions.GetNode<Button>("Human").Position.Y == 474 &&
+                  setupOptions.GetNode<Button>("Random").Position.Y == 530 &&
+                  setupOptions.GetNode<Button>("Continue").Position.Y == 586 &&
+                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 40,
+                "setup note and action buttons have ample bottom padding");
+            foreach (var action in new[] { "Human", "Random", "Continue" })
+            {
+                var actionButton = setupOptions.GetNode<Button>(action);
+                var actionIcon = actionButton.GetNode<TextureRect>("ActionIcon");
+                Check(actionButton.Icon is null && actionIcon.Texture is not null &&
+                      actionIcon.Position.IsEqualApprox(new Vector2(18, 8)) &&
+                      actionIcon.Size.IsEqualApprox(new Vector2(32, 32)) &&
+                      actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
+                    action + " icon fits inside its 48px button without blocking input");
+            }
             Press(root, Setup + "ClassicStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
                   !root.GetNode<Control>(Setup + "ThemeFields").Visible &&
