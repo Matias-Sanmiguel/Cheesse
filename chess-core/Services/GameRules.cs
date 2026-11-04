@@ -8,15 +8,21 @@ public static class GameRules
     public static GameStatus Evaluate(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        return Evaluate(game.Board, game.Turn, game.Positions);
+        return Evaluate(game.Board, game.Turn, game.Positions, game.Mode);
     }
 
     public static GameStatus Evaluate(Board board, PlayerColor side) =>
-        Evaluate(board, side, null);
+        Evaluate(board, side, null, GameMode.Classic);
 
-    internal static GameStatus Evaluate(Board board, PlayerColor side, IEnumerable<Board>? positions)
+    internal static GameStatus Evaluate(Board board, PlayerColor side, IEnumerable<Board>? positions,
+        GameMode mode = GameMode.Classic)
     {
         ArgumentNullException.ThrowIfNull(board);
+        var modeRules = GameModeRuleCatalog.For(mode);
+        var lastMover = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+        if (modeRules.SpecialOutcome(board, lastMover) is { } victory)
+            return victory;
+
         var inCheck = CheckDetector.IsInCheck(board, side);
         var legalMoves = MoveGenerator.Legal(board, side);
 
@@ -24,7 +30,7 @@ public static class GameRules
         if (legalMoves.Count == 0)
             return inCheck ? GameStatus.Checkmate : GameStatus.Stalemate;
 
-        if (HasInsufficientMaterial(board))
+        if (modeRules.InsufficientMaterialIsDraw && HasInsufficientMaterial(board))
             return GameStatus.DrawByInsufficientMaterial;
 
         // CORE-F5 closes these draws without a separate claim interaction.

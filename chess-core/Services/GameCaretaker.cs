@@ -58,7 +58,8 @@ public sealed class GameCaretaker
             var board = memento.Positions[ply];
             var positions = memento.Positions.Take(ply + 1).ToArray();
             var before = new GameMemento(memento.InitialBoard, board,
-                GameRules.Evaluate(board, board.Turn, positions), memento.History.Take(ply), positions);
+                GameRules.Evaluate(board, board.Turn, positions, memento.Mode),
+                memento.History.Take(ply), positions, memento.Mode);
             _undo.Push(new PlayMoveCommand(_game, memento.History[ply], before, memento.Positions[ply + 1]));
         }
     }

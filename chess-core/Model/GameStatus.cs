@@ -5,6 +5,7 @@ public enum GameStatus
     Ongoing,
     Check,
     Checkmate,
+    PicadaVictory,
     Stalemate,
     DrawByFiftyMove,
     DrawByRepetition,

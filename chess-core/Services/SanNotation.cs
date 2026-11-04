@@ -72,16 +72,17 @@ public static class SanNotation
     public static string ToPgn(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        return ToPgn(game.History, game.InitialBoard);
+        return ToPgn(game.History, game.InitialBoard, game.Mode);
     }
 
-    public static string ToPgn(IReadOnlyList<Move> history, Board initialBoard)
+    public static string ToPgn(IReadOnlyList<Move> history, Board initialBoard,
+        GameMode mode = GameMode.Classic)
     {
         ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(initialBoard);
         var board = initialBoard;
         var positions = new List<Board> { board };
-        var status = GameRules.Evaluate(board, board.Turn, positions);
+        var status = GameRules.Evaluate(board, board.Turn, positions, mode);
         var tokens = new List<string>();
 
         foreach (var move in history)
@@ -97,7 +98,7 @@ public static class SanNotation
             tokens.Add(ToSan(board, move));
             board = board.WithMove(move);
             positions.Add(board);
-            status = GameRules.Evaluate(board, board.Turn, positions);
+            status = GameRules.Evaluate(board, board.Turn, positions, mode);
         }
 
         var result = Result(status, board.Turn);
@@ -106,6 +107,8 @@ public static class SanNotation
         pgn.Append("[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n");
         pgn.Append("[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n");
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
+        if (mode == GameMode.ReyDeLaPicada)
+            pgn.Append("[Variant \"Rey de la Picada\"]\n");
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -140,7 +143,8 @@ public static class SanNotation
     }
 
     // Imports the main line. Comments, annotations and variations are not history moves.
-    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard)
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard,
+        GameMode mode = GameMode.Classic)
     {
         ArgumentNullException.ThrowIfNull(pgn);
         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -153,6 +157,10 @@ public static class SanNotation
                 throw new FormatException("Invalid or duplicate PGN tag.");
             remaining = remaining[tag.Length..];
         }
+
+        if (tags.TryGetValue("Variant", out var variant) &&
+            (mode != GameMode.ReyDeLaPicada || variant != "Rey de la Picada"))
+            throw new FormatException("PGN variant does not match the game mode.");
 
         if (tags.TryGetValue("SetUp", out var setup) && setup is not ("0" or "1"))
             throw new FormatException("Invalid PGN SetUp tag.");
@@ -182,7 +190,7 @@ public static class SanNotation
                 continue;
             }
 
-            if (GameRules.Evaluate(board, board.Turn, positions) is not (GameStatus.Ongoing or GameStatus.Check))
+            if (GameRules.Evaluate(board, board.Turn, positions, mode) is not (GameStatus.Ongoing or GameStatus.Check))
                 throw new FormatException("PGN continues after the game has ended.");
 
             var legalMoves = MoveGenerator.Legal(board, board.Turn);
@@ -260,7 +268,8 @@ public static class SanNotation
 
     private static string Result(GameStatus status, PlayerColor turn) => status switch
     {
-        GameStatus.Checkmate => turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.Checkmate or GameStatus.PicadaVictory =>
+            turn == PlayerColor.White ? "0-1" : "1-0",
         GameStatus.Stalemate or GameStatus.DrawByFiftyMove or
             GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial => "1/2-1/2",
         _ => "*",

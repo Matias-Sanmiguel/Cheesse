@@ -15,17 +15,25 @@ public sealed class ChessGame
     {
     }
 
-    public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock, Board initialBoard)
+    public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock, GameMode mode)
+        : this(events, repository, clock, FenSerializer.Load(FenSerializer.InitialPosition), mode)
+    {
+    }
+
+    public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock,
+        Board initialBoard, GameMode mode = GameMode.Classic)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(initialBoard);
+        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
 
         Events = events;
         Repository = repository;
         Clock = clock;
         InitialBoard = initialBoard;
+        Mode = mode;
         Board = initialBoard;
         History = _history.AsReadOnly();
         _positions.Add(initialBoard);
@@ -44,6 +52,8 @@ public sealed class ChessGame
     public Board Board { get; private set; }
 
     public PlayerColor Turn => Board.Turn;
+
+    public GameMode Mode { get; private set; }
 
     public GameStatus Status { get; private set; }
 
@@ -91,7 +101,7 @@ public sealed class ChessGame
         Restore(source.CreateMemento());
     }
 
-    public GameMemento CreateMemento() => new(InitialBoard, Board, Status, History, _positions);
+    public GameMemento CreateMemento() => new(InitialBoard, Board, Status, History, _positions, Mode);
 
     public void Restore(GameMemento memento)
     {
@@ -103,6 +113,7 @@ public sealed class ChessGame
     internal void RestorePosition(GameMemento memento)
     {
         InitialBoard = memento.InitialBoard;
+        Mode = memento.Mode;
         Board = memento.Board;
         Status = memento.Status;
         _history.Clear();
