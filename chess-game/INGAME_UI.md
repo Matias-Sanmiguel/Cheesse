@@ -44,6 +44,7 @@ Button styles use **Godot `StyleBoxTexture`**, original 48x32 PNG, *left/right 1
 - **Never** use independently stretched X/Y dimensions for decorations or icons.
 - Native-size or exact integer-scaled `TextureRect` is preferred; when width must grow, use `NinePatchRect`/`StyleBoxTexture` so the frame corners and icon region are preserved.
 - `SidePanelTests` now checks original sizes for cards, team icons, bars and coordinate badges, badge alignment, and both per-color counters advancing after a move.
+- Two derived card textures (`player_card_black_aligned_128x66.png` and `player_card_white_aligned_128x66.png`) move the **built-in 37x36 icon well by +4px**, exactly matching each 32x32 icon's new position. The original supplied card PNGs remain unchanged for reference. No frames, glyphs, or board sprites are rescaled.
 - `BoardView.cs`, `Board.tscn` and all chess resources remain untouched.
 
 ## Validation before merging PR

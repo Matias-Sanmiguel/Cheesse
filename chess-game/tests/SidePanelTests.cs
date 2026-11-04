@@ -85,8 +85,13 @@ public partial class SidePanelTests : Node
                 var timer = root.GetNode<Label>(stagePath + side + "Clock");
 
                 Check(badge.Size.IsEqualApprox(new Vector2(32, 32)) &&
-                      (badge.Position - card.Position).IsEqualApprox(new Vector2(10, 16)),
-                    side + " icon is native-size and centered in its card's icon well");
+                      (badge.Position - card.Position).IsEqualApprox(new Vector2(14, 16)),
+                    side + " icon follows the square four pixels to the right");
+                string expectedArt = "res://assets/ingame/02_board_ui/player_card_" +
+                    side.ToLowerInvariant() + "_aligned_128x66.png";
+                Check(ResourceLoader.Exists(expectedArt) &&
+                      card.Texture?.ResourcePath == expectedArt,
+                    side + " card uses its shifted-square artwork rather than the original");
                 Check(name.HorizontalAlignment == HorizontalAlignment.Center &&
                       (name.Position - card.Position).IsEqualApprox(new Vector2(56, 13)) &&
                       name.Size.IsEqualApprox(new Vector2(116, 20)),

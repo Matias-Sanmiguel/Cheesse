@@ -196,13 +196,14 @@ public partial class InGamePresentationView : Control
         // Match the actual chess orientation: black plays at the top, white at
         // the bottom. Both cards share the same internal spacing and hierarchy.
         // Only these decorations move; the board remains native-size.
-        _blackCard = Card("BlackCard", "02_board_ui/player_card_black_128x66.png", 12, 184);
-        _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_128x66.png", 12, 642);
-        // Each source card has a native 36px icon well near its left edge.
-        // Position the untouched 32px badges by the well center, not by the
-        // visually wider 188px nine-patch card. Both use the same layout.
-        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 22, 200, 32, 32);
-        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 22, 658, 32, 32);
+        _blackCard = Card("BlackCard", "02_board_ui/player_card_black_aligned_128x66.png", 12, 184);
+        _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_aligned_128x66.png", 12, 642);
+        // The aligned card variants shift the BUILT-IN 37x36 icon well +4 px
+        // without distorting the card or changing its nine-patch margins.
+        // Move each 32x32 team badge by the exact same amount; the background
+        // square and foreground icon must always stay together.
+        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 26, 200, 32, 32);
+        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 26, 658, 32, 32);
 
         // Center names in the right-hand text area. Bring the clock icon and
         // digits into a compact second row with breathing room from the border.
