@@ -184,14 +184,27 @@ public partial class MenuTests : Node
                       actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
                     action + " icon fits inside its 48px button without blocking input");
             }
+            var classicCard = setupOptions.GetNode<Button>("ClassicStyle");
+            var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
+            var classicCaption = classicCard.GetNode<Label>("Caption");
+            var picadaCaption = picadaCard.GetNode<Label>("Caption");
+            Check(classicCard.Position == new Vector2(41, 112) &&
+                  picadaCard.Position == new Vector2(347, 112) &&
+                  picadaCard.Position.X - (classicCard.Position.X + classicCard.Size.X) == 14 &&
+                  classicCaption.Position == new Vector2(112, 0) &&
+                  picadaCaption.Position == new Vector2(112, 0) &&
+                  classicCaption.Size == new Vector2(164, 112) &&
+                  picadaCaption.Size == new Vector2(164, 112) &&
+                  picadaCaption.AutowrapMode == TextServer.AutowrapMode.Off,
+                "style cards are centered with even outer margins and aligned captions");
             Press(root, Setup + "ClassicStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
                   root.GetNode<Control>(Setup + "ThemeFields").Visible &&
                   setupOptions.GetNode<OptionButton>("ThemeFields/Board").Disabled &&
                   setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
                   setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
-                  setupPreview.GetNode<ColorRect>("Square0").Color == new Color("eeeed2") &&
-                  setupPreview.GetNode<ColorRect>("Square1").Color == new Color("769656") &&
+                  setupPreview.GetNode<ColorRect>("Square0").Color == BoardView.LightSquare &&
+                  setupPreview.GetNode<ColorRect>("Square1").Color == BoardView.DarkSquare &&
                   setupPreview.GetNode<TextureRect>("Tile0").Texture is null &&
                   setupOptions.GetNode<Button>("ClassicStyle").GetNode<TextureRect>("CardArt").Texture ==
                       PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/classic_selected_73x28.png", 4),
