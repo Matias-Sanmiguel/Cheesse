@@ -1,0 +1,138 @@
+{
+  "game": "CHEESSE",
+  "reference_viewport": [
+    960,
+    540
+  ],
+  "pixel_art_backgrounds": {
+    "960x540": "01_background/ingame_picada_960x540.png",
+    "1440x900": "01_background/ingame_picada_1440x900.png"
+  },
+  "reuses_existing_not_included": [
+    "logo original",
+    "tiles 48x48",
+    "piezas 48x48"
+  ],
+  "components": [
+    {
+      "id": "board_frame",
+      "file": "02_board_ui/frame_board_422x422.png",
+      "position": [
+        170,
+        75
+      ],
+      "size": [
+        422,
+        422
+      ],
+      "board_inset": [
+        19,
+        19
+      ],
+      "board_size": [
+        384,
+        384
+      ]
+    },
+    {
+      "id": "board_tiles",
+      "file": "EXTERNO",
+      "position": [
+        189,
+        94
+      ],
+      "tile_size": [
+        48,
+        48
+      ],
+      "board_cells": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "player_white",
+      "file": "02_board_ui/player_card_white_128x66.png",
+      "position": [
+        18,
+        239
+      ]
+    },
+    {
+      "id": "player_black",
+      "file": "02_board_ui/player_card_black_128x66.png",
+      "position": [
+        18,
+        313
+      ]
+    },
+    {
+      "id": "sidebar",
+      "file": "03_sidebar/sidebar_parchment_306x454.png",
+      "position": [
+        629,
+        58
+      ]
+    },
+    {
+      "id": "sidebar_header",
+      "file": "03_sidebar/header_ribbon_210x34.png",
+      "position": [
+        677,
+        49
+      ]
+    },
+    {
+      "id": "status_mode",
+      "file": "03_sidebar/status_cream_270x28.png",
+      "position": [
+        647,
+        112
+      ]
+    },
+    {
+      "id": "status_turn",
+      "file": "03_sidebar/status_turn_270x28.png",
+      "position": [
+        647,
+        149
+      ]
+    },
+    {
+      "id": "history",
+      "file": "03_sidebar/history_box_270x92.png",
+      "position": [
+        647,
+        343
+      ]
+    },
+    {
+      "id": "history_scroll_thumb",
+      "file": "03_sidebar/history_thumb_10x24.png",
+      "position": [
+        901,
+        351
+      ]
+    }
+  ],
+  "button_draw_sizes_for_demo": {
+    "action": [
+      130,
+      29
+    ],
+    "primary": [
+      270,
+      32
+    ]
+  },
+  "button_stylebox_margins": {
+    "left": 10,
+    "top": 9,
+    "right": 10,
+    "bottom": 9
+  },
+  "notes": [
+    "The real buttons are nine-slice 48x32 PNGs; use StyleBoxTexture.",
+    "All labels are dynamic, not painted into button images."
+  ]
+}
