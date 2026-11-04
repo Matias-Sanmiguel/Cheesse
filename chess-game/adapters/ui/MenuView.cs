@@ -24,6 +24,9 @@ public partial class MenuView : Control
     private Button _continue = null!;
     private Label _message = null!;
     private OptionButton _appearance = null!;
+    private Button _classicStyleCard = null!;
+    private Button _picadaStyleCard = null!;
+    private Control _classicStyleDescription = null!;
     private OptionButton _boardSkin = null!;
     private OptionButton _whiteSkin = null!;
     private OptionButton _blackSkin = null!;
@@ -155,7 +158,7 @@ public partial class MenuView : Control
         _boardSkin.Select(0);
         _whiteSkin.Select(picada ? 1 : 0);
         _blackSkin.Select(picada ? 1 : 0);
-        _setup.GetNode<Label>("Heading").Text = picada ? "REY DE LA PICADA" : "PREPARA TU PARTIDA";
+        _setup.GetNode<Label>("Heading").Text = "PREPARA TU PARTIDA";
         _setup.GetNode<Label>("Preview/RuleTag").Text = picada
             ? "OBJETIVO: REY EN D4 / E4 / D5 / E5"
             : "REGLAS CLASICAS · PARTIDA NORMAL";
@@ -176,90 +179,194 @@ public partial class MenuView : Control
     private void BuildSetup()
     {
         _setup = MakePage("SetupPage");
-        _setup.AddChild(PixelUiSkin.Button("Back", "VOLVER", new Vector2(84, 166),
-            new Vector2(200, 56), () => ShowPage(_setupReturnPage), "back", 24, "small"));
-        _setup.AddChild(PixelUiSkin.Label("Heading", "PREPARA TU PARTIDA", new Vector2(333, 165),
-            new Vector2(800, 60), 39, pixel: true, light: true));
 
-        var preview = PixelUiSkin.MakePanel("Preview", "parchment", new Vector2(60, 232), new Vector2(613, 626));
+        // Same 1440x900 stage and original art, reorganized like the supplied
+        // two-column reference. No logo on this screen: use the freed header space.
+        _setup.AddChild(PixelUiSkin.Button("Back", "VOLVER",
+            new Vector2(82, 89), new Vector2(200, 56),
+            () => ShowPage(_setupReturnPage), "back", 24, "small"));
+        _setup.AddChild(PixelUiSkin.Label("Heading", "PREPARA TU PARTIDA",
+            new Vector2(319, 79), new Vector2(802, 77), 43,
+            pixel: true, light: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Bold));
+
+        // LEFT: live board and piece preview, followed by the three descriptive lines.
+        var preview = PixelUiSkin.MakePanel("Preview", "parchment",
+            new Vector2(60, 170), new Vector2(630, 680));
         _setup.AddChild(preview);
-        preview.AddChild(PixelUiSkin.Label("Heading", "VISTA PREVIA", new Vector2(29, 21),
-            new Vector2(546, 55), 31, pixel: true));
-        preview.AddChild(PixelUiSkin.Image("BoardFrame", "cards/board_preview_frame_96x96.png",
-            new Vector2(23, 95), new Vector2(320, 320), 3));
+        preview.AddChild(PixelUiSkin.Label("Heading", "VISTA PREVIA",
+            new Vector2(41, 22), new Vector2(546, 56), 34,
+            pixel: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Bold));
+
+        preview.AddChild(PixelUiSkin.Image("BoardFrame",
+            "cards/board_preview_frame_96x96.png",
+            new Vector2(55, 108), new Vector2(320, 320), 3));
+
         _tiles = new TextureRect[16];
         for (int i = 0; i < _tiles.Length; i++)
         {
-            var x = i % 4;
-            var y = i / 4;
+            int x = i % 4, y = i / 4;
             var backing = new ColorRect
             {
+                Name = "Square" + i,
                 Color = (x + y) % 2 == 0 ? new Color("e9e3d6") : new Color("769656"),
-                Position = new Vector2(47 + x * 67, 121 + y * 67),
+                Position = new Vector2(79 + x * 67, 134 + y * 67),
                 Size = new Vector2(67, 67),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
+                MouseFilter = Control.MouseFilterEnum.Ignore
             };
             preview.AddChild(backing);
             var tile = PixelUiSkin.Image("Tile" + i, "", backing.Position, backing.Size);
             preview.AddChild(tile);
             _tiles[i] = tile;
         }
-        preview.AddChild(PixelUiSkin.Image("WhiteFrame", "cards/piece_preview_frame_64x64.png",
-            new Vector2(354, 116), new Vector2(198, 198), 3));
-        _whitePiece = PixelUiSkin.Image("WhitePiece", "", new Vector2(404, 168), new Vector2(96, 96), 2);
-        preview.AddChild(_whitePiece);
-        preview.AddChild(PixelUiSkin.Image("BlackFrame", "cards/piece_preview_frame_64x64.png",
-            new Vector2(354, 314), new Vector2(198, 198), 3));
-        _blackPiece = PixelUiSkin.Image("BlackPiece", "", new Vector2(404, 362), new Vector2(96, 96), 2);
-        preview.AddChild(_blackPiece);
-        _boardName = PixelUiSkin.Label("BoardName", "TABLERO CLASICO", new Vector2(25, 457),
-            new Vector2(315, 48), 23, pixel: true);
-        preview.AddChild(_boardName);
-        _matchLabel = PixelUiSkin.Label("Teams", "PIEZAS CLASICAS", new Vector2(27, 515),
-            new Vector2(530, 47), 26, pixel: true);
-        preview.AddChild(_matchLabel);
-        preview.AddChild(PixelUiSkin.Label("RuleTag", "REGLAS CLASICAS · PARTIDA NORMAL", new Vector2(28, 572),
-            new Vector2(540, 31), 18));
 
-        var form = PixelUiSkin.MakePanel("Options", "wood", new Vector2(696, 232), new Vector2(684, 626));
+        // Keep the supplied 64x64 piece frames at their clean x2 scale.
+        preview.AddChild(PixelUiSkin.Image("WhiteFrame",
+            "cards/piece_preview_frame_64x64.png",
+            new Vector2(423, 123), new Vector2(128, 128), 2));
+        _whitePiece = PixelUiSkin.Image("WhitePiece", "",
+            new Vector2(439, 139), new Vector2(96, 96), 2);
+        preview.AddChild(_whitePiece);
+
+        preview.AddChild(PixelUiSkin.Image("BlackFrame",
+            "cards/piece_preview_frame_64x64.png",
+            new Vector2(423, 289), new Vector2(128, 128), 2));
+        _blackPiece = PixelUiSkin.Image("BlackPiece", "",
+            new Vector2(439, 305), new Vector2(96, 96), 2);
+        preview.AddChild(_blackPiece);
+
+        preview.AddChild(new ColorRect
+        {
+            Name = "DetailsSeparator",
+            Position = new Vector2(40, 468),
+            Size = new Vector2(550, 4),
+            Color = new Color("b8874d"),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        });
+        preview.AddChild(new ColorRect
+        {
+            Name = "SeparatorGem",
+            Position = new Vector2(310, 464),
+            Size = new Vector2(12, 12),
+            Color = new Color("e3a845"),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        });
+        _boardName = PixelUiSkin.Label("BoardName", "TABLERO CLASICO",
+            new Vector2(42, 492), new Vector2(550, 40), 24,
+            pixel: true, weight: UiFontWeight.SemiBold);
+        preview.AddChild(_boardName);
+        _matchLabel = PixelUiSkin.Label("Teams", "BLANCAS VS NEGRAS",
+            new Vector2(42, 540), new Vector2(550, 40), 24,
+            pixel: true, weight: UiFontWeight.SemiBold);
+        preview.AddChild(_matchLabel);
+        preview.AddChild(PixelUiSkin.Label("RuleTag",
+            "REGLAS CLASICAS - PARTIDA NORMAL",
+            new Vector2(42, 591), new Vector2(554, 45), 20,
+            pixel: true, weight: UiFontWeight.Medium));
+
+        // RIGHT: visual style choice above the familiar themed dropdowns and CTAs.
+        var form = PixelUiSkin.MakePanel("Options", "wood",
+            new Vector2(715, 170), new Vector2(665, 680));
         _setup.AddChild(form);
-        form.AddChild(PixelUiSkin.Label("Heading", "PERSONALIZACION", new Vector2(37, 25),
-            new Vector2(580, 49), 32, pixel: true, light: true));
-        form.AddChild(PixelUiSkin.Label("AppearanceLabel", "ESTILO VISUAL", new Vector2(41, 83),
-            new Vector2(585, 32), 22, pixel: true, light: true, weight: UiFontWeight.Medium));
-        _appearance = MakeOption("Appearance", new Vector2(42, 118), new Vector2(592, 50));
+        form.AddChild(PixelUiSkin.Label("Heading", "PERSONALIZACION",
+            new Vector2(40, 19), new Vector2(585, 58), 35,
+            pixel: true, light: true,
+            alignment: HorizontalAlignment.Center, weight: UiFontWeight.Bold));
+        form.AddChild(new ColorRect
+        {
+            Name = "HeaderDivider",
+            Color = new Color("a8693c"),
+            Position = new Vector2(43, 79),
+            Size = new Vector2(580, 3),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        });
+        form.AddChild(PixelUiSkin.Label("AppearanceLabel", "ESTILO VISUAL",
+            new Vector2(43, 88), new Vector2(570, 33), 23,
+            pixel: true, light: true, weight: UiFontWeight.Medium));
+
+        // Preserve the original OptionButton and its selected index as the
+        // source of truth for themes, saves, and the existing tests.
+        _appearance = MakeOption("Appearance", Vector2.Zero, new Vector2(1, 1));
         _appearance.AddItem("CLASICO");
         _appearance.AddItem("PICADA PERSONALIZADA");
+        _appearance.Visible = false;
         form.AddChild(_appearance);
 
-        _themeFields = new Control { Name = "ThemeFields", Position = new Vector2(0, 174), Size = new Vector2(684, 252), MouseFilter = Control.MouseFilterEnum.Pass };
+        _classicStyleCard = MakeStyleCard("ClassicStyle", "CLASICO",
+            "modes/mode_classic_icon.png",
+            new Vector2(43, 127), new Vector2(283, 87),
+            () => { _appearance.Select(0); UpdatePreview(); });
+        form.AddChild(_classicStyleCard);
+        _picadaStyleCard = MakeStyleCard("PicadaStyle", "PICADA\nPERSONALIZADA",
+            "modes/mode_picada_king_icon.png",
+            new Vector2(340, 127), new Vector2(283, 87),
+            () => { _appearance.Select(1); UpdatePreview(); });
+        form.AddChild(_picadaStyleCard);
+
+        _themeFields = new Control
+        {
+            Name = "ThemeFields",
+            Position = new Vector2(0, 232),
+            Size = new Vector2(665, 223),
+            MouseFilter = Control.MouseFilterEnum.Pass
+        };
         form.AddChild(_themeFields);
-        _themeFields.AddChild(PixelUiSkin.Label("BoardLabel", "TABLERO", new Vector2(42, 5),
-            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
-        _boardSkin = MakeOption("Board", new Vector2(42, 31), new Vector2(592, 48));
+
+        _themeFields.AddChild(PixelUiSkin.Label("BoardLabel", "TABLERO",
+            new Vector2(43, 0), new Vector2(210, 47), 22,
+            pixel: true, light: true, weight: UiFontWeight.Medium));
+        _boardSkin = MakeOption("Board", new Vector2(266, 0), new Vector2(351, 47));
         foreach (var skin in VisualThemeCatalog.Boards) _boardSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_boardSkin);
-        _themeFields.AddChild(PixelUiSkin.Label("WhiteLabel", "BLANCAS: ELEGIR QUESO", new Vector2(42, 86),
-            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
-        _whiteSkin = MakeOption("White", new Vector2(42, 113), new Vector2(592, 48));
+
+        _themeFields.AddChild(PixelUiSkin.Label("WhiteLabel", "BLANCAS - QUESO",
+            new Vector2(43, 76), new Vector2(218, 47), 22,
+            pixel: true, light: true, weight: UiFontWeight.Medium));
+        _whiteSkin = MakeOption("White", new Vector2(266, 76), new Vector2(351, 47));
         _whiteSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Cheeses) _whiteSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_whiteSkin);
-        _themeFields.AddChild(PixelUiSkin.Label("BlackLabel", "NEGRAS: ELEGIR FIAMBRE", new Vector2(42, 169),
-            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
-        _blackSkin = MakeOption("Black", new Vector2(42, 197), new Vector2(592, 48));
+
+        _themeFields.AddChild(PixelUiSkin.Label("BlackLabel", "NEGRAS - FIAMBRE",
+            new Vector2(43, 152), new Vector2(218, 47), 22,
+            pixel: true, light: true, weight: UiFontWeight.Medium));
+        _blackSkin = MakeOption("Black", new Vector2(266, 152), new Vector2(351, 47));
         _blackSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Charcuterie) _blackSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_blackSkin);
-        _note = PixelUiSkin.Label("Note", "EL MODO DE JUEGO MANTIENE LAS REGLAS CLASICAS.",
-            new Vector2(42, 422), new Vector2(590, 28), 16, light: true);
+
+        // A helpful explanation fills the same area when classic style is used.
+        _classicStyleDescription = PixelUiSkin.MakePanel("ClassicInfo", "parchment",
+            new Vector2(43, 247), new Vector2(576, 190));
+        form.AddChild(_classicStyleDescription);
+        _classicStyleDescription.AddChild(PixelUiSkin.Label("Title", "AJEDREZ CLASICO",
+            new Vector2(24, 24), new Vector2(525, 52), 29,
+            pixel: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Bold));
+        _classicStyleDescription.AddChild(PixelUiSkin.Label("Detail",
+            "TABLERO ORIGINAL\nPIEZAS TRADICIONALES\nSIN CAMBIOS VISUALES",
+            new Vector2(29, 84), new Vector2(517, 80), 22,
+            pixel: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Medium));
+
+        _note = PixelUiSkin.Label("Note",
+            "LAS SKINS NO CAMBIAN LAS REGLAS.",
+            new Vector2(44, 459), new Vector2(572, 44), 18,
+            light: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Medium);
         form.AddChild(_note);
-        form.AddChild(PixelUiSkin.Button("Human", "CONTRA HUMANO", new Vector2(43, 454),
-            new Vector2(590, 48), () => HumanRequested?.Invoke(), "play", 26));
-        form.AddChild(PixelUiSkin.Button("Random", "CONTRA LA IA ALEATORIA", new Vector2(43, 509),
-            new Vector2(590, 48), () => RandomRequested?.Invoke(), "dice", 26));
-        _continue = PixelUiSkin.Button("Continue", "CONTINUAR PARTIDA", new Vector2(43, 564),
-            new Vector2(590, 48), () => ContinueRequested?.Invoke(), "load", 26);
+
+        // Keep the exact button assets/icons and the existing game callbacks.
+        form.AddChild(PixelUiSkin.Button("Human", "CONTRA HUMANO",
+            new Vector2(43, 509), new Vector2(575, 48),
+            () => HumanRequested?.Invoke(), "play", 26));
+        form.AddChild(PixelUiSkin.Button("Random", "CONTRA LA IA ALEATORIA",
+            new Vector2(43, 565), new Vector2(575, 48),
+            () => RandomRequested?.Invoke(), "dice", 26));
+        _continue = PixelUiSkin.Button("Continue", "CONTINUAR PARTIDA",
+            new Vector2(43, 621), new Vector2(575, 48),
+            () => ContinueRequested?.Invoke(), "load", 26);
         _continue.Disabled = true;
         form.AddChild(_continue);
 
@@ -274,6 +381,42 @@ public partial class MenuView : Control
         UpdatePreview();
     }
 
+    private static Button MakeStyleCard(string name, string label, string illustration,
+        Vector2 position, Vector2 size, Action onSelected)
+    {
+        var button = new Button
+        {
+            Name = name,
+            Text = "",
+            Position = position,
+            Size = size,
+            MouseDefaultCursorShape = Control.CursorShape.PointingHand,
+            FocusMode = Control.FocusModeEnum.All,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        PixelUiSkin.StyleButton(button, 22, "medium");
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        button.AddChild(PixelUiSkin.Image("Art", illustration,
+            new Vector2(14, 11), new Vector2(65, 65), 1));
+        button.AddChild(PixelUiSkin.Label("Caption", label,
+            new Vector2(87, 6), new Vector2(size.X - 100, size.Y - 12), 21,
+            pixel: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.SemiBold));
+        button.Pressed += onSelected;
+        return button;
+    }
+
+    private static void SetStyleCardSelected(Button card, bool selected)
+    {
+        // Gold = active; parchment = inactive. Both skins already exist in the game.
+        card.AddThemeStyleboxOverride("normal", PixelUiSkin.NineSlice(
+            selected ? "buttons/medium_120x24/idle.png" : "panels/parchment_9slice_32x32.png"));
+        card.AddThemeStyleboxOverride("hover", PixelUiSkin.NineSlice(
+            "buttons/medium_120x24/hover.png"));
+        card.AddThemeStyleboxOverride("pressed", PixelUiSkin.NineSlice(
+            "buttons/medium_120x24/pressed.png"));
+    }
+
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
     {
         var option = new OptionButton { Name = name, Position = position, Size = size };
@@ -285,6 +428,9 @@ public partial class MenuView : Control
     {
         bool themed = _appearance.Selected == 1;
         _themeFields.Visible = themed;
+        _classicStyleDescription.Visible = !themed;
+        SetStyleCardSelected(_classicStyleCard, !themed);
+        SetStyleCardSelected(_picadaStyleCard, themed);
         _note.Text = SelectedMode == GameMode.ReyDeLaPicada
             ? "REY DE LA PICADA: LLEVA TU REY A D4, E4, D5 O E5."
             : themed
@@ -373,7 +519,8 @@ public partial class MenuView : Control
         _modes.Visible = page == Page.Modes;
         _setup.Visible = page == Page.Setup;
         _settings.Visible = page == Page.Settings;
-        _subpageLogo.Visible = page != Page.Home;
+        // Modes have their own compact logo; setup intentionally has no logo.
+        _subpageLogo.Visible = page == Page.Settings;
         GetViewport().GuiReleaseFocus();
     }
 
