@@ -228,6 +228,9 @@ public partial class MenuTests : Node
                   root.GetNode<Control>("InGamePresentation/ArtworkStage/PicadaBadge").Visible,
                 "Picada reaches gameplay with four highlighted goals and a HUD badge");
 
+            Check(root.GetNode<Label>("SidePanel/Margin/Content/Mode").Text.Contains("PICADA"),
+                "sidebar identifies the active Picada rules rather than classic chess");
+
             // Real input path: walk the king to d4 without exposing it to check.
             Move(root, "f2", "f4");
             Move(root, "a7", "a6");

@@ -109,6 +109,12 @@ public partial class SidePanelView : PanelContainer
     private void Refresh()
     {
         if (_game is null || _caretaker is null) return;
+        GetNode<Label>("Margin/Content/Mode").Text = _game.Mode switch
+        {
+            GameMode.ReyDeLaPicada => "MODO: PICADA",
+            GameMode.Fondue => "MODO: FONDUE",
+            _ => "MODO: CLASICO"
+        };
         _turn.Text = _game.Status == GameStatus.PicadaVictory
             ? (_game.Winner == PlayerColor.White ? "GANAN BLANCAS" : "GANAN NEGRAS")
             : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";

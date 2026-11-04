@@ -161,6 +161,8 @@ public partial class ReleaseTests : Node
     private async Task Capture(string name)
     {
         if (!OS.GetCmdlineUserArgs().Contains("--screenshots")) return;
+        if (name == "picada-result")
+            await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         using var image = GetViewport().GetTexture().GetImage();
         image.SavePng("/tmp/cheesse-" + name + ".png");
