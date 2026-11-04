@@ -33,6 +33,12 @@ public partial class InGamePresentationView : Control
     private Panel _helpPanel = null!;
     private Panel _settingsPanel = null!;
     private ChessGame? _game;
+    private NinePatchRect _whiteCard = null!;
+    private NinePatchRect _blackCard = null!;
+    private double _whiteElapsed;
+    private double _blackElapsed;
+    private int _whiteDisplayed = -1;
+    private int _blackDisplayed = -1;
     private bool _muted;
 
     public override void _Ready()
@@ -85,12 +91,52 @@ public partial class InGamePresentationView : Control
             _foreground.Visible = visible;
     }
 
+    /// <summary>
+    /// Time played per side in the current session. Not a competitive 10-minute
+    /// chess clock: no timeout win rule exists in Chess.Core yet.
+    /// </summary>
     public void Attach(ChessGame game)
     {
         _game = game;
-        // Real match-time controls are not implemented yet: do not display a fake 10:00 clock.
-        _whiteClock.Text = "--:--";
-        _blackClock.Text = "--:--";
+        _whiteElapsed = 0;
+        _blackElapsed = 0;
+        _whiteDisplayed = -1;
+        _blackDisplayed = -1;
+        RefreshElapsedLabels();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!Visible || _game is null || _menu?.Visible == true ||
+            _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
+            return;
+
+        if (_game.Turn == PlayerColor.White)
+            _whiteElapsed += delta;
+        else
+            _blackElapsed += delta;
+
+        _whiteCard.Modulate = _game.Turn == PlayerColor.White ? Colors.White : new Color(0.84f, 0.84f, 0.84f);
+        _blackCard.Modulate = _game.Turn == PlayerColor.Black ? Colors.White : new Color(0.84f, 0.84f, 0.84f);
+        RefreshElapsedLabels();
+    }
+
+    private void RefreshElapsedLabels()
+    {
+        static string Format(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
+        int white = Math.Max(0, (int)_whiteElapsed);
+        int black = Math.Max(0, (int)_blackElapsed);
+
+        if (white != _whiteDisplayed)
+        {
+            _whiteDisplayed = white;
+            _whiteClock.Text = Format(white);
+        }
+        if (black != _blackDisplayed)
+        {
+            _blackDisplayed = black;
+            _blackClock.Text = Format(black);
+        }
     }
 
     public override void _ExitTree() => GetViewport().SizeChanged -= Refit;
@@ -100,43 +146,71 @@ public partial class InGamePresentationView : Control
         void Art(string name, string file, float x, float y, float w, float h) =>
             _stage.AddChild(InGameUiSkin.Sprite(name, file, new Vector2(x, y), new Vector2(w, h)));
 
-        // 422x422 artwork is displayed at EXACT 2x, so its 384px transparent
-        // center becomes 768x768. The board pixels themselves are not resized.
         Art("GameLogo", "res://assets/ui/logos/logo_cheese.png", 8, 18, 192, 64);
         Art("BoardFrame", "02_board_ui/frame_board_422x422.png",
-            FrameLeft, FrameTop, 422 * FrameScale, 422 * FrameScale);
+            FrameLeft, FrameTop, 844, 844);
 
         float boardX = FrameLeft + FrameInset;
         float boardY = FrameTop + FrameInset;
 
-        // Separate pixel art coordinate badges around the native-size board.
+        // BoardView draws the coordinate glyphs; place the badge art under the
+        // actual glyph centers rather than guessing by using fixed left offsets.
+        Font coordFont = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
+        const int coordSize = 16;
+        float baseline = boardY + BoardSize + 22f;
+        float opticalCenterY = baseline - (coordFont.GetAscent(coordSize) - coordFont.GetDescent(coordSize)) / 2f;
+        float fileBadgeY = Mathf.Min(Mathf.Round(opticalCenterY - 22f), FrameTop + 844f - 44f);
         for (int i = 0; i < 8; i++)
         {
+            string rankText = (8 - i).ToString();
+            float textWidth = coordFont.GetStringSize(rankText,
+                HorizontalAlignment.Left, -1, coordSize).X;
+            float rankTextCenter = boardX - 12f - textWidth / 2f;
             Art("RankBadge" + (8 - i), "02_board_ui/coordinate_badge_22x22.png",
-                boardX - 50, boardY + 96 * i + 26, 44, 44);
+                Mathf.Round(rankTextCenter - 22f), boardY + 96 * i + 26, 44, 44);
             Art("FileBadge" + i, "02_board_ui/coordinate_badge_22x22.png",
-                boardX + 96 * i + 26, boardY + BoardSize + 1, 44, 36);
+                boardX + 96 * i + 26, fileBadgeY, 44, 44);
         }
 
-        // Cards live in the available left column. They are not part of BoardView.
-        Art("WhiteCard", "02_board_ui/player_card_white_128x66.png", 16, 343, 166, 86);
-        Art("BlackCard", "02_board_ui/player_card_black_128x66.png", 16, 463, 166, 86);
-        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 24, 363, 40, 40);
-        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 24, 483, 40, 40);
+        // The 128x66 artwork is kept at its native height. Nine-patch extends
+        // only the plain right-hand text field (not the icon box or the corners).
+        NinePatchRect Card(string name, string path, int x, int y)
+        {
+            var card = new NinePatchRect
+            {
+                Name = name,
+                Texture = InGameUiSkin.Texture(path),
+                Position = new Vector2(x, y),
+                Size = new Vector2(188, 66),
+                PatchMarginLeft = 58,
+                PatchMarginRight = 12,
+                PatchMarginTop = 10,
+                PatchMarginBottom = 10,
+                MouseFilter = MouseFilterEnum.Ignore,
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+            };
+            _stage.AddChild(card);
+            return card;
+        }
 
-        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS",
-            new Vector2(67, 353), new Vector2(111, 30), 19,
-            InGameUiSkin.Ink, UiFontWeight.SemiBold));
-        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS",
-            new Vector2(67, 473), new Vector2(111, 30), 19,
-            InGameUiSkin.Ivory, UiFontWeight.SemiBold));
+        _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_128x66.png", 12, 343);
+        _blackCard = Card("BlackCard", "02_board_ui/player_card_black_128x66.png", 12, 463);
+        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 31, 360, 32, 32);
+        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 31, 480, 32, 32);
+        Art("WhiteTimerIcon", "05_icons/timer_16.png", 79, 382, 16, 16);
+        Art("BlackTimerIcon", "05_icons/timer_16.png", 79, 502, 16, 16);
 
-        _whiteClock = InGameUiSkin.Text("WhiteClock", "--:--",
-            new Vector2(69, 387), new Vector2(105, 27), 18, InGameUiSkin.Ink);
-        _blackClock = InGameUiSkin.Text("BlackClock", "--:--",
-            new Vector2(69, 507), new Vector2(105, 27), 18, InGameUiSkin.Ivory);
-        _whiteClock.TooltipText = "Sin reloj de ajedrez configurado";
-        _blackClock.TooltipText = "Sin reloj de ajedrez configurado";
+        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS", new Vector2(78, 350),
+            new Vector2(112, 24), 17, InGameUiSkin.Ink, UiFontWeight.SemiBold));
+        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS", new Vector2(78, 470),
+            new Vector2(112, 24), 17, InGameUiSkin.Ivory, UiFontWeight.SemiBold));
+        _whiteClock = InGameUiSkin.Text("WhiteClock", "00:00", new Vector2(103, 378),
+            new Vector2(89, 27), 18, InGameUiSkin.Ink);
+        _blackClock = InGameUiSkin.Text("BlackClock", "00:00", new Vector2(103, 498),
+            new Vector2(89, 27), 18, InGameUiSkin.Ivory);
+        const string timerHint = "Tiempo jugado en esta sesión; no es una partida a contrarreloj ni se guarda.";
+        _whiteClock.TooltipText = timerHint;
+        _blackClock.TooltipText = timerHint;
         _stage.AddChild(_whiteClock);
         _stage.AddChild(_blackClock);
     }
