@@ -24,6 +24,8 @@ def main():
     config = config.replace('config/name="Cheesse"', f'config/name="{project_name}"')
     config = config.replace('run/main_scene="res://scenes/Main.tscn"', f'run/main_scene="res://tests/{args.scene}.tscn"')
     config = config.replace('config/icon="res://icon.svg"', '')
+    # Godot 4.7.2 races when importing multiple fonts (godotengine/godot#111039).
+    config += '\n[editor]\nimport/use_multiple_threads=false\n'
     (sandbox / "project.godot").write_text(config)
     subprocess.run([args.godot, "--headless", "--path", str(sandbox), "--import"], check=True, timeout=120)
     environment = os.environ.copy()
