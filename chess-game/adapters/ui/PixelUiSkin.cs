@@ -3,285 +3,280 @@ using Godot;
 namespace Cheesse.Game.Adapters.Ui;
 
 /// <summary>
-/// Pixel-art presentation for the existing Godot controls. Only visual overrides:
-/// no chess rules, input behavior, save logic or scene node paths are changed.
-/// Original PNGs remain untouched; nearest-neighbor x2 images are cached in memory.
+/// Shared presentation primitives for pixel-art UI. No game logic belongs here.
+/// All textures are taken from the original 48px / UI asset pack and filtered with Nearest.
 /// </summary>
 internal static class PixelUiSkin
 {
     private const string Ui = "res://assets/ui/";
-    private const string LocalFont = "res://assets/ui/fonts/Pixeboy-z8XGD.ttf";
-    private static readonly Dictionary<string, Texture2D> Cache = new();
-    private static Font? _pixelFont;
-    private static bool _fontChecked;
+    private const string LocalFont = Ui + "fonts/Pixeboy-z8XGD.ttf";
+    private static readonly Dictionary<string, Texture2D> Textures = new();
+    private static Font? _font;
 
-    private static readonly Color Ink = new("39251d");
-    private static readonly Color Cream = new("f9e6bf");
-    private static readonly Color MutedCream = new("e2ba82");
+    public static readonly Color Ink = new("39251d");
+    public static readonly Color Cream = new("ffedca");
+    public static readonly Color Gold = new("f5c14d");
+    public static readonly Color Muted = new("b9a18b");
+    public static readonly Color Burgundy = new("78142c");
 
-    public static void ApplyMenu(MenuView menu)
+    public static Texture2D? Texture(string path, int scale = 1)
     {
-        menu.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-
-        var background = Load(Ui + "brand/menu_background.png");
-        if (background is not null && !menu.HasNode("PixelBackground"))
-        {
-            var texture = new TextureRect
-            {
-                Name = "PixelBackground",
-                Texture = background,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.Scale,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-                AnchorRight = 1,
-                AnchorBottom = 1,
-            };
-            menu.AddChild(texture);
-            menu.MoveChild(texture, 1); // Behind Center, in front of fallback ColorRect.
-        }
-
-        var panel = menu.GetNode<PanelContainer>("Center/Panel");
-        panel.CustomMinimumSize = new Vector2(548, 0);
-        panel.AddThemeStyleboxOverride("panel", MakeStyle("panels/wood_9slice_32x32.png", 8, 2));
-
-        var margin = menu.GetNode<MarginContainer>("Center/Panel/Margin");
-        margin.AddThemeConstantOverride("margin_left", 24);
-        margin.AddThemeConstantOverride("margin_right", 24);
-        margin.AddThemeConstantOverride("margin_top", 16);
-        margin.AddThemeConstantOverride("margin_bottom", 16);
-
-        const string basePath = "Center/Panel/Margin/Options/";
-        var options = menu.GetNode<VBoxContainer>("Center/Panel/Margin/Options");
-        options.AddThemeConstantOverride("separation", 6);
-        menu.GetNode<Control>(basePath + "Spacer").CustomMinimumSize = Vector2.Zero;
-
-        var title = menu.GetNode<Label>(basePath + "Title");
-        var logo = Load(Ui + "brand/logo_cheesse.png", 2);
-        if (logo is not null && !options.HasNode("PixelBranding"))
-        {
-            title.Visible = false;
-            var wrapper = new CenterContainer
-            {
-                Name = "PixelBranding",
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            var image = new TextureRect
-            {
-                Name = "Logo",
-                Texture = logo,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                CustomMinimumSize = new Vector2(384, 128),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            wrapper.AddChild(image);
-            options.AddChild(wrapper);
-            options.MoveChild(wrapper, 0);
-        }
-
-        LabelStyle(menu.GetNode<Label>(basePath + "Subtitle"), 16, MutedCream, pixelFont: false);
-        LabelStyle(menu.GetNode<Label>(basePath + "AppearanceLabel"), 18, Cream);
-        LabelStyle(menu.GetNode<Label>(basePath + "ThemeDetails/BoardLabel"), 15, Cream, pixelFont: false);
-        LabelStyle(menu.GetNode<Label>(basePath + "ThemeDetails/WhiteLabel"), 15, Cream, pixelFont: false);
-        LabelStyle(menu.GetNode<Label>(basePath + "ThemeDetails/BlackLabel"), 15, Cream, pixelFont: false);
-        LabelStyle(menu.GetNode<Label>(basePath + "ThemeDetails/ThemeNote"), 13, MutedCream, pixelFont: false);
-        LabelStyle(menu.GetNode<Label>(basePath + "Message"), 16, Cream, pixelFont: false);
-
-        var themeDetails = menu.GetNode<VBoxContainer>(basePath + "ThemeDetails");
-        themeDetails.AddThemeConstantOverride("separation", 3);
-
-        foreach (var name in new[] { "Appearance", "ThemeDetails/Board", "ThemeDetails/White", "ThemeDetails/Black" })
-        {
-            var select = menu.GetNode<OptionButton>(basePath + name);
-            ButtonStyle(select, medium: true, fontSize: 16, pixelFont: false);
-            select.CustomMinimumSize = new Vector2(0, 34);
-        }
-
-        foreach (var name in new[] { "Human", "Random", "Continue" })
-        {
-            var button = menu.GetNode<Button>(basePath + name);
-            ButtonStyle(button, medium: false, fontSize: 19);
-            button.CustomMinimumSize = new Vector2(0, 46);
-        }
-
-        if (!options.HasNode("ModePreview"))
-            AddModePreview(options);
+        string resource = path.StartsWith("res://", StringComparison.Ordinal) ? path : Ui + path;
+        string key = resource + "@" + scale;
+        if (Textures.TryGetValue(key, out var cached)) return cached;
+        if (!ResourceLoader.Exists(resource)) return null;
+        var source = GD.Load<Texture2D>(resource);
+        if (source is null) return null;
+        if (scale <= 1) return Textures[key] = source;
+        var image = source.GetImage();
+        image.Resize(source.GetWidth() * scale, source.GetHeight() * scale, Godot.Image.Interpolation.Nearest);
+        return Textures[key] = ImageTexture.CreateFromImage(image);
     }
 
-    public static void SetModePreviewVisible(MenuView menu, bool visible)
+    public static Font? Pixeboy()
     {
-        var preview = menu.GetNodeOrNull<HBoxContainer>("Center/Panel/Margin/Options/ModePreview");
-        if (preview is not null)
-            preview.Visible = visible;
+        // Available when the supplied font has been installed into the local project.
+        if (_font is not null) return _font;
+        if (!ResourceLoader.Exists(LocalFont)) return null;
+        return _font = GD.Load<Font>(LocalFont);
+    }
+
+    public static StyleBoxTexture NineSlice(string path, int sourceMargin = 8, int scale = 2)
+    {
+        var texture = Texture(path, scale);
+        var margin = sourceMargin * scale;
+        return new StyleBoxTexture
+        {
+            Texture = texture,
+            TextureMarginLeft = margin,
+            TextureMarginTop = margin,
+            TextureMarginRight = margin,
+            TextureMarginBottom = margin,
+            AxisStretchHorizontal = StyleBoxTexture.AxisStretchMode.Stretch,
+            AxisStretchVertical = StyleBoxTexture.AxisStretchMode.Stretch,
+            ContentMarginLeft = margin,
+            ContentMarginTop = 8,
+            ContentMarginRight = margin,
+            ContentMarginBottom = 8,
+        };
+    }
+
+    public static Panel MakePanel(string name, string skin, Vector2 position, Vector2 size)
+    {
+        var panel = new Panel { Name = name, Position = position, Size = size };
+        panel.AddThemeStyleboxOverride("panel", NineSlice("panels/" + skin + "_9slice_32x32.png"));
+        return panel;
+    }
+
+    public static Label Label(string name, string text, Vector2 position, Vector2 size, int fontSize = 22,
+        bool pixel = false, bool light = false, HorizontalAlignment alignment = HorizontalAlignment.Left)
+    {
+        var label = new Label
+        {
+            Name = name,
+            Text = text,
+            Position = position,
+            Size = size,
+            HorizontalAlignment = alignment,
+            VerticalAlignment = VerticalAlignment.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+        };
+        StyleLabel(label, fontSize, light ? Cream : Ink, pixel);
+        return label;
+    }
+
+    public static void StyleLabel(Label label, int fontSize, Color color, bool pixel = false)
+    {
+        label.AddThemeFontSizeOverride("font_size", fontSize);
+        label.AddThemeColorOverride("font_color", color);
+        if (pixel && Pixeboy() is { } font)
+            label.AddThemeFontOverride("font", font);
+    }
+
+    public static Button Button(string name, string text, Vector2 position, Vector2 size,
+        Action? onPressed = null, string icon = "", int fontSize = 25, string variant = "large")
+    {
+        var button = new Button
+        {
+            Name = name,
+            Text = text,
+            Position = position,
+            Size = size,
+            FocusMode = Control.FocusModeEnum.All,
+        };
+        StyleButton(button, fontSize, variant);
+        if (!string.IsNullOrEmpty(icon)) button.Icon = Texture("icons/" + icon + "_16x16.png", 2);
+        if (onPressed is not null) button.Pressed += onPressed;
+        return button;
+    }
+
+    public static void StyleButton(Button button, int fontSize = 25, string variant = "large")
+    {
+        string folder = variant switch
+        {
+            "small" => "buttons/small_80x24/",
+            "medium" => "buttons/medium_120x24/",
+            _ => "buttons/large_160x24/"
+        };
+        foreach (var state in new[] { "normal", "hover", "pressed", "disabled" })
+        {
+            string file = state == "normal" ? "idle" : state;
+            button.AddThemeStyleboxOverride(state, NineSlice(folder + file + ".png"));
+        }
+        // A focused control must not look hovered or pressed. This fixes the stuck first button.
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        button.AddThemeFontSizeOverride("font_size", fontSize);
+        foreach (var color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
+            button.AddThemeColorOverride(color, Ink);
+        button.AddThemeColorOverride("font_disabled_color", new Color("786a5c"));
+        if (Pixeboy() is { } font) button.AddThemeFontOverride("font", font);
+        button.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+    }
+
+    public static void StyleOption(OptionButton select, int fontSize = 24)
+    {
+        StyleButton(select, fontSize, "medium");
+        select.AddThemeColorOverride("font_color", Ink);
+        // Popup colors use an opaque texture-backed panel to remain readable on wood.
+        var popup = select.GetPopup();
+        popup.AddThemeStyleboxOverride("panel", NineSlice("panels/parchment_9slice_32x32.png"));
+        popup.AddThemeColorOverride("font_color", Ink);
+        popup.AddThemeColorOverride("font_hover_color", Burgundy);
+        popup.AddThemeFontSizeOverride("font_size", 22);
+        if (Pixeboy() is { } font) popup.AddThemeFontOverride("font", font);
+    }
+
+    public static TextureRect Image(string name, string path, Vector2 position, Vector2 size, int sourceScale = 1)
+    {
+        return new TextureRect
+        {
+            Name = name,
+            Texture = Texture(path, sourceScale),
+            Position = position,
+            Size = size,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+        };
     }
 
     public static void ApplySidePanel(SidePanelView panel)
     {
         panel.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        panel.AddThemeStyleboxOverride("panel", MakeStyle("panels/parchment_9slice_32x32.png", 8, 2));
+        panel.AddThemeStyleboxOverride("panel", NineSlice("panels/parchment_9slice_32x32.png"));
+        const string at = "Margin/Content/";
+        var content = panel.GetNode<VBoxContainer>("Margin/Content");
+        content.AddThemeConstantOverride("separation", 6);
+        var margin = panel.GetNode<MarginContainer>("Margin");
+        margin.AddThemeConstantOverride("margin_left", 32);
+        margin.AddThemeConstantOverride("margin_right", 32);
+        margin.AddThemeConstantOverride("margin_top", 28);
+        margin.AddThemeConstantOverride("margin_bottom", 24);
 
-        const string basePath = "Margin/Content/";
-        LabelStyle(panel.GetNode<Label>(basePath + "Title"), 29, Ink);
-        LabelStyle(panel.GetNode<Label>(basePath + "Turn"), 22, Ink, pixelFont: false);
-        LabelStyle(panel.GetNode<Label>(basePath + "Status"), 19, Ink, pixelFont: false);
-        LabelStyle(panel.GetNode<Label>(basePath + "Message"), 15, Ink, pixelFont: false);
-        LabelStyle(panel.GetNode<Label>(basePath + "Help"), 14, Ink, pixelFont: false);
-
-        foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Menu" })
-            ButtonStyle(panel.GetNode<Button>(basePath + name), medium: true, fontSize: 17);
-
-        var opponent = panel.GetNode<CheckButton>(basePath + "Random");
-        opponent.AddThemeColorOverride("font_color", Ink);
-        opponent.AddThemeColorOverride("font_hover_color", Ink);
-        var on = Load(Ui + "controls/toggle_on.png");
-        var off = Load(Ui + "controls/toggle_off.png");
-        if (on is not null) opponent.AddThemeIconOverride("checked", on);
-        if (off is not null) opponent.AddThemeIconOverride("unchecked", off);
-    }
-
-    private static void AddModePreview(VBoxContainer options)
-    {
-        var row = new HBoxContainer
+        var oldTitle = panel.GetNode<Label>(at + "Title");
+        oldTitle.Visible = false;
+        if (!content.HasNode("BrandLogo"))
         {
-            Name = "ModePreview",
-            Alignment = BoxContainer.AlignmentMode.Center,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        row.AddThemeConstantOverride("separation", 8);
-        options.AddChild(row);
-        // Logo, hidden Title, Subtitle, then the mode preview.
-        options.MoveChild(row, options.HasNode("PixelBranding") ? 3 : 2);
+            var brand = Image("BrandLogo", "brand/logo_cheesse_small.png", Vector2.Zero, new Vector2(300, 70), 2);
+            brand.CustomMinimumSize = new Vector2(300, 70);
+            content.AddChild(brand);
+            content.MoveChild(brand, 0);
+        }
 
-        var choices = new (string Image, string Caption)[]
+        StyleLabel(panel.GetNode<Label>(at + "Turn"), 25, Ink, pixel: true);
+        StyleLabel(panel.GetNode<Label>(at + "Status"), 21, Ink, pixel: false);
+        StyleLabel(panel.GetNode<Label>(at + "Message"), 19, Ink, pixel: false);
+        StyleLabel(panel.GetNode<Label>(at + "Help"), 17, Ink, pixel: false);
+
+        var turn = panel.GetNode<Label>(at + "Turn");
+        var status = panel.GetNode<Label>(at + "Status");
+        if (!turn.HasNode("TurnIcon"))
         {
-            ("mode_classic_icon.png", "CLASICO"),
-            ("mode_picada_king_icon.png", "PICADA"),
-            ("mode_swiss_cheese_icon.png", "SUIZO"),
-            ("mode_fondue_icon.png", "FONDUE"),
-        };
-        for (int index = 0; index < choices.Length; index++)
+            var icon = Image("TurnIcon", "hud/turn_white_24x24.png", Vector2.Zero, new Vector2(40, 40), 2);
+            icon.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+            icon.Position = new Vector2(-44, 0);
+            turn.AddChild(icon);
+        }
+        if (!status.HasNode("StatusIcon"))
         {
-            var card = new Control
-            {
-                Name = $"Mode{index}",
-                CustomMinimumSize = new Vector2(96, 112),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-                TooltipText = index == 0 ? "Ajedrez clasico" : "Modo especial: proximamente",
-                Modulate = index == 0 ? Colors.White : new Color(1, 1, 1, 0.66f),
-            };
-            var frame = new TextureRect
-            {
-                Name = "Frame",
-                Texture = Load(Ui + (index == 0 ? "cards/card_selected_96x112.png" : "cards/card_frame_96x112.png")),
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.Keep,
-                Position = Vector2.Zero,
-                Size = new Vector2(96, 112),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            card.AddChild(frame);
-            var icon = new TextureRect
-            {
-                Name = "Icon",
-                Texture = Load(Ui + "modes/" + choices[index].Image),
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.Keep,
-                Position = new Vector2(16, 10),
-                Size = new Vector2(64, 64),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            card.AddChild(icon);
-            var caption = new Label
-            {
-                Name = "Caption",
-                Text = choices[index].Caption,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Position = new Vector2(5, 80),
-                Size = new Vector2(86, 20),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            LabelStyle(caption, 13, Cream);
-            card.AddChild(caption);
-            row.AddChild(card);
+            var icon = Image("StatusIcon", "hud/status_ongoing_24x24.png", Vector2.Zero, new Vector2(36, 36), 2);
+            icon.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+            icon.Position = new Vector2(-38, 0);
+            status.AddChild(icon);
+        }
+
+        var separator = panel.GetNode<HSeparator>(at + "Separator");
+        separator.CustomMinimumSize = new Vector2(0, 8);
+
+        foreach (var (node, icon) in new[]
+        {
+            ("History/Undo", "undo"), ("History/Redo", "redo"),
+            ("Files/Save", "save"), ("Files/Load", "load"),
+            ("NewGame", "new_game"), ("Menu", "home"),
+        })
+        {
+            var button = panel.GetNode<Button>(at + node);
+            StyleButton(button, fontSize: 21, variant: "medium");
+            button.Icon = Texture("icons/" + icon + "_16x16.png", 2);
+            button.CustomMinimumSize = new Vector2(0, 52);
+        }
+
+        var opponent = panel.GetNode<CheckButton>(at + "Random");
+        foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color" })
+            opponent.AddThemeColorOverride(key, Ink);
+        opponent.AddThemeFontSizeOverride("font_size", 19);
+        opponent.AddThemeIconOverride("checked", Texture("controls/toggle_on.png", 2));
+        opponent.AddThemeIconOverride("unchecked", Texture("controls/toggle_off.png", 2));
+
+        if (!content.HasNode("MovesHeading"))
+        {
+            var heading = Label("MovesHeading", "HISTORIAL DE JUGADAS", Vector2.Zero, Vector2.Zero, 23, pixel: true);
+            heading.CustomMinimumSize = new Vector2(0, 34);
+            content.AddChild(heading);
+            content.MoveChild(heading, content.GetChildren().IndexOf(opponent) + 1);
+            var box = new ScrollContainer { Name = "MovesScroll", CustomMinimumSize = new Vector2(0, 150), SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+            box.AddThemeStyleboxOverride("panel", NineSlice("panels/dark_9slice_32x32.png"));
+            var lines = Label("MovesText", "TODAVIA NO HAY JUGADAS", Vector2.Zero, Vector2.Zero, 18, light: false);
+            lines.Name = "MovesText";
+            lines.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            lines.AddThemeColorOverride("font_color", new Color("634632"));
+            box.AddChild(lines);
+            content.AddChild(box);
+            content.MoveChild(box, content.GetChildren().IndexOf(heading) + 1);
         }
     }
 
-    private static void LabelStyle(Label label, int size, Color color, bool pixelFont = true)
+    public static void ApplyGameOver(GameOverOverlay overlay)
     {
-        label.AddThemeColorOverride("font_color", color);
-        label.AddThemeFontSizeOverride("font_size", size);
-        if (pixelFont && PixelFont() is { } font)
-            label.AddThemeFontOverride("font", font);
-    }
-
-    private static void ButtonStyle(Button button, bool medium, int fontSize, bool pixelFont = true)
-    {
-        string folder = medium ? "buttons/medium_120x24/" : "buttons/large_160x24/";
-        button.AddThemeStyleboxOverride("normal", MakeStyle(folder + "idle.png", 8, 2));
-        button.AddThemeStyleboxOverride("hover", MakeStyle(folder + "hover.png", 8, 2));
-        button.AddThemeStyleboxOverride("pressed", MakeStyle(folder + "pressed.png", 8, 2));
-        button.AddThemeStyleboxOverride("disabled", MakeStyle(folder + "disabled.png", 8, 2));
-        button.AddThemeStyleboxOverride("focus", MakeStyle(folder + "hover.png", 8, 2));
-        button.AddThemeColorOverride("font_color", Ink);
-        button.AddThemeColorOverride("font_hover_color", Ink);
-        button.AddThemeColorOverride("font_pressed_color", Ink);
-        button.AddThemeColorOverride("font_focus_color", Ink);
-        button.AddThemeColorOverride("font_disabled_color", new Color("665547"));
-        button.AddThemeFontSizeOverride("font_size", fontSize);
-        if (pixelFont && PixelFont() is { } font)
-            button.AddThemeFontOverride("font", font);
-    }
-
-    private static StyleBox MakeStyle(string relativePath, int sourceMargin, int scale)
-    {
-        var texture = Load(Ui + relativePath, scale);
-        if (texture is null)
-            return new StyleBoxFlat { BgColor = new Color("c6953f") };
-
-        var margin = sourceMargin * scale;
-        return new StyleBoxTexture
+        var panel = overlay.GetNode<PanelContainer>("Overlay/Center/Panel");
+        panel.AddThemeStyleboxOverride("panel", NineSlice("panels/parchment_9slice_32x32.png"));
+        panel.CustomMinimumSize = new Vector2(490, 360);
+        var title = overlay.GetNode<Label>("Overlay/Center/Panel/Content/Title");
+        var reason = overlay.GetNode<Label>("Overlay/Center/Panel/Content/Reason");
+        StyleLabel(title, 38, Ink, pixel: true);
+        StyleLabel(reason, 24, Ink);
+        var content = overlay.GetNode<VBoxContainer>("Overlay/Center/Panel/Content");
+        if (!content.HasNode("ResultBanner"))
         {
-            Texture = texture,
-            AxisStretchHorizontal = StyleBoxTexture.AxisStretchMode.Tile,
-            AxisStretchVertical = StyleBoxTexture.AxisStretchMode.Tile,
-            TextureMarginLeft = margin,
-            TextureMarginTop = margin,
-            TextureMarginRight = margin,
-            TextureMarginBottom = margin,
-            ContentMarginLeft = margin,
-            ContentMarginTop = 5,
-            ContentMarginRight = margin,
-            ContentMarginBottom = 5,
-        };
-    }
-
-    private static Font? PixelFont()
-    {
-        if (_fontChecked) return _pixelFont;
-        _fontChecked = true;
-        // Pixeboy is an optional locally-installed personal-use font, never committed.
-        if (ResourceLoader.Exists(LocalFont))
-            _pixelFont = GD.Load<Font>(LocalFont);
-        return _pixelFont;
-    }
-
-    private static Texture2D? Load(string path, int scale = 1)
-    {
-        string key = path + "@" + scale;
-        if (Cache.TryGetValue(key, out var cached))
-            return cached;
-        if (!ResourceLoader.Exists(path))
-            return null;
-        var source = GD.Load<Texture2D>(path);
-        if (source is null) return null;
-        Texture2D result = source;
-        if (scale > 1)
-        {
-            var image = source.GetImage();
-            image.Resize(source.GetWidth() * scale, source.GetHeight() * scale, Image.Interpolation.Nearest);
-            result = ImageTexture.CreateFromImage(image);
+            var banner = Image("ResultBanner", "dialogs/victory_banner_192x48.png", Vector2.Zero, new Vector2(384, 96), 2);
+            banner.CustomMinimumSize = new Vector2(384, 96);
+            content.AddChild(banner);
+            content.MoveChild(banner, 0);
         }
-        Cache[key] = result;
-        return result;
+        foreach (string action in new[] { "Rematch", "MainMenu" })
+        {
+            var btn = overlay.GetNode<Button>("Overlay/Center/Panel/Content/" + action);
+            StyleButton(btn, 25);
+            btn.CustomMinimumSize = new Vector2(0, 60);
+        }
+    }
+
+    public static void ShowGameOverBanner(GameOverOverlay overlay, bool draw)
+    {
+        var banner = overlay.GetNodeOrNull<TextureRect>("Overlay/Center/Panel/Content/ResultBanner");
+        if (banner is not null)
+            banner.Texture = Texture(draw ? "dialogs/draw_banner_192x48.png" : "dialogs/victory_banner_192x48.png", 2);
     }
 }

@@ -23,7 +23,9 @@ public partial class SidePanelTests : Node
             if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(SavePath);
             var root = GD.Load<PackedScene>("res://scenes/Main.tscn").Instantiate<GameCompositionRoot>();
             AddChild(root);
-            Press(root, "Menu/Center/Panel/Margin/Options/Human");
+            Press(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            Press(root, "Menu/Stage/ModesPage/Mode0");
+            Press(root, "Menu/Stage/SetupPage/Options/Human");
             await Frames();
 
             var board = root.GetNode<BoardView>("Board");
