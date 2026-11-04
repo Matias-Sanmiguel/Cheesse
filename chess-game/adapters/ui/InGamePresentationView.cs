@@ -42,6 +42,9 @@ public partial class InGamePresentationView : Control
     private int _blackDisplayed = -1;
     private bool _muted;
 
+    /// <summary>Seconds played in this session, across both sides; not a countdown.</summary>
+    public int TotalElapsedSeconds => Math.Max(0, (int)(_whiteElapsed + _blackElapsed));
+
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
