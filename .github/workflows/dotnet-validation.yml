@@ -1,0 +1,23 @@
+name: Cheese .NET validation
+
+on:
+  push:
+    branches: [main, feat/pixel-ui]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compile-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore Cheesse.sln
+      - name: Build
+        run: dotnet build Cheesse.sln --no-restore --configuration Debug
+      - name: Unit tests
+        run: dotnet test Cheesse.sln --no-build --configuration Debug --verbosity normal
