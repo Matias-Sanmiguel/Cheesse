@@ -29,7 +29,7 @@ public partial class SidePanelTests : Node
 
             var board = root.GetNode<BoardView>("Board");
             var panel = root.GetNode<SidePanelView>("SidePanel");
-            var viewport = GetViewportRect().Size;
+            var viewport = GetViewport().GetVisibleRect().Size;
             float scale = Mathf.Min(viewport.X / 960f, viewport.Y / 540f);
             Vector2 offset = (viewport - new Vector2(960, 540) * scale) / 2f;
             var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768) * board.Scale.X);
