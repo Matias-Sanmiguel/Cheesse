@@ -24,6 +24,7 @@ public partial class SidePanelTests : Node
             var root = GD.Load<PackedScene>("res://scenes/Main.tscn").Instantiate<GameCompositionRoot>();
             AddChild(root);
             Press(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            Press(root, "Menu/Stage/ModesPage/Mode0");
             Press(root, "Menu/Stage/SetupPage/Options/Human");
             await Frames();
 
