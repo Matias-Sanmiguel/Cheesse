@@ -8,12 +8,12 @@ namespace Cheesse.Game.Adapters.Ui;
 
 public partial class BoardView : Node2D
 {
-    // Mantenemos 80 temporalmente.
-    // Pasaremos a 96 despues de completar el merge.
     private const int SquareSize = 96;
 
-    private static readonly Color LightSquare = new("eeeed2");
-    private static readonly Color DarkSquare = new("769656");
+    // Paleta queso del modo clasico: casillas lisas, sin PNGs ni texturas.
+    // Los temas personalizados siguen usando sus propios light_tile/dark_tile.
+    internal static readonly Color LightSquare = new("e9deb7");
+    internal static readonly Color DarkSquare = new("c9aa63");
 
     private ChessGame? _game;
     private GodotEventBus? _bus;
@@ -36,6 +36,7 @@ public partial class BoardView : Node2D
     private VisualTheme _visualTheme = VisualTheme.Classic;
 
     public VisualTheme CurrentTheme => _visualTheme;
+    internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
     {
@@ -426,7 +427,9 @@ public partial class BoardView : Node2D
     
     private void LoadTextures()
     {
-        // TABLERO
+        // En modo clasico ambos campos son null: DrawBoard dibuja los colores
+        // lisos definidos arriba. No cargar PNGs de respaldo para este modo.
+        // Los tableros de apariencia personalizada mantienen sus texturas.
         string? boardRoot = _visualTheme.BoardSkin is null
             ? null
             : "res://assets/skins/boards/" + _visualTheme.BoardSkin;
@@ -438,13 +441,6 @@ public partial class BoardView : Node2D
         _darkTile = boardRoot is null
             ? null
             : LoadTextureIfExists(boardRoot + "/dark_tile.png");
-
-        // Respaldo clásico.
-        _lightTile ??= LoadTextureIfExists(
-            "res://assets/board/light_tile.png");
-
-        _darkTile ??= LoadTextureIfExists(
-            "res://assets/board/dark_tile.png");
 
         // PIEZAS
         _pieceTextures.Clear();
