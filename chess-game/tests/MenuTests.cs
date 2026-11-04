@@ -64,7 +64,7 @@ public partial class MenuTests : Node
                   PixelUiSkin.FontFor(UiFontWeight.Medium), "configuration label uses Medium");
             Check(root.GetNode<Label>("Menu/Stage/ModesPage/Hint").GetThemeFont("font") ==
                   PixelUiSkin.FontFor(UiFontWeight.Medium), "instruction uses Medium");
-            Check(root.GetNode<Label>("Menu/Stage/ModesPage/Mode1/Description").GetThemeFont("font") ==
+            Check(root.GetNode<Label>("Menu/Stage/ModesPage/Description1").GetThemeFont("font") ==
                   PixelUiSkin.FontFor(UiFontWeight.Regular), "description uses Regular");
             Check(root.GetNode<Label>("Menu/Stage/SetupPage/Options/Heading").GetThemeFont("font") ==
                   PixelUiSkin.FontFor(UiFontWeight.Bold), "section title uses Bold");
@@ -98,6 +98,51 @@ public partial class MenuTests : Node
                   root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
                 "unfinished modes are visibly unavailable");
+            var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
+            Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
+                  modePage.HasNode("GameLogo"),
+                "mode selection has its own pixel-art backdrop, compact logo and navigation");
+            var modeLogo = modePage.GetNode<TextureRect>("GameLogo");
+            Check(modeLogo.Position.IsEqualApprox(new Vector2(528, 75)) &&
+                  modeLogo.Size.IsEqualApprox(new Vector2(384, 96)),
+                "mode logo uses the compact 128x32 artwork at x3 scale");
+            Check(modePage.GetNode<Button>("Back").Position.IsEqualApprox(new Vector2(66, 86)) &&
+                  modePage.GetNode<Label>("Heading").Position.Y >= 188,
+                "back button stays in the header and heading is separated from the logo");
+            for (int i = 0; i < 4; i++)
+            {
+                var card = root.GetNode<Button>(Modes + "Mode" + i);
+                Check(card.Size.IsEqualApprox(new Vector2(288, 336)),
+                    "all mode cards, including classic, occupy equal 96x112 x3 bounds");
+                Check(card.GetNode<TextureRect>("Base").Texture ==
+                      PixelUiSkin.Texture("res://assets/ui/mode_selection/components/card_base_96x112.png", 3),
+                    "mode " + i + " uses the COMPONENT card base instead of a precomposed card");
+                Check(card.GetNode<TextureRect>("Illustration").Size.IsEqualApprox(new Vector2(192, 192)) &&
+                      card.GetNode<TextureRect>("Illustration").Position.IsEqualApprox(new Vector2(48, 45)),
+                    "mode " + i + " draws its original 64x64 illustration at x3, offset 16,15");
+                Check(card.HasNode("TitlePlaque") && card.HasNode("ActionPlate") &&
+                      card.GetNode<Label>("ModeName").GetThemeFont("font") ==
+                          PixelUiSkin.FontFor(UiFontWeight.SemiBold) &&
+                      card.GetNode<Label>("State").GetThemeFont("font") ==
+                          PixelUiSkin.FontFor(UiFontWeight.Medium),
+                    "mode " + i + " composes plaque, editable title and action in Pixelify Sans");
+                Check(card.HasNode("HoverOverlay") && card.HasNode("SelectedOverlay") &&
+                      !card.GetNode<TextureRect>("HoverOverlay").Visible &&
+                      !card.GetNode<TextureRect>("SelectedOverlay").Visible,
+                    "mode " + i + " uses the original focus overlays only on interaction");
+                Check(root.GetNode<Label>(Modes + "Description" + i).GetThemeFont("font") ==
+                      PixelUiSkin.FontFor(UiFontWeight.Regular),
+                    "mode " + i + " has independent editable description below the card");
+            }
+            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR",
+                "classic mode is playable with a dynamic JUGAR label");
+            foreach (var locked in new[] { "Mode1", "Mode2", "Mode3" })
+            {
+                Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
+                      root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
+                    locked + " is visibly locked with dynamic copy, without navigation");
+            }
+
             Press(root, Modes + "Mode0");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
             var appearance = root.GetNode<OptionButton>(Setup + "Appearance");

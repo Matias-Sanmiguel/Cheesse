@@ -151,44 +151,10 @@ public partial class MenuView : Control
     private void BuildModes()
     {
         _modes = MakePage("ModesPage");
-        _modes.AddChild(PixelUiSkin.Button("Back", "VOLVER", new Vector2(83, 184),
-            new Vector2(205, 56), () => ShowPage(Page.Home), "back", 24, "small"));
-        _modes.AddChild(PixelUiSkin.Label("Heading", "ELEGIR MODO DE JUEGO", new Vector2(325, 186),
-            new Vector2(915, 59), 40, pixel: true, light: true));
-        _modes.AddChild(PixelUiSkin.Label("Hint", "Elegi un modo para preparar la partida. Los especiales se habilitaran con sus reglas.",
-            new Vector2(94, 252), new Vector2(1260, 44), 21, light: true, alignment: HorizontalAlignment.Center));
-        var modes = new[]
-        {
-            ("CLASICO", "Las reglas del ajedrez original. Personaliza piezas y tablero.", "mode_classic_icon.png", true),
-            ("REY DE LA PICADA", "Gana llegando con tu rey al centro o dando jaque mate.", "mode_picada_king_icon.png", false),
-            ("QUESO SUIZO", "Los agujeros bloquean casillas y cambian las trayectorias.", "mode_swiss_cheese_icon.png", false),
-            ("FONDUE", "Una captura derrite piezas vecinas. Cuidado con tu rey.", "mode_fondue_icon.png", false),
-        };
-        for (int i = 0; i < modes.Length; i++)
-        {
-            int x = 80 + i * 323;
-            var card = PixelUiSkin.Button("Mode" + i, "", new Vector2(x, 320), new Vector2(292, 437),
-                modes[i].Item4 ? () => OpenSetup(Page.Modes) : null, fontSize: 20);
-            var frame = PixelUiSkin.NineSlice(modes[i].Item4
-                ? "cards/card_selected_96x112.png" : "cards/card_frame_96x112.png", 12);
-            card.AddThemeStyleboxOverride("normal", frame);
-            card.AddThemeStyleboxOverride("hover", PixelUiSkin.NineSlice("cards/card_selected_96x112.png", 12));
-            card.AddThemeStyleboxOverride("pressed", PixelUiSkin.NineSlice("cards/card_selected_96x112.png", 12));
-            card.AddThemeStyleboxOverride("disabled", frame);
-            card.Disabled = !modes[i].Item4;
-            _modes.AddChild(card);
-            card.AddChild(PixelUiSkin.Image("Art", "modes/" + modes[i].Item3,
-                new Vector2(66, 49), new Vector2(160, 160), 2));
-            card.AddChild(PixelUiSkin.Label("ModeName", modes[i].Item1,
-                new Vector2(15, 215), new Vector2(260, 58), 27, pixel: true,
-                alignment: HorizontalAlignment.Center));
-            card.AddChild(PixelUiSkin.Label("Description", modes[i].Item2,
-                new Vector2(31, 284), new Vector2(228, 90), 17,
-                alignment: HorizontalAlignment.Center));
-            card.AddChild(PixelUiSkin.Label("State", modes[i].Item4 ? "JUGAR AHORA" : "PROXIMAMENTE",
-                new Vector2(13, 385), new Vector2(267, 38), 22, pixel: true,
-                alignment: HorizontalAlignment.Center));
-        }
+        ModeSelectionPageBuilder.Build(
+            _modes,
+            () => OpenSetup(Page.Modes),
+            () => ShowPage(Page.Home));
     }
 
     private void BuildSetup()
