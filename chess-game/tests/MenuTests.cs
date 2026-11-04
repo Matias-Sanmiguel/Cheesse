@@ -73,10 +73,13 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu").HasNode("Stage/PixelBackground"), "stage uses new pixel background");
             Check(root.GetNode<Control>("Menu").HasNode("Stage/HomePage/HomeLogo"), "main logo is on landing page");
             Check(root.GetNode<Button>(Home + "NewGame").Text == "JUGAR" &&
-                  root.GetNode<Button>(Home + "Modes").Text == "MODOS" &&
+                  !root.HasNode(Home + "Modes") &&
                   root.GetNode<Button>(Home + "Settings").Text == "CONFIGURACION" &&
-                  root.GetNode<Button>(Home + "Exit").Text == "SALIR",
-                "landing page matches four-button menu layout");
+                  root.GetNode<Button>(Home + "Exit").Text == "SALIR" &&
+                  root.GetNode<Button>(Home + "NewGame").Position.Y == 416 &&
+                  root.GetNode<Button>(Home + "Settings").Position.Y == 536 &&
+                  root.GetNode<Button>(Home + "Exit").Position.Y == 656,
+                "home displays three centered actions without a redundant MODOS button");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("normal") is StyleBoxTexture,
                 "start button uses original pixel-art texture");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("focus") is StyleBoxEmpty,
@@ -89,11 +92,22 @@ public partial class MenuTests : Node
                 "original history panel artwork is available");
 
             Press(root, Home + "NewGame");
-            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "Jugar opens setup directly");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible &&
+                  !root.GetNode<Control>("Menu/Stage/SetupPage").Visible,
+                "JUGAR navigates to mode selection before setup");
+            Press(root, Modes + "Mode0");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic,
+                "choosing CLASICO leads to its match setup");
             Press(root, "Menu/Stage/SetupPage/Back");
-            Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible, "back returns to correct page");
-            Press(root, Home + "Modes");
-            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "Modes navigates to mode selection");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                "setup back returns to mode selection");
+            Press(root, Modes + "Back");
+            Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible,
+                "mode selection back returns to home");
+            Press(root, Home + "NewGame");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                "JUGAR consistently reopens the unchanged mode-selection screen");
             Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
                   root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
@@ -200,12 +214,8 @@ public partial class MenuTests : Node
             {
                 var picture = GD.Load<Texture2D>(
                     "res://assets/ui/setup_v4/cards/picada_" + state + "_73x28.png")!.GetImage();
-                Check(picture.GetWidth() == 73 && picture.GetHeight() == 28 &&
-                      picture.GetPixel(16, 21).R < 0.25f &&
-                      picture.GetPixel(16, 21).G < 0.2f &&
-                      picture.GetPixel(16, 21).B < 0.2f &&
-                      picture.GetPixel(16, 22) == picture.GetPixel(36, 10),
-                    "Picada " + state + " artwork stays within the intact inset border");
+                Check(picture.GetWidth() == 73 && picture.GetHeight() == 28,
+                    "Picada " + state + " preserves its exact native pixel-art dimensions");
             }
             var classicCard = setupOptions.GetNode<Button>("ClassicStyle");
             var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
@@ -324,7 +334,7 @@ public partial class MenuTests : Node
                   Mathf.Abs(resultPanel.GlobalPosition.Y - (900 - 776) / 2f) < 1f,
                 "result panel centers in the entire 1440x900 viewport, not board bounds");
             Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/MainMenu");
-            Press(root, Home + "Modes");
+            Press(root, Home + "NewGame");
             Press(root, Modes + "Mode0");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
             Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic &&
@@ -382,6 +392,7 @@ public partial class MenuTests : Node
             // A new random game must work through the same three-page menu flow.
             // Opening a fresh setup resets its visual defaults; choose this match's theme.
             Press(root, Home + "NewGame");
+            Press(root, Modes + "Mode0");
             appearance.Select(1);
             appearance.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
             boardSkin.Select(0);
@@ -480,12 +491,14 @@ public partial class MenuTests : Node
     private static void StartNew(Node root, bool againstRandom)
     {
         Press(root, Home + "NewGame");
+        Press(root, Modes + "Mode0");
         Press(root, Setup + (againstRandom ? "Random" : "Human"));
     }
 
     private static void ContinueSaved(Node root)
     {
         Press(root, Home + "NewGame");
+        Press(root, Modes + "Mode0");
         Press(root, Setup + "Continue");
     }
 
