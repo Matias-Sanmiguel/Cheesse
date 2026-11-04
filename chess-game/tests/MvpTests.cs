@@ -69,7 +69,10 @@ public partial class MvpTests : Node
             // keyboard shortcut rather than clicking a button behind the dialog.
             Keypress(Key.Z, ctrl: true);
             Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible,
-                "Ctrl+Z dismisses the checkmate overlay");
+                "Ctrl+Z dismisses the checkmate overlay (status=" + root.CurrentGame.Status +
+                ", history=" + root.CurrentGame.History.Count +
+                ", modal=" + overlay.Visible +
+                ", menu=" + root.GetNode<MenuView>("Menu").Visible + ")");
             Press(root, Panel + "History/Redo");
             Check(overlay.Visible, "redo reopens mate overlay");
             Keypress(Key.Z, ctrl: true);
