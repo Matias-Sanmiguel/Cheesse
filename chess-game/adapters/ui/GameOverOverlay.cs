@@ -69,6 +69,25 @@ public partial class GameOverOverlay : CanvasLayer
         return sprite;
     }
 
+    // Icons keep their original aspect ratio when the menu is scaled.
+    private static TextureRect AddIcon(Control parent, string name, string path,
+        float x, float y, float width = 12, float height = 12)
+    {
+        var icon = new TextureRect
+        {
+            Name = name,
+            Texture = Texture(path),
+            Position = Size(x, y),
+            Size = Size(width, height),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        parent.AddChild(icon);
+        return icon;
+    }
+
     private static Label AddText(Control parent, string name, string value,
         float x, float y, float width, float height, int fontSize, Color color,
         UiFontWeight weight = UiFontWeight.SemiBold)
@@ -121,9 +140,9 @@ public partial class GameOverOverlay : CanvasLayer
         button.Pressed += action;
         _content.AddChild(button);
 
-        AddSprite(button, name + "Icon", "04_icons/" + icon + "_12x12.png",
-            5, 3, 12, 12);
-        AddText(button, name + "Label", text, 19, 0, 138, 18, 34,
+        AddIcon(button, name + "Icon", "04_icons/" + icon + "_12x12.png",
+            7, 3, 12, 12);
+        AddText(button, name + "Label", text, 24, 0, 128, 18, 32,
             material == "primary" ? new Color("47281d") : new Color("fff0c8"),
             UiFontWeight.Bold);
         return button;
@@ -133,11 +152,11 @@ public partial class GameOverOverlay : CanvasLayer
     {
         float x = 21 + index * 60;
         AddSprite(_content, "StatFrame" + index, "02_panel/stat_box_54x23.png", x, 121, 54, 23);
-        AddSprite(_content, "StatIcon" + index, "04_icons/" + icon + "_12x12.png",
+        AddIcon(_content, "StatIcon" + index, "04_icons/" + icon + "_12x12.png",
             x + 3, 126, 12, 12);
-        AddText(_content, "StatLabel" + index, label, x + 15, 122.5f, 37, 7, 20,
+        AddText(_content, "StatLabel" + index, label, x + 15, 122.5f, 37, 7, 18,
             new Color("684538"), UiFontWeight.Medium);
-        return AddText(_content, "StatValue" + index, "--", x + 15, 131, 37, 10, 28,
+        return AddText(_content, "StatValue" + index, "--", x + 15, 131, 37, 10, 24,
             new Color("442c21"), UiFontWeight.Bold);
     }
 
@@ -168,9 +187,9 @@ public partial class GameOverOverlay : CanvasLayer
         _movesValue = AddStat(1, "JUGADAS", "moves");
         _modeValue = AddStat(2, "MODO", "mode");
 
-        AddImageButton("Rematch", "REVANCHA", "primary", "rematch", 20, 150,
+        AddImageButton("Rematch", "REVANCHA", "primary", "rematch", 20, 145,
             () => { Hide(); EmitSignal(SignalName.RematchRequested); });
-        AddImageButton("MainMenu", "MENU PRINCIPAL", "secondary", "home", 20, 172,
+        AddImageButton("MainMenu", "MENU PRINCIPAL", "secondary", "home", 20, 167,
             () => { Hide(); EmitSignal(SignalName.MainMenuRequested); });
     }
 
