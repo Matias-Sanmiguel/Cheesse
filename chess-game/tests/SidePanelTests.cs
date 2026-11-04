@@ -61,6 +61,57 @@ public partial class SidePanelTests : Node
             Check(root.GetNode<Button>("InGameUtilities/UtilityStage/HelpButton").Visible &&
                   root.GetNode<Button>("InGameUtilities/UtilityStage/SoundButton").Visible,
                 "top utility buttons are interactive and layered above the sidebar");
+            // Regression: visual resources must never be stretched along different axes.
+            // The frame is exactly x2, while the interactive board stays scale (1,1).
+            var stagePath = "InGamePresentation/ArtworkStage/";
+            var whiteCard = root.GetNode<NinePatchRect>(stagePath + "WhiteCard");
+            var blackCard = root.GetNode<NinePatchRect>(stagePath + "BlackCard");
+            Check(whiteCard.Size.IsEqualApprox(new Vector2(188, 66)) &&
+                  blackCard.Size.IsEqualApprox(new Vector2(188, 66)),
+                "team cards retain their 66px native height");
+            Check(whiteCard.PatchMarginLeft == 58 && whiteCard.PatchMarginTop == 10,
+                "nine-patch preserves the artwork around player icons and borders");
+            foreach (string badge in new[] { "WhiteBadge", "BlackBadge" })
+            {
+                var image = root.GetNode<TextureRect>(stagePath + badge);
+                Check(image.Size.IsEqualApprox(new Vector2(32, 32)),
+                    badge + " keeps its native 32x32 pixels");
+            }
+            foreach (string art in new[] { "ModeBar", "TurnBar", "StatusBar" })
+            {
+                var image = panel.GetNode<TextureRect>("Margin/Content/" + art);
+                Check(image.Size.IsEqualApprox(new Vector2(270, 28)),
+                    art + " remains a native-size 270x28 status bar");
+            }
+            foreach (string art in new[] { "CrownBadge", "TurnBadge" })
+            {
+                var image = panel.GetNode<TextureRect>("Margin/Content/" + art);
+                Check(image.Size.IsEqualApprox(new Vector2(24, 24)),
+                    art + " retains native square pixels");
+            }
+            var toggle = panel.GetNode<CheckButton>("Margin/Content/Random");
+            Check(toggle.GetThemeIcon("on") == InGameUiSkin.Texture("05_icons/random_16.png") &&
+                  toggle.GetThemeIcon("off") == InGameUiSkin.Texture("05_icons/switch_16.png"),
+                "random toggle uses real CheckButton on/off icons");
+            var coordsFont = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
+            float rankGlyphWidth = coordsFont.GetStringSize("8", HorizontalAlignment.Left, -1, 16).X;
+            float rankGlyphCenter = board.GlobalPosition.X - 12f - rankGlyphWidth / 2f;
+            var rank8 = root.GetNode<TextureRect>(stagePath + "RankBadge8");
+            Check(Mathf.Abs(rank8.GlobalPosition.X + rank8.Size.X / 2f - rankGlyphCenter) < 1f,
+                "number 8 is centered horizontally on its badge");
+            foreach (string name in new[] { "RankBadge1", "RankBadge8", "FileBadge0", "FileBadge7" })
+            {
+                var image = root.GetNode<TextureRect>(stagePath + name);
+                Check(image.Size.IsEqualApprox(new Vector2(44, 44)),
+                    name + " is a square integer x2 sprite");
+            }
+            var whiteClock = root.GetNode<Label>(stagePath + "WhiteClock");
+            var blackClock = root.GetNode<Label>(stagePath + "BlackClock");
+            Check(whiteClock.Text == "00:00" && blackClock.Text == "00:00",
+                "session timers start at zero instead of displaying fake chess clocks");
+            presentation._Process(2.2);
+            Check(whiteClock.Text == "00:02" && blackClock.Text == "00:00",
+                "white elapsed-time clock advances while white has the move");
             Check(panelRect.Position.X >= 0 && panelRect.Position.Y >= 0 &&
                 panelRect.End.X <= 1440 && panelRect.End.Y <= 900, "panel fits 1440x900");
             foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Random", "Menu" })
@@ -91,6 +142,9 @@ public partial class SidePanelTests : Node
             bus.StateChanged += () => notifications++;
             Move(root, "e2", "e4");
             Check(notifications > 0, "move notifies the bus");
+            presentation._Process(3.2);
+            Check(blackClock.Text == "00:03" && whiteClock.Text == "00:02",
+                "elapsed time switches to black after white moves");
             Check(Text(root, "Turn") == "TURNO: NEGRAS", "turn changes through bus");
             Check(!Disabled(root, "History/Undo") && Disabled(root, "History/Redo"), "move updates history buttons");
             PressPanel(root, "History/Undo");
@@ -135,7 +189,7 @@ public partial class SidePanelTests : Node
             Check(Text(root, "Status") == "EN JUEGO", "Redo clears check text");
 
             PressPanel(root, "NewGame");
-            var toggle = root.GetNode<CheckButton>(Content + "Random");
+            toggle = root.GetNode<CheckButton>(Content + "Random");
             toggle.ButtonPressed = true;
             Check(root.AgainstRandom, "toggle enables RandomAI");
             Move(root, "e2", "e4");
