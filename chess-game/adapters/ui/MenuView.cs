@@ -390,10 +390,10 @@ public partial class MenuView : Control
             SetupAssets + "cards/" + design + "_idle_73x28.png",
             Vector2.Zero, new Vector2(292, 112), 4);
         button.AddChild(cardArt);
-        // The art contains its own illustration on the left. Keep both
-        // captions entirely inside the text area and truly centered vertically.
+        // Center text in the visible 24px card face, excluding the
+        // 4px drop shadow. Preserve the original illustration in the PNG.
         var caption = PixelUiSkin.Label("Caption", label,
-            new Vector2(112, 0), new Vector2(164, 112),
+            new Vector2(112, 0), new Vector2(164, 96),
             index == 0 ? 24 : 20, pixel: true,
             alignment: HorizontalAlignment.Center, weight: UiFontWeight.SemiBold);
         caption.AutowrapMode = TextServer.AutowrapMode.Off;

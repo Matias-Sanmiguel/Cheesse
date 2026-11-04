@@ -227,10 +227,10 @@ public partial class MenuTests : Node
                   picadaCard.Position.X - (classicCard.Position.X + classicCard.Size.X) == 14 &&
                   classicCaption.Position == new Vector2(112, 0) &&
                   picadaCaption.Position == new Vector2(112, 0) &&
-                  classicCaption.Size == new Vector2(164, 112) &&
-                  picadaCaption.Size == new Vector2(164, 112) &&
+                  classicCaption.Size == new Vector2(164, 96) &&
+                  picadaCaption.Size == new Vector2(164, 96) &&
                   picadaCaption.AutowrapMode == TextServer.AutowrapMode.Off,
-                "style cards are centered with even outer margins and aligned captions");
+                "style cards center captions within their faces rather than including the lower shadows");
             Press(root, Setup + "ClassicStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
                   root.GetNode<Control>(Setup + "ThemeFields").Visible &&
