@@ -65,8 +65,11 @@ public partial class MvpTests : Node
             Move(root, "a2", "a3");
             Check(root.CurrentGame.History.Count == 4, "overlay blocks board input");
             await Frames();
-            ClickAt(root.GetNode<Button>(Panel + "History/Undo").GetGlobalRect().GetCenter());
-            Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible, "panel undo dismisses mate overlay");
+            // The centered result dialog covers the sidebar; use the supported
+            // keyboard shortcut rather than clicking a button behind the dialog.
+            Keypress(Key.Z, ctrl: true);
+            Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible,
+                "Ctrl+Z dismisses the checkmate overlay");
             Press(root, Panel + "History/Redo");
             Check(overlay.Visible, "redo reopens mate overlay");
             Keypress(Key.Z, ctrl: true);
