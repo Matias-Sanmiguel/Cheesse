@@ -193,21 +193,24 @@ public partial class InGamePresentationView : Control
             return card;
         }
 
-        _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_128x66.png", 12, 343);
-        _blackCard = Card("BlackCard", "02_board_ui/player_card_black_128x66.png", 12, 463);
-        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 31, 360, 32, 32);
-        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 31, 480, 32, 32);
-        Art("WhiteTimerIcon", "05_icons/timer_16.png", 79, 382, 16, 16);
-        Art("BlackTimerIcon", "05_icons/timer_16.png", 79, 502, 16, 16);
+        // Match the actual chess orientation: black plays at the top, white at
+        // the bottom. Both cards share the same internal spacing and hierarchy.
+        // Only these decorations move; the board remains native-size.
+        _blackCard = Card("BlackCard", "02_board_ui/player_card_black_128x66.png", 12, 184);
+        _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_128x66.png", 12, 642);
+        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 31, 201, 32, 32);
+        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 31, 659, 32, 32);
+        Art("BlackTimerIcon", "05_icons/timer_16.png", 79, 223, 16, 16);
+        Art("WhiteTimerIcon", "05_icons/timer_16.png", 79, 681, 16, 16);
 
-        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS", new Vector2(78, 350),
-            new Vector2(112, 24), 17, InGameUiSkin.Ink, UiFontWeight.SemiBold));
-        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS", new Vector2(78, 470),
+        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS", new Vector2(78, 191),
             new Vector2(112, 24), 17, InGameUiSkin.Ivory, UiFontWeight.SemiBold));
-        _whiteClock = InGameUiSkin.Text("WhiteClock", "00:00", new Vector2(103, 378),
-            new Vector2(89, 27), 18, InGameUiSkin.Ink);
-        _blackClock = InGameUiSkin.Text("BlackClock", "00:00", new Vector2(103, 498),
+        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS", new Vector2(78, 649),
+            new Vector2(112, 24), 17, InGameUiSkin.Ink, UiFontWeight.SemiBold));
+        _blackClock = InGameUiSkin.Text("BlackClock", "00:00", new Vector2(103, 219),
             new Vector2(89, 27), 18, InGameUiSkin.Ivory);
+        _whiteClock = InGameUiSkin.Text("WhiteClock", "00:00", new Vector2(103, 677),
+            new Vector2(89, 27), 18, InGameUiSkin.Ink);
         const string timerHint = "Tiempo jugado en esta sesión; no es una partida a contrarreloj ni se guarda.";
         _whiteClock.TooltipText = timerHint;
         _blackClock.TooltipText = timerHint;
@@ -248,8 +251,29 @@ public partial class InGamePresentationView : Control
 
         _helpPanel = Popup("HelpPopup", new Vector2(1090, 52), new Vector2(312, 100),
             "JUGADA: elegi una pieza y despues su destino.\nGUARDAR: conserva el estado de la partida.");
-        _settingsPanel = Popup("SettingsPopup", new Vector2(1090, 52), new Vector2(312, 112),
-            "OPCIONES DE PARTIDA\nSonido: usa el icono del altavoz.\nOponente: cambia con el boton junto a turno.");
+        _settingsPanel = Popup("SettingsPopup", new Vector2(1090, 52), new Vector2(312, 158),
+            "OPCIONES DE PARTIDA\n\nSONIDO: boton de altavoz superior.");
+        _settingsPanel.GetNode<Label>("Text").Size = new Vector2(292, 70);
+
+        // The SAME CheckButton instance is moved from the sidebar into settings:
+        // its Toggled event, save/load synchronization and opponent logic remain
+        // connected. No duplicate controls or competing state.
+        var opponent = _sidebar!.GetNode<CheckButton>("Margin/Content/Random");
+        opponent.Reparent(_settingsPanel, false);
+        opponent.Name = "Random";
+        opponent.Position = new Vector2(16, 85);
+        opponent.Size = new Vector2(280, 28);
+        opponent.Text = "NEGRAS ALEATORIAS";
+        opponent.TooltipText = "La IA juega con las piezas negras";
+        opponent.AddThemeFontSizeOverride("font_size", 16);
+        opponent.AddThemeColorOverride("font_color", InGameUiSkin.Ink);
+        if (PixelUiSkin.FontFor(UiFontWeight.Medium) is { } font)
+            opponent.AddThemeFontOverride("font", font);
+
+        _settingsPanel.AddChild(InGameUiSkin.Text("OpponentHelp",
+            "Se puede cambiar durante la partida.",
+            new Vector2(16, 118), new Vector2(280, 20), 13,
+            InGameUiSkin.Ink, UiFontWeight.Regular));
         _helpText = _helpPanel.GetNode<Label>("Text");
     }
 

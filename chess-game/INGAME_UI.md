@@ -11,15 +11,16 @@ This implementation uses the **61 original PNGs** supplied in `CHEESSE_InGame_UI
 - All chess logic, `BoardView.cs`, piece PNGs, tile PNGs, overlays and mouse input remain unchanged.
 - Rank/file badges are square, exact integer x2 sprites (22→44), aligned to the actual glyph centers using the same font metrics as `BoardView.DrawCoordinates()`. The `BoardView` coordinate drawing, tiles, pieces and pointer conversion remain unchanged.
 - Team cards are **128x66 source** nine-patch assets, extended horizontally only to 188x66; their source left icon boxes, top and bottom borders and 32x32 team sprites are not resized.
-- The mode/turn/status ribbons render at their **native 270x28 resolution**. Icons retain 24x24/16x16 sizes, and the status line is a separate bar.
-- The in-game opponent switch uses Godot `CheckButton`'s proper `on`/`off` theme icons and is placed fully inside the turn ribbon; no default switch overflows its right edge.
+- The mode and turn ribbons render at their **native 270x28 resolution**. The game status is **a 16x16 dot (green for ongoing, amber for check, red for finished) and simple text**, without a third rectangle.
+- The player cards mirror the standard chess orientation: **black above** at y=184, **white below** at y=642. Both retain their source-pixel outlines, aligned icon, player name and functional time on a consistent two-line grid.
+- The random-black-opponent `CheckButton` is now accessible through **in-game Settings** (gear icon), away from the turn ribbon. The same control is reparented at runtime: `Toggled`, save/load and ongoing opponent behavior remain connected.
 - The interactive board continues to receive pointer input in its own original coordinates.
 - Player cards, status bars, header, action buttons and scrollable history are **separate runtime Godot nodes**, not a flattened preview.
 
 ## Real interactions preserved
 
 - Undo, Redo, Save, Load, New Game and Menu are the existing `SidePanelView` events: no duplicated chess logic.
-- `Negras aleatorias` remains accessible through the small switch beside the turn bar; its tooltip explains the action.
+- `Negras aleatorias` is in the **top-right settings popup**, not on the turn indicator. Its original signal and persistence behavior are preserved.
 - Help and settings buttons toggle small in-game popups; the sound utility toggles the Master audio bus.
 - The history text updates when `GodotEventBus.StateChanged` is emitted and can scroll.
 - Current game mode is **Clásico**. Special modes are *not* implemented in this PR.

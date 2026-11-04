@@ -25,6 +25,7 @@ public partial class SidePanelView : PanelContainer
     private Func<bool>? _hasSave;
     private Label _turn = null!;
     private Label _status = null!;
+    private TextureRect _statusDot = null!;
     private Label _message = null!;
     private Label _help = null!;
     private Label _moves = null!;
@@ -53,6 +54,7 @@ public partial class SidePanelView : PanelContainer
         _random.Toggled += enabled => RandomChanged?.Invoke(enabled);
 
         InGameUiSkin.SkinSidebar(this);
+        _statusDot = GetNode<TextureRect>(content + "StatusDot");
         _moves = GetNode<Label>(content + "MovesScroll/MovesText");
     }
 
@@ -102,6 +104,13 @@ public partial class SidePanelView : PanelContainer
             GameStatus.DrawByRepetition => "TABLAS: REPETICION",
             GameStatus.DrawByInsufficientMaterial => "TABLAS: MATERIAL",
             _ => _game.Status.ToString().ToUpperInvariant(),
+        };
+
+        _statusDot.Modulate = _game.Status switch
+        {
+            GameStatus.Ongoing => new Color("5abf69"),
+            GameStatus.Check => new Color("e6af47"),
+            _ => new Color("c95859")
         };
 
         _undo.Disabled = !_caretaker.CanUndo;

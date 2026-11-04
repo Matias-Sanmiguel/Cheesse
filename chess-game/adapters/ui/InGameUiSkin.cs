@@ -139,7 +139,8 @@ internal static class InGameUiSkin
         Decor("HeaderRibbon", "03_sidebar/header_ribbon_210x34.png", 65, 6, 210, 34);
         Decor("ModeBar", "03_sidebar/status_cream_270x28.png", 35, 76, 270, 28);
         Decor("TurnBar", "03_sidebar/status_turn_270x28.png", 35, 117, 270, 28);
-        Decor("StatusBar", "03_sidebar/status_cream_270x28.png", 35, 158, 270, 28);
+        // Status is deliberately a lightweight dot + label on the parchment.
+        // It does not need a third rectangular ribbon.
         Decor("ActionsDivider", "03_sidebar/divider_270x12.png", 35, 228, 270, 12);
 
         // History artwork also uses nine-slice: only its center expands.
@@ -174,7 +175,7 @@ internal static class InGameUiSkin
         Place("Title", 65, 8, 210, 32);
         Place("Mode", 75, 77, 194, 26);
         Place("Turn", 75, 118, 190, 26);
-        Place("Random", 274, 119, 24, 24);
+        // Random is reparented into the in-game settings popup, not the turn bar.
         Place("Status", 70, 159, 226, 26);
         Place("ActionsHeading", 103, 199, 134, 25);
 
@@ -232,7 +233,7 @@ internal static class InGameUiSkin
         scroll.GetVScrollBar().AddThemeStyleboxOverride("scroll_focus", new StyleBoxEmpty());
 
         var random = panel.GetNode<CheckButton>(contentRoot + "Random");
-        random.TooltipText = "Activar o desactivar negras aleatorias";
+        random.TooltipText = "La IA juega con las piezas negras";
         random.Text = string.Empty;
         random.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         // CheckButton uses 'on'/'off' icons (not CheckBox's 'checked'/'unchecked').

@@ -69,6 +69,11 @@ public partial class SidePanelTests : Node
             Check(whiteCard.Size.IsEqualApprox(new Vector2(188, 66)) &&
                   blackCard.Size.IsEqualApprox(new Vector2(188, 66)),
                 "team cards retain their 66px native height");
+            Check(blackCard.Position.Y < whiteCard.Position.Y,
+                "black team card is above and white team card is below");
+            Check(blackCard.Position.Y < board.GlobalPosition.Y + 300 &&
+                  whiteCard.Position.Y > board.GlobalPosition.Y + 500,
+                "cards follow the black-top white-bottom chess orientation");
             Check(whiteCard.PatchMarginLeft == 58 && whiteCard.PatchMarginTop == 10,
                 "nine-patch preserves the artwork around player icons and borders");
             foreach (string badge in new[] { "WhiteBadge", "BlackBadge" })
@@ -77,7 +82,7 @@ public partial class SidePanelTests : Node
                 Check(image.Size.IsEqualApprox(new Vector2(32, 32)),
                     badge + " keeps its native 32x32 pixels");
             }
-            foreach (string art in new[] { "ModeBar", "TurnBar", "StatusBar" })
+            foreach (string art in new[] { "ModeBar", "TurnBar" })
             {
                 var image = panel.GetNode<TextureRect>("Margin/Content/" + art);
                 Check(image.Size.IsEqualApprox(new Vector2(270, 28)),
@@ -89,7 +94,18 @@ public partial class SidePanelTests : Node
                 Check(image.Size.IsEqualApprox(new Vector2(24, 24)),
                     art + " retains native square pixels");
             }
-            var toggle = panel.GetNode<CheckButton>("Margin/Content/Random");
+            const string settingsTogglePath = "InGameUtilities/UtilityStage/SettingsPopup/Random";
+            var toggle = root.GetNode<CheckButton>(settingsTogglePath);
+            Check(!panel.HasNode("Margin/Content/Random") &&
+                  toggle.GetParent().Name == "SettingsPopup",
+                "random opponent switch lives in game settings, not the turn bar");
+            Check(!panel.HasNode("Margin/Content/StatusBar"),
+                "game status uses the existing dot with no third status rectangle");
+            var statusDot = panel.GetNode<TextureRect>("Margin/Content/StatusDot");
+            Check(statusDot.Modulate.G > statusDot.Modulate.R,
+                "ongoing status is represented by a green dot");
+            Check(toggle.Text == "NEGRAS ALEATORIAS",
+                "settings explain the opponent control");
             Check(toggle.GetThemeIcon("on") == InGameUiSkin.Texture("05_icons/random_16.png") &&
                   toggle.GetThemeIcon("off") == InGameUiSkin.Texture("05_icons/switch_16.png"),
                 "random toggle uses real CheckButton on/off icons");
@@ -128,6 +144,11 @@ public partial class SidePanelTests : Node
 
             var whiteClock = root.GetNode<Label>(stagePath + "WhiteClock");
             var blackClock = root.GetNode<Label>(stagePath + "BlackClock");
+            Check(blackClock.GlobalPosition.Y < whiteClock.GlobalPosition.Y,
+                "black time displays above white time in the left column");
+            Check(Mathf.Abs(blackClock.Position.Y - blackCard.Position.Y - 35) < 0.1f &&
+                  Mathf.Abs(whiteClock.Position.Y - whiteCard.Position.Y - 35) < 0.1f,
+                "both timers share consistent padding inside their cards");
             Check(whiteClock.Text == "00:00" && blackClock.Text == "00:00",
                 "session timers start at zero instead of displaying fake chess clocks");
             presentation._Process(2.2);
@@ -135,7 +156,7 @@ public partial class SidePanelTests : Node
                 "white elapsed-time clock advances while white has the move");
             Check(panelRect.Position.X >= 0 && panelRect.Position.Y >= 0 &&
                 panelRect.End.X <= 1440 && panelRect.End.Y <= 900, "panel fits 1440x900");
-            foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Random", "Menu" })
+            foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Menu" })
             {
                 var rect = root.GetNode<Control>(Content + name).GetGlobalRect();
                 Check(!rect.Intersects(boardRect), name + " does not overlap board");
@@ -210,7 +231,7 @@ public partial class SidePanelTests : Node
             Check(Text(root, "Status") == "EN JUEGO", "Redo clears check text");
 
             PressPanel(root, "NewGame");
-            toggle = root.GetNode<CheckButton>(Content + "Random");
+            toggle = root.GetNode<CheckButton>(settingsTogglePath);
             toggle.ButtonPressed = true;
             Check(root.AgainstRandom, "toggle enables RandomAI");
             Move(root, "e2", "e4");
