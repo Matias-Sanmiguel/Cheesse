@@ -2,6 +2,7 @@
 using Chess.Core.Model;
 using Cheesse.Game.Adapters.Infra;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 
 namespace Cheesse.Game.Adapters.Ui;
 
@@ -26,6 +27,9 @@ public partial class BoardView : Node2D
 
     private Texture2D? _lightTile;
     private Texture2D? _darkTile;
+    private VisualTheme _visualTheme = VisualTheme.Classic;
+
+    public VisualTheme CurrentTheme => _visualTheme;
 
     public override void _Ready()
     {
@@ -47,6 +51,15 @@ public partial class BoardView : Node2D
         RefreshFromGame();
     }
 
+    public void SetVisualTheme(VisualTheme theme)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        _visualTheme = VisualThemeCatalog.Normalize(theme);
+
+        LoadTextures();
+        QueueRedraw();
+    }
     public override void _ExitTree()
     {
         if (_bus is not null)
@@ -378,36 +391,70 @@ public partial class BoardView : Node2D
         );
     }
 
+    
     private void LoadTextures()
     {
-        _lightTile = LoadTextureIfExists(
+        // TABLERO
+        string? boardRoot = _visualTheme.BoardSkin is null
+            ? null
+            : "res://assets/skins/boards/" + _visualTheme.BoardSkin;
+
+        _lightTile = boardRoot is null
+            ? null
+            : LoadTextureIfExists(boardRoot + "/light_tile.png");
+
+        _darkTile = boardRoot is null
+            ? null
+            : LoadTextureIfExists(boardRoot + "/dark_tile.png");
+
+        // Respaldo clásico.
+        _lightTile ??= LoadTextureIfExists(
             "res://assets/board/light_tile.png");
 
-        _darkTile = LoadTextureIfExists(
+        _darkTile ??= LoadTextureIfExists(
             "res://assets/board/dark_tile.png");
 
+        // PIEZAS
         _pieceTextures.Clear();
 
         foreach (PieceType type in Enum.GetValues<PieceType>())
         {
             foreach (PlayerColor color in Enum.GetValues<PlayerColor>())
             {
-                string colorName =
-                    color.ToString().ToLowerInvariant();
-
                 string pieceName =
                     type.ToString().ToLowerInvariant();
 
-                string path =
-                    $"res://assets/pieces/{colorName}/{pieceName}.png";
+                // En los packs las carpetas se llaman White y Black.
+                string skinColor = color.ToString();
 
-                Texture2D? texture = LoadTextureIfExists(path);
+                string? pack = color == PlayerColor.White
+                    ? _visualTheme.WhitePack
+                    : _visualTheme.BlackPack;
+
+                Texture2D? texture = null;
+
+                if (pack is not null)
+                {
+                    string path =
+                        $"res://assets/skins/pieces/{pack}/" +
+                        $"{skinColor}/{pieceName}.png";
+
+                    texture = LoadTextureIfExists(path);
+                }
+
+                // Si no existe el sprite temático, usar el clásico.
+                texture ??= LoadTextureIfExists(
+                    $"res://assets/pieces/" +
+                    $"{skinColor.ToLowerInvariant()}/{pieceName}.png");
 
                 if (texture is not null)
+                {
                     _pieceTextures[(type, color)] = texture;
+                }
             }
         }
     }
+
 
     private static Texture2D? LoadTextureIfExists(string path)
     {

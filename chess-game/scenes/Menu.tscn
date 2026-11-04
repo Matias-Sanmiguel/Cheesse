@@ -82,6 +82,52 @@ custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 mouse_filter = 2
 
+
+[node name="AppearanceLabel" type="Label" parent="Center/Panel/Margin/Options"]
+layout_mode = 2
+text = "Apariencia de la partida"
+
+[node name="Appearance" type="OptionButton" parent="Center/Panel/Margin/Options"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+
+[node name="ThemeDetails" type="VBoxContainer" parent="Center/Panel/Margin/Options"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BoardLabel" type="Label" parent="Center/Panel/Margin/Options/ThemeDetails"]
+layout_mode = 2
+text = "Tablero"
+
+[node name="Board" type="OptionButton" parent="Center/Panel/Margin/Options/ThemeDetails"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="WhiteLabel" type="Label" parent="Center/Panel/Margin/Options/ThemeDetails"]
+layout_mode = 2
+text = "Blancas - Elegí un queso"
+
+[node name="White" type="OptionButton" parent="Center/Panel/Margin/Options/ThemeDetails"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="BlackLabel" type="Label" parent="Center/Panel/Margin/Options/ThemeDetails"]
+layout_mode = 2
+text = "Negras - Elegí un fiambre"
+
+[node name="Black" type="OptionButton" parent="Center/Panel/Margin/Options/ThemeDetails"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="ThemeNote" type="Label" parent="Center/Panel/Margin/Options/ThemeDetails"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.67, 0.74, 0.72, 1)
+theme_override_font_sizes/font_size = 13
+text = "La apariencia no cambia las reglas. Los modos especiales se implementarán por separado."
+autowrap_mode = 2
+
+
 [node name="Human" type="Button" parent="Center/Panel/Margin/Options"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2

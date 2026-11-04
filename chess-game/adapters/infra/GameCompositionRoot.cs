@@ -6,6 +6,7 @@ using Cheesse.Game.Adapters.Input;
 using Cheesse.Game.Adapters.Persist;
 using Cheesse.Game.Adapters.Ui;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 
 namespace Cheesse.Game.Adapters.Infra;
 
@@ -45,11 +46,12 @@ public partial class GameCompositionRoot : Node
         _panel.RedoRequested += Redo;
         _panel.SaveRequested += SaveGame;
         _panel.LoadRequested += LoadGame;
-        _panel.NewGameRequested += () => StartNewGame(AgainstRandom);
+        _panel.NewGameRequested +=
+            () => StartNewGame(AgainstRandom, _repository.Theme);
         _panel.MenuRequested += ShowMenu;
         _panel.RandomChanged += SetRandomOpponent;
         _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
-        _gameOver.RematchRequested += () => StartNewGame(AgainstRandom);
+        _gameOver.RematchRequested += () => StartNewGame(AgainstRandom, _repository.Theme);
         _gameOver.MainMenuRequested += ShowMenu;
         ShowMenu();
     }
@@ -75,14 +77,31 @@ public partial class GameCompositionRoot : Node
         }
     }
 
-    public void StartHumanGame() => StartNewGame(false);
-    public void StartRandomGame() => StartNewGame(true);
+    
+    public void StartHumanGame()
+    {
+        StartNewGame(false, _menu.CreateVisualTheme());
+    }
 
-    private void StartNewGame(bool againstRandom)
+    public void StartRandomGame()
+    {
+        StartNewGame(true, _menu.CreateVisualTheme());
+    }
+
+    private void StartNewGame(
+        bool againstRandom,
+        VisualTheme theme)
     {
         _repository.AgainstRandom = againstRandom;
-        EnterGame(new ChessGame(_bus, _repository, _clock));
+        _repository.Theme = VisualThemeCatalog.Normalize(theme);
+
+        EnterGame(new ChessGame(
+            _bus,
+            _repository,
+            _clock
+        ));
     }
+
 
     private void ContinueGame()
     {
@@ -102,6 +121,7 @@ public partial class GameCompositionRoot : Node
         _caretaker = game.Caretaker;
         _ai = _repository.AgainstRandom ? new RandomAI() : null;
         _board.Attach(game, _bus);
+        _board.SetVisualTheme(_repository.Theme);   
         _panel.Attach(game, _caretaker, _bus, AgainstRandom, () => _repository.HasSave);
         _input.Attach(game, _board, _promotionDialog, ApplyMove, () => game.State.AcceptsMoves && !_gameOver.Visible && (!AgainstRandom || game.Turn == PlayerColor.White));
         _menu.Hide();
