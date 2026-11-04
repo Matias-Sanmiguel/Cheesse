@@ -147,8 +147,16 @@ public partial class InGamePresentationView : Control
             _stage.AddChild(InGameUiSkin.Sprite(name, file, new Vector2(x, y), new Vector2(w, h)));
 
         Art("GameLogo", "res://assets/ui/logos/logo_cheese.png", 8, 18, 192, 64);
-        Art("BoardFrame", "02_board_ui/frame_board_422x422.png",
-            FrameLeft, FrameTop, 844, 844);
+        // The PNG has a transparent 384x384 opening. Draw only its wooden
+        // border in front of the board, so the chess squares cannot cut off
+        // the inner rim. It never captures mouse input and has no effect on
+        // BoardView (which stays 768x768 at scale 1).
+        var frame = InGameUiSkin.Sprite("BoardFrame",
+            "02_board_ui/frame_board_422x422.png",
+            new Vector2(FrameLeft, FrameTop), new Vector2(844, 844));
+        frame.ZIndex = 1;
+        frame.MouseFilter = MouseFilterEnum.Ignore;
+        _stage.AddChild(frame);
 
         float boardX = FrameLeft + FrameInset;
         float boardY = FrameTop + FrameInset;

@@ -45,6 +45,14 @@ public partial class SidePanelTests : Node
             var frame = root.GetNode<TextureRect>("InGamePresentation/ArtworkStage/BoardFrame");
             Check(frame.Size.IsEqualApprox(new Vector2(844, 844)),
                 "frame expands 2x to fit the original board, not vice versa");
+            Check(frame.ZIndex > board.ZIndex &&
+                  frame.MouseFilter == Control.MouseFilterEnum.Ignore,
+                "wooden border renders over board but never intercepts clicks");
+            var framePixels = frame.Texture?.GetImage();
+            Check(framePixels is not null &&
+                  framePixels.GetPixel(211, 211).A == 0f &&
+                  framePixels.GetPixel(18, 18).A > 0.99f,
+                "front frame has a fully transparent board opening and opaque rim");
             var presentation = root.GetNode<InGamePresentationView>("InGamePresentation");
             Check(presentation.Visible && presentation.HasNode("ArtworkStage/BoardFrame"),
                 "in-game presentation and wooden frame are rendered");
