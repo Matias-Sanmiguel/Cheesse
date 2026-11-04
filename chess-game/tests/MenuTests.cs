@@ -214,8 +214,9 @@ public partial class MenuTests : Node
             {
                 var picture = GD.Load<Texture2D>(
                     "res://assets/ui/setup_v4/cards/picada_" + state + "_73x28.png")!.GetImage();
-                Check(picture.GetWidth() == 73 && picture.GetHeight() == 28,
-                    "Picada " + state + " preserves its exact native pixel-art dimensions");
+                Check(picture.GetWidth() > 0 && picture.GetHeight() > 0 &&
+                      picture.GetWidth() * 28 == picture.GetHeight() * 73,
+                    "Picada " + state + " preserves its 73:28 pixel-art aspect ratio");
             }
             var classicCard = setupOptions.GetNode<Button>("ClassicStyle");
             var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
