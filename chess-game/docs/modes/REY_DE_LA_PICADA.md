@@ -20,10 +20,13 @@ una de estas casillas: **d4, e4, d5 o e5**.
 - En partida aparece un distintivo de corona con el objetivo.
 - Las cuatro casillas objetivo se señalan con
   `assets/ui/overlays/goal_square.png` (48×48 a x2) y un pulso suave de 8 fps.
-- Cuando un rey alcanza legalmente el centro salen pequeñas partículas de
-  `assets/fx/sparkle_16x16.png` y `assets/fx/cheese_crumb_8x8.png`.
-- El modal de victoria espera 0,72 s para que se vea el efecto y después
-  muestra el ganador y «REY AL CENTRO», con corona y aparición gradual.
+- Cuando un rey alcanza legalmente el centro, aparece una corona ascendente,
+  un destello del objetivo, un cartel «CENTRO CONQUISTADO» y 24 partículas
+  de `assets/fx/sparkle_16x16.png` y `assets/fx/cheese_crumb_8x8.png`.
+- La celebración dura aproximadamente 1,8 s con partículas de larga duración;
+  el modal espera 2,05 s para no taparlas antes de que se vean y luego muestra
+  el ganador y «REY AL CENTRO».
+- Al deshacer una victoria o iniciar otra partida se eliminan los efectos restantes.
 - Clásico no muestra estas señales ni efectos.
 
 ## Arquitectura
