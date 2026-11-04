@@ -32,7 +32,7 @@ public partial class GameOverOverlay : CanvasLayer
         _content = GetNode<Control>("Overlay/Center/Panel/Content");
         _panel.CustomMinimumSize = Size(216, 194);
         _content.Size = Size(216, 194);
-        TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+        _panel.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
 
         BuildComponents();
         Hide();
