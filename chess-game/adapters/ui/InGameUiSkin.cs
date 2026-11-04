@@ -107,8 +107,23 @@ internal static class InGameUiSkin
         panel.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         panel.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         var content = panel.GetNode<Control>("Margin/Content");
-        var background = Sprite("Parchment", "03_sidebar/sidebar_parchment_306x454.png",
-            Vector2.Zero, new Vector2(306, 454));
+        content.CustomMinimumSize = new Vector2(340, 808);
+        // Nine-slice extends the parchment vertically, without stretching its border pixels.
+        var background = new Panel
+        {
+            Name = "Parchment",
+            Position = Vector2.Zero,
+            Size = new Vector2(340, 808),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        background.AddThemeStyleboxOverride("panel", new StyleBoxTexture
+        {
+            Texture = Texture("03_sidebar/sidebar_parchment_306x454.png"),
+            TextureMarginLeft = 14,
+            TextureMarginRight = 14,
+            TextureMarginTop = 14,
+            TextureMarginBottom = 14
+        });
         content.AddChild(background);
         content.MoveChild(background, 0);
 
@@ -116,31 +131,77 @@ internal static class InGameUiSkin
         {
             var art = Sprite(name, path, new Vector2(x, y), new Vector2(w, h));
             content.AddChild(art);
-            content.MoveChild(art, 1); // Behind all live controls, above parchment.
+            content.MoveChild(art, 1);
         }
 
-        Decor("HeaderRibbon", "03_sidebar/header_ribbon_210x34.png", 48, -9, 210, 34);
-        Decor("ModeBar", "03_sidebar/status_cream_270x28.png", 18, 54, 270, 28);
-        Decor("TurnBar", "03_sidebar/status_turn_270x28.png", 18, 91, 270, 28);
-        Decor("ActionsDivider", "03_sidebar/divider_270x12.png", 18, 139, 270, 12);
-        Decor("HistoryPanel", "03_sidebar/history_box_270x92.png", 18, 285, 270, 92);
-        Decor("CrownBadge", "05_icons/crown_24.png", 24, 57, 24, 24);
-        Decor("TurnBadge", "05_icons/cheese_24.png", 24, 93, 24, 24);
-        Decor("StatusDot", "05_icons/status_dot_16.png", 20, 124, 13, 13);
+        Decor("HeaderRibbon", "03_sidebar/header_ribbon_210x34.png", 65, 6, 210, 34);
+        Decor("ModeBar", "03_sidebar/status_cream_270x28.png", 23, 80, 294, 40);
+        Decor("TurnBar", "03_sidebar/status_turn_270x28.png", 23, 132, 294, 40);
+        Decor("ActionsDivider", "03_sidebar/divider_270x12.png", 24, 222, 292, 12);
+
+        // History artwork also uses nine-slice: only its center expands.
+        var historyPanel = new Panel
+        {
+            Name = "HistoryPanel",
+            Position = new Vector2(24, 475),
+            Size = new Vector2(292, 225),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        historyPanel.AddThemeStyleboxOverride("panel", new StyleBoxTexture
+        {
+            Texture = Texture("03_sidebar/history_box_270x92.png"),
+            TextureMarginLeft = 12, TextureMarginRight = 12,
+            TextureMarginTop = 12, TextureMarginBottom = 12
+        });
+        content.AddChild(historyPanel);
+        content.MoveChild(historyPanel, 1);
+
+        Decor("CrownBadge", "05_icons/crown_24.png", 32, 88, 27, 27);
+        Decor("TurnBadge", "05_icons/cheese_24.png", 32, 140, 27, 27);
+        Decor("StatusDot", "05_icons/status_dot_16.png", 28, 189, 16, 16);
+
+        // Reflow EXISTING controls. Paths/signals in SidePanelView stay unchanged.
+        void Place(string path, float x, float y, float w, float h)
+        {
+            var control = panel.GetNode<Control>("Margin/Content/" + path);
+            control.Position = new Vector2(x, y);
+            control.Size = new Vector2(w, h);
+        }
+
+        Place("Title", 65, 8, 210, 32);
+        Place("Mode", 69, 84, 224, 33);
+        Place("Turn", 69, 136, 224, 33);
+        Place("Random", 287, 136, 30, 30);
+        Place("Status", 35, 185, 260, 26);
+        Place("ActionsHeading", 103, 223, 134, 23);
+
+        Place("History", 24, 256, 292, 48);
+        Place("History/Undo", 0, 0, 140, 44);
+        Place("History/Redo", 152, 0, 140, 44);
+        Place("Files", 24, 316, 292, 48);
+        Place("Files/Save", 0, 0, 140, 44);
+        Place("Files/Load", 152, 0, 140, 44);
+        Place("NewGame", 24, 376, 292, 49);
+
+        Place("MovesHeading", 61, 438, 218, 30);
+        Place("MovesScroll", 38, 495, 265, 181);
+        Place("Menu", 24, 710, 292, 49);
+        Place("Message", 27, 769, 286, 25);
+        Place("Help", 27, 769, 286, 25);
 
         void Style(string path, int size, Color color, UiFontWeight weight)
         {
             PixelUiSkin.StyleLabel(panel.GetNode<Label>("Margin/Content/" + path), size, color, weight: weight);
         }
-        Style("Title", 19, Ivory, UiFontWeight.Bold);
-        Style("Mode", 16, Ink, UiFontWeight.SemiBold);
-        Style("Turn", 16, Ink, UiFontWeight.SemiBold);
-        Style("Status", 11, Ink, UiFontWeight.Medium);
-        Style("ActionsHeading", 13, Ink, UiFontWeight.SemiBold);
-        Style("MovesHeading", 12, Ink, UiFontWeight.SemiBold);
-        Style("MovesScroll/MovesText", 14, Ivory, UiFontWeight.Regular);
-        Style("Message", 11, Ink, UiFontWeight.Regular);
-        Style("Help", 11, Ink, UiFontWeight.Regular);
+        Style("Title", 22, Ivory, UiFontWeight.Bold);
+        Style("Mode", 19, Ink, UiFontWeight.SemiBold);
+        Style("Turn", 19, Ink, UiFontWeight.SemiBold);
+        Style("Status", 15, Ink, UiFontWeight.Medium);
+        Style("ActionsHeading", 17, Ink, UiFontWeight.SemiBold);
+        Style("MovesHeading", 17, Ink, UiFontWeight.SemiBold);
+        Style("MovesScroll/MovesText", 18, Ivory, UiFontWeight.Regular);
+        Style("Message", 15, Ink, UiFontWeight.Regular);
+        Style("Help", 15, Ink, UiFontWeight.Regular);
 
         var contentRoot = "Margin/Content/";
         foreach (var item in new[]
@@ -154,7 +215,7 @@ internal static class InGameUiSkin
         })
         {
             var button = panel.GetNode<Button>(contentRoot + item.Item1);
-            StyleButton(button, item.Item2, item.Item3, 14);
+            StyleButton(button, item.Item2, item.Item3, 19);
         }
 
         var scroll = panel.GetNode<ScrollContainer>(contentRoot + "MovesScroll");

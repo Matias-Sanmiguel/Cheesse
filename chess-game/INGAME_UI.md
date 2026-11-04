@@ -4,10 +4,11 @@ This implementation uses the **61 original PNGs** supplied in `CHEESSE_InGame_UI
 
 ## Design and scaling
 
-- UI-only virtual coordinate space: **960 x 540** as in `layout_referencia_960x540.json`.
-- A **separate background** is selected from two authored sources: 960x540 for wide windows, 1440x900 for 16:10; the background stretches to fill the viewport using Nearest.
-- The foreground uses uniform `min(viewportWidth/960, viewportHeight/540)` scaling and centers itself. It is never stretched separately along x/y.
-- The **board itself is not modified**: same `BoardView.cs`, scene, piece textures, tile textures, rules and legal-move indicators. The existing board node is positioned and scaled from its native 96px cells to the **384px opening** of the 422x422 frame. Layout at the virtual resolution: frame `(170,75)`; inner board `(189,94)`, tiles `(48x48)`, sidebar `(629,58)`.
+- The **board remains at its original resolution**: 8 x 96px = **768 x 768 screen pixels**, `BoardView.Scale = (1,1)` at every window size. No board, tile, piece or input scaling.
+- The reference JSON used a 384px inner frame. Rather than shrink the 768px game, the original **422 x 422 board frame is drawn at exact x2 = 844 x 844**. Its 384px opening becomes 768px. Frame top-left `(206,24)`, board top-left `(244,62)`.
+- The surrounding **1440 x 900 desktop layout** is re-composed around that board: left-side team cards, right-side 340x808 HUD at `(1080,42)`, separate 9-slice parchment and scrollable history. Pixel art is nearest-neighbor and the board is untouched.
+- The backdrop uses the provided authored sources and fills the window; decorative UI keeps native coordinates on larger windows and is centered without scaling. **At windows smaller than 1440x900, surrounding elements can be cropped rather than shrinking the board** (768px board cannot physically fit into a 720px-high window). The intended play window is at least 1440x900.
+- All chess logic, `BoardView.cs`, piece PNGs, tile PNGs, overlays and mouse input remain unchanged.
 - Rank and file badges are independent decorative sprites behind the board's already-rendered labels. The interactive board continues to receive pointer input in its own transformed coordinates.
 - Player cards, status bars, header, action buttons and scrollable history are **separate runtime Godot nodes**, not a flattened preview.
 

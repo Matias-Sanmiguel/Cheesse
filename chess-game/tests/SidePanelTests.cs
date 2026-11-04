@@ -30,20 +30,26 @@ public partial class SidePanelTests : Node
             var board = root.GetNode<BoardView>("Board");
             var panel = root.GetNode<SidePanelView>("SidePanel");
             var viewport = GetViewport().GetVisibleRect().Size;
-            float scale = Mathf.Min(viewport.X / 960f, viewport.Y / 540f);
-            Vector2 offset = (viewport - new Vector2(960, 540) * scale) / 2f;
-            var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768) * board.Scale.X);
+            Vector2 offset = new(
+                Mathf.Max(0f, (viewport.X - 1440f) * 0.5f),
+                Mathf.Max(0f, (viewport.Y - 900f) * 0.5f));
+            var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768));
             var panelRect = panel.GetGlobalRect();
             Check(boardRect.End.X < panelRect.Position.X, "board stays to the left of the panel");
-            Check(board.GlobalPosition.DistanceTo(offset + new Vector2(189, 94) * scale) < 1.5f,
-                "board placed precisely in supplied frame opening");
-            Check(Mathf.Abs(boardRect.Size.X - 384f * scale) < 1.5f,
-                "original chess board scales as one node to the 384px artwork opening");
+            Check(board.GlobalPosition.DistanceTo(offset + new Vector2(244, 62)) < 1.5f,
+                "board sits inside the doubled frame at its original position");
+            Check(board.Scale.IsEqualApprox(Vector2.One),
+                "board node is NEVER scaled; all 96px squares remain 96px");
+            Check(boardRect.Size.IsEqualApprox(new Vector2(768, 768)),
+                "8x8 board keeps exact 768x768 native resolution");
+            var frame = root.GetNode<TextureRect>("InGamePresentation/ArtworkStage/BoardFrame");
+            Check(frame.Size.IsEqualApprox(new Vector2(844, 844)),
+                "frame expands 2x to fit the original board, not vice versa");
             var presentation = root.GetNode<InGamePresentationView>("InGamePresentation");
             Check(presentation.Visible && presentation.HasNode("ArtworkStage/BoardFrame"),
                 "in-game presentation and wooden frame are rendered");
             Check(ResourceLoader.Exists("res://assets/ingame/01_background/ingame_picada_1440x900.png"),
-                "16:10 background is imported");
+                "1440x900 background is imported");
             Check(ResourceLoader.Exists("res://assets/ingame/01_background/ingame_picada_960x540.png"),
                 "16:9 background is imported");
             Check(ResourceLoader.Exists("res://assets/ingame/04_buttons/cheese_hover_9slice_48x32.png"),
