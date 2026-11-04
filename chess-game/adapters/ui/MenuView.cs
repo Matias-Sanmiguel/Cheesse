@@ -243,15 +243,15 @@ public partial class MenuView : Control
 
         preview.AddChild(PixelUiSkin.Image("WhiteFrame",
             SetupAssets + "preview/slot_pieza_40x39.png",
-            new Vector2(408, 103), new Vector2(160, 156), 4));
+            new Vector2(388, 103), new Vector2(160, 156), 4));
         _whitePiece = PixelUiSkin.Image("WhitePiece", "",
-            new Vector2(440, 133), new Vector2(96, 96), 2);
+            new Vector2(420, 133), new Vector2(96, 96), 2);
         preview.AddChild(_whitePiece);
         preview.AddChild(PixelUiSkin.Image("BlackFrame",
             SetupAssets + "preview/slot_pieza_40x39.png",
-            new Vector2(408, 275), new Vector2(160, 156), 4));
+            new Vector2(388, 275), new Vector2(160, 156), 4));
         _blackPiece = PixelUiSkin.Image("BlackPiece", "",
-            new Vector2(440, 305), new Vector2(96, 96), 2);
+            new Vector2(420, 305), new Vector2(96, 96), 2);
         preview.AddChild(_blackPiece);
 
         preview.AddChild(PixelUiSkin.Image("DetailsSeparator",
@@ -288,7 +288,7 @@ public partial class MenuView : Control
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Bold));
         form.AddChild(PixelUiSkin.Label("AppearanceLabel", "ESTILO VISUAL",
-            new Vector2(43, 77), new Vector2(560, 30), 23,
+            new Vector2(43, 73), new Vector2(560, 30), 23,
             pixel: true, light: true, weight: UiFontWeight.Medium));
 
         // Keep the hidden selector as the single source of truth for game mode,
@@ -300,17 +300,17 @@ public partial class MenuView : Control
         form.AddChild(_appearance);
 
         _classicStyleCard = MakeStyleCard("ClassicStyle", "CLASICO", "classic", 0,
-            new Vector2(41, 112), () => { _appearance.Select(0); UpdatePreview(); });
+            new Vector2(41, 108), () => { _appearance.Select(0); UpdatePreview(); });
         form.AddChild(_classicStyleCard);
         _picadaStyleCard = MakeStyleCard("PicadaStyle", "PICADA\nPERSONALIZADA", "picada", 1,
-            new Vector2(347, 112), () => { _appearance.Select(1); UpdatePreview(); });
+            new Vector2(347, 108), () => { _appearance.Select(1); UpdatePreview(); });
         form.AddChild(_picadaStyleCard);
 
         _themeFields = new Control
         {
             Name = "ThemeFields",
-            Position = new Vector2(0, 246),
-            Size = new Vector2(680, 182),
+            Position = new Vector2(0, 230),
+            Size = new Vector2(680, 164),
             MouseFilter = Control.MouseFilterEnum.Pass
         };
         form.AddChild(_themeFields);
@@ -321,33 +321,33 @@ public partial class MenuView : Control
         foreach (var skin in VisualThemeCatalog.Boards) _boardSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_boardSkin);
         _themeFields.AddChild(PixelUiSkin.Label("WhiteLabel", "BLANCAS - QUESO",
-            new Vector2(43, 66), new Vector2(216, 44), 22,
+            new Vector2(43, 60), new Vector2(216, 44), 22,
             pixel: true, light: true, weight: UiFontWeight.Medium));
-        _whiteSkin = MakeOption("White", new Vector2(264, 66), new Vector2(355, 44));
+        _whiteSkin = MakeOption("White", new Vector2(264, 60), new Vector2(355, 44));
         _whiteSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Cheeses) _whiteSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_whiteSkin);
         _themeFields.AddChild(PixelUiSkin.Label("BlackLabel", "NEGRAS - FIAMBRE",
-            new Vector2(43, 132), new Vector2(216, 44), 22,
+            new Vector2(43, 120), new Vector2(216, 44), 22,
             pixel: true, light: true, weight: UiFontWeight.Medium));
-        _blackSkin = MakeOption("Black", new Vector2(264, 132), new Vector2(355, 44));
+        _blackSkin = MakeOption("Black", new Vector2(264, 120), new Vector2(355, 44));
         _blackSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Charcuterie) _blackSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_blackSkin);
 
         _note = PixelUiSkin.Label("Note", "LAS SKINS NO CAMBIAN LAS REGLAS.",
-            new Vector2(43, 429), new Vector2(574, 34), 17,
+            new Vector2(43, 409), new Vector2(574, 34), 17,
             light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Medium);
         form.AddChild(_note);
 
         // Retain the original gold buttons, 16px icons and handlers.
         form.AddChild(MakeSetupActionButton("Human", "CONTRA HUMANO", "play",
-            new Vector2(43, 470), () => HumanRequested?.Invoke()));
+            new Vector2(43, 450), () => HumanRequested?.Invoke()));
         form.AddChild(MakeSetupActionButton("Random", "CONTRA STOCKFISH", "dice",
-            new Vector2(43, 526), () => RandomRequested?.Invoke()));
+            new Vector2(43, 505), () => RandomRequested?.Invoke()));
         _continue = MakeSetupActionButton("Continue", "CONTINUAR PARTIDA", "load",
-            new Vector2(43, 582), () => ContinueRequested?.Invoke());
+            new Vector2(43, 560), () => ContinueRequested?.Invoke());
         _continue.Disabled = true;
         form.AddChild(_continue);
 
