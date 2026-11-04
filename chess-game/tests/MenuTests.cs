@@ -168,12 +168,23 @@ public partial class MenuTests : Node
                   setupOptions.GetNode<Button>("PicadaStyle").Size.X == 292 &&
                   !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
                 "V4 preview frames, separator and style cards use exact integer scaling");
-            Check(setupOptions.GetNode<Label>("Note").Position.Y == 429 &&
-                  setupOptions.GetNode<Button>("Human").Position.Y == 470 &&
-                  setupOptions.GetNode<Button>("Random").Position.Y == 526 &&
-                  setupOptions.GetNode<Button>("Continue").Position.Y == 582 &&
-                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 28,
-                "setup note and action buttons have ample bottom padding");
+            Check(setupOptions.GetNode<Label>("AppearanceLabel").Position.Y == 73 &&
+                  setupOptions.GetNode<Control>("ThemeFields").Position.Y == 230 &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/White").Position.Y == 60 &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/Black").Position.Y == 120 &&
+                  setupOptions.GetNode<Label>("Note").Position.Y == 409 &&
+                  setupOptions.GetNode<Button>("Human").Position.Y == 450 &&
+                  setupOptions.GetNode<Button>("Random").Position.Y == 505 &&
+                  setupOptions.GetNode<Button>("Continue").Position.Y == 560 &&
+                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 50,
+                "setup content sits higher with compact controls and 50px of bottom padding");
+            Check(setupPreview.GetNode<TextureRect>("WhiteFrame").Position == new Vector2(388, 103) &&
+                  setupPreview.GetNode<TextureRect>("BlackFrame").Position == new Vector2(388, 275) &&
+                  setupPreview.GetNode<TextureRect>("WhitePiece").Position == new Vector2(420, 133) &&
+                  setupPreview.GetNode<TextureRect>("BlackPiece").Position == new Vector2(420, 305) &&
+                  setupPreview.GetNode<TextureRect>("WhitePiece").Size == new Vector2(96, 96) &&
+                  setupPreview.GetNode<TextureRect>("BlackPiece").Size == new Vector2(96, 96),
+                "piece preview frames move left together with their unscaled-content king sprites");
             foreach (var action in new[] { "Human", "Random", "Continue" })
             {
                 var actionButton = setupOptions.GetNode<Button>(action);
@@ -188,8 +199,8 @@ public partial class MenuTests : Node
             var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
             var classicCaption = classicCard.GetNode<Label>("Caption");
             var picadaCaption = picadaCard.GetNode<Label>("Caption");
-            Check(classicCard.Position == new Vector2(41, 112) &&
-                  picadaCard.Position == new Vector2(347, 112) &&
+            Check(classicCard.Position == new Vector2(41, 108) &&
+                  picadaCard.Position == new Vector2(347, 108) &&
                   picadaCard.Position.X - (classicCard.Position.X + classicCard.Size.X) == 14 &&
                   classicCaption.Position == new Vector2(112, 0) &&
                   picadaCaption.Position == new Vector2(112, 0) &&
