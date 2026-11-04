@@ -37,6 +37,10 @@ public partial class BoardView : Node2D
     private Texture2D? _goalOverlay;
     private double _goalPulseTime;
     private double _goalRedrawClock;
+    private Node2D? _picadaVictoryFx;
+
+    // The celebration should be visible before its result dialog covers the board.
+    public const double PicadaVictoryEffectDurationSeconds = 1.8;
     private VisualTheme _visualTheme = VisualTheme.Classic;
 
     public VisualTheme CurrentTheme => _visualTheme;
@@ -68,6 +72,7 @@ public partial class BoardView : Node2D
         if (_bus is not null)
             _bus.StateChanged -= OnStateChanged;
 
+        ClearPicadaVictoryFx();
         _game = game;
         _bus = bus;
         _goalPulseTime = 0;
@@ -108,38 +113,130 @@ public partial class BoardView : Node2D
         }
     }
 
+    /// <summary>
+    /// Long, unmistakable visual feedback when the king conquers the central squares.
+    /// The particles are independent Godot sprites and animate even after the match ends.
+    /// </summary>
     public void CelebratePicadaVictory(Square square)
     {
-        if (_game?.Mode != GameMode.ReyDeLaPicada) return;
+        if (_game?.Mode != GameMode.ReyDeLaPicada ||
+            _game.Status != GameStatus.PicadaVictory)
+            return;
+
+        ClearPicadaVictoryFx();
         var sparkle = LoadTextureIfExists("res://assets/fx/sparkle_16x16.png");
         var crumb = LoadTextureIfExists("res://assets/fx/cheese_crumb_8x8.png");
-        if (sparkle is null || crumb is null) return;
+        var crownTexture = LoadTextureIfExists("res://assets/ui/icons/crown_16x16.png");
 
         Vector2 center = GetSquarePosition(square) + new Vector2(SquareSize / 2f, SquareSize / 2f);
-        Vector2[] offsets =
-        [
-            new(-88, -56), new(-38, -90), new(38, -86), new(86, -52),
-            new(-94, 24), new(-42, 72), new(44, 74), new(94, 23)
-        ];
-        for (int i = 0; i < offsets.Length; i++)
+        var effect = new Node2D
         {
+            Name = "PicadaVictoryFx",
+            Position = center,
+            ZIndex = 20,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        AddChild(effect);
+        _picadaVictoryFx = effect;
+
+        // A bright enlargement of the same target art already used on the board.
+        if (_goalOverlay is not null)
+        {
+            var burst = new Sprite2D
+            {
+                Name = "GoalBurst",
+                Texture = _goalOverlay,
+                Scale = new Vector2(2f, 2f),
+                Modulate = new Color(1f, 0.9f, 0.48f, 0.88f)
+            };
+            effect.AddChild(burst);
+            var ringTween = effect.CreateTween().SetParallel(true);
+            ringTween.TweenProperty(burst, "scale", new Vector2(4.2f, 4.2f), 0.85)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            ringTween.TweenProperty(burst, "modulate:a", 0f, 0.9f).SetDelay(0.28);
+        }
+
+        // The crown rises above the winning king instead of covering the piece.
+        if (crownTexture is not null)
+        {
+            var crown = new Sprite2D
+            {
+                Name = "WinningCrown",
+                Texture = crownTexture,
+                Position = new Vector2(0f, -62f),
+                Scale = new Vector2(2.5f, 2.5f),
+                Modulate = new Color(1f, 1f, 1f, 0f)
+            };
+            effect.AddChild(crown);
+            var crownTween = effect.CreateTween().SetParallel(true);
+            crownTween.TweenProperty(crown, "position", new Vector2(0f, -112f), 0.85)
+                .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+            crownTween.TweenProperty(crown, "scale", new Vector2(4f, 4f), 0.85)
+                .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+            crownTween.TweenProperty(crown, "modulate:a", 1f, 0.18);
+        }
+
+        // The supplied sparkle and cheese pixel-art sprites form a broad burst.
+        // They stay bright for a full second before fading, unlike the old 0.44s FX.
+        for (int i = 0; i < 24; i++)
+        {
+            Texture2D? texture = i % 4 == 0 ? crumb ?? sparkle : sparkle ?? crumb;
+            if (texture is null) continue;
+            float angle = Mathf.Tau * i / 24f;
+            float distance = 115f + (i % 5) * 19f;
+            var startPosition = new Vector2(Mathf.Cos(angle) * 10f, Mathf.Sin(angle) * 10f);
+            var destination = new Vector2(Mathf.Cos(angle) * distance,
+                Mathf.Sin(angle) * (distance * 0.82f));
+            float initialScale = i % 4 == 0 ? 3f : 2.75f;
             var particle = new Sprite2D
             {
-                Name = "PicadaSpark",
-                Texture = i % 3 == 0 ? crumb : sparkle,
-                Position = center,
-                Scale = i % 3 == 0 ? new Vector2(3, 3) : new Vector2(2, 2),
-                ZIndex = 6,
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+                Name = "PicadaParticle" + i,
+                Texture = texture,
+                Position = startPosition,
+                Scale = Vector2.One * initialScale,
+                Modulate = i % 3 == 0 ? new Color("ffe19a") : Colors.White
             };
-            AddChild(particle);
-            var tween = CreateTween().SetParallel(true);
-            tween.TweenProperty(particle, "position", center + offsets[i], 0.64)
+            effect.AddChild(particle);
+            var particleTween = effect.CreateTween().SetParallel(true);
+            particleTween.TweenProperty(particle, "position", destination, 1.48)
                 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-            tween.TweenProperty(particle, "modulate:a", 0f, 0.44).SetDelay(0.20);
-            tween.SetParallel(false);
-            tween.TweenCallback(Callable.From(() => particle.QueueFree()));
+            particleTween.TweenProperty(particle, "modulate:a", 0f, 0.78).SetDelay(1.00);
+            particleTween.TweenProperty(particle, "rotation", (i % 2 == 0 ? 1f : -1f) * 0.55f, 1.48);
         }
+
+        // Text is rendered using the project's font, never baked into the sprites.
+        var plaque = PixelUiSkin.MakePanel("VictoryPlaque", "dark",
+            new Vector2(-224f, -194f), new Vector2(448f, 58f));
+        plaque.MouseFilter = Control.MouseFilterEnum.Ignore;
+        plaque.Modulate = new Color(1f, 1f, 1f, 0f);
+        var caption = PixelUiSkin.Label("VictoryCaption", "CENTRO CONQUISTADO",
+            Vector2.Zero, new Vector2(448f, 58f), 32,
+            pixel: true, light: true, alignment: HorizontalAlignment.Center,
+            weight: UiFontWeight.Bold);
+        caption.AddThemeColorOverride("font_color", PixelUiSkin.Gold);
+        plaque.AddChild(caption);
+        effect.AddChild(plaque);
+        var plaqueTween = effect.CreateTween().SetParallel(true);
+        plaqueTween.TweenProperty(plaque, "modulate:a", 1f, 0.3).SetDelay(0.18);
+        plaqueTween.TweenProperty(plaque, "position:y", -215f, 0.72)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+
+        // Keep the FX alive until the modal starts; no particles linger after.
+        var lifetime = effect.CreateTween();
+        lifetime.TweenInterval(PicadaVictoryEffectDurationSeconds + 0.36);
+        lifetime.TweenCallback(Callable.From(() =>
+        {
+            if (ReferenceEquals(_picadaVictoryFx, effect))
+                _picadaVictoryFx = null;
+            effect.QueueFree();
+        }));
+    }
+
+    private void ClearPicadaVictoryFx()
+    {
+        if (_picadaVictoryFx is not null && GodotObject.IsInstanceValid(_picadaVictoryFx))
+            _picadaVictoryFx.QueueFree();
+        _picadaVictoryFx = null;
     }
 
     // Compatibilidad con InputAdapter de main.
@@ -208,6 +305,8 @@ public partial class BoardView : Node2D
 
     public void RefreshFromGame()
     {
+        if (_game?.Status != GameStatus.PicadaVictory)
+            ClearPicadaVictoryFx();
         _lastMove = _game is not null && _game.History.Count > 0
             ? _game.History[^1]
             : null;
