@@ -49,6 +49,8 @@ public partial class GameCompositionRoot : Node
         AddChild(_ingame);
         MoveChild(_ingame, 0);
         _ingame.Configure(_board, _panel, _menu);
+        // Utility popups are above the sidebar but below the main menu/game-over.
+        _ingame.InstallForeground(this, _menu);
 
         _input = GetNode<InputAdapter>("Input");
         _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
@@ -140,6 +142,7 @@ public partial class GameCompositionRoot : Node
         _input.Attach(game, _board, _promotionDialog, ApplyMove, () => game.State.AcceptsMoves && !_gameOver.Visible && (!AgainstRandom || game.Turn == PlayerColor.White));
         _menu.Hide();
         _ingame.Show();
+        _ingame.ShowUtilities(true);
         _board.Show();
         _panel.Show();
         _bus.NotifyStateChanged();
@@ -191,6 +194,7 @@ public partial class GameCompositionRoot : Node
         _board.Hide();
         _panel.Hide();
         _ingame.Hide();
+        _ingame.ShowUtilities(false);
         _menu.SetMessage("");
         _menu.SetContinueAvailable(_repository.HasSave);
         _menu.Show();
