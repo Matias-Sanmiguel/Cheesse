@@ -305,11 +305,17 @@ public partial class MenuTests : Node
                   ribbonBehindIcon.G > ribbonBehindIcon.B,
                 "winner ribbon shows uninterrupted green behind the original piece icon");
             var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
+            var winnerTitle = modalContent.GetNode<Label>("Title");
+            // The icon and caption are one centered group rather than independent positions.
+            float winnerGroupCenter = (winnerIcon.Position.X +
+                winnerTitle.Position.X + winnerTitle.Size.X) / 2f;
             Check(winnerIcon.Texture is not null &&
                   winnerIcon.Texture.ResourcePath.EndsWith("/white_12x12.png") &&
-                  winnerIcon.Position.IsEqualApprox(new Vector2(29 * 4, 71 * 4)) &&
-                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)),
-                "winner ribbon uses its original small white piece, centered without any extra box");
+                  winnerIcon.Position.Y == 71 * 4 &&
+                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)) &&
+                  winnerTitle.Position.X - (winnerIcon.Position.X + winnerIcon.Size.X) == 4 * 4 &&
+                  Mathf.Abs(winnerGroupCenter - 108 * 4) <= 2f,
+                "winner chess piece sits beside the text and both are centered within the ribbon");
             var rematch = modalContent.GetNode<Button>("Rematch");
             var mainMenu = modalContent.GetNode<Button>("MainMenu");
             Check(!rematch.HasNode("RematchIcon") && !mainMenu.HasNode("MainMenuIcon") &&
