@@ -76,9 +76,9 @@ public partial class MenuTests : Node
                   !root.HasNode(Home + "Modes") &&
                   root.GetNode<Button>(Home + "Settings").Text == "CONFIGURACION" &&
                   root.GetNode<Button>(Home + "Exit").Text == "SALIR" &&
-                  root.GetNode<Button>(Home + "NewGame").Position.Y == 416 &&
-                  root.GetNode<Button>(Home + "Settings").Position.Y == 536 &&
-                  root.GetNode<Button>(Home + "Exit").Position.Y == 656,
+                  root.GetNode<Button>(Home + "NewGame").Position.Y == 384 &&
+                  root.GetNode<Button>(Home + "Settings").Position.Y == 504 &&
+                  root.GetNode<Button>(Home + "Exit").Position.Y == 624,
                 "home displays three centered actions without a redundant MODOS button");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("normal") is StyleBoxTexture,
                 "start button uses original pixel-art texture");
