@@ -284,7 +284,7 @@ public partial class MenuView : Control
             SetupAssets + "panels/panel_personalizacion_170x165.png",
             Vector2.Zero, new Vector2(680, 660), 4));
         form.AddChild(PixelUiSkin.Label("Heading", "PERSONALIZACION",
-            new Vector2(40, 15), new Vector2(600, 54), 33,
+            new Vector2(40, 21), new Vector2(600, 54), 33,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Bold));
         form.AddChild(PixelUiSkin.Label("AppearanceLabel", "ESTILO VISUAL",
