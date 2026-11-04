@@ -93,12 +93,15 @@ public partial class SidePanelView : PanelContainer
     private void Refresh()
     {
         if (_game is null || _caretaker is null) return;
-        _turn.Text = _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
+        _turn.Text = _game.Status == GameStatus.PicadaVictory
+            ? (_game.Turn == PlayerColor.White ? "GANAN NEGRAS" : "GANAN BLANCAS")
+            : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
         _status.Text = _game.Status switch
         {
             GameStatus.Ongoing => "EN JUEGO",
             GameStatus.Check => "JAQUE",
             GameStatus.Checkmate => "JAQUE MATE",
+            GameStatus.PicadaVictory => "REY EN EL CENTRO",
             GameStatus.Stalemate => "TABLAS POR AHOGADO",
             GameStatus.DrawByFiftyMove => "TABLAS: 50 MOVIMIENTOS",
             GameStatus.DrawByRepetition => "TABLAS: REPETICION",

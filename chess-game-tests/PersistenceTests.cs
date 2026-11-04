@@ -84,6 +84,7 @@ public partial class PersistenceTests : Node
         RoundTrip(repository, FenSerializer.InitialPosition,
             "g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8");
         RepetitionContinuesAfterLoad(repository);
+        PicadaRoundTrip(repository);
         InvalidSavesKeepOpenGame(repository);
         OverwriteUsesMostRecentSave(repository);
         SaveFailureKeepsPreviousFile(repository);
@@ -155,6 +156,27 @@ public partial class PersistenceTests : Node
         Check(!repository.Load(game), "missing save returns false");
         Check(Snapshot(game) == before && ReferenceEquals(game.Board, board), "missing save keeps open game");
         Check(game.Undo(), "missing save keeps Undo");
+    }
+
+    private void PicadaRoundTrip(FileSaveRepository repository)
+    {
+        const string fen = "7k/8/8/8/8/4K3/8/8 w - - 0 1";
+        var source = new ChessGame(new Events(), repository, new Clock(),
+            FenSerializer.Load(fen), GameMode.ReyDeLaPicada);
+        Play(source, "e3e4");
+        Check(source.Status == GameStatus.PicadaVictory, "Picada ends when king reaches center");
+        repository.Save(source);
+
+        var target = Create(repository);
+        Check(repository.Load(target), "Picada save reloads");
+        Check(target.Mode == GameMode.ReyDeLaPicada &&
+              target.Status == GameStatus.PicadaVictory &&
+              FenSerializer.Write(target.Board) == FenSerializer.Write(source.Board),
+            "saved mode, win status and board survive loading");
+        Check(target.Undo() && target.Status == GameStatus.Ongoing,
+            "undo works on a loaded Picada win");
+        Check(target.Redo() && target.Status == GameStatus.PicadaVictory,
+            "redo recovers loaded Picada win");
     }
 
     private void RepetitionContinuesAfterLoad(FileSaveRepository repository)

@@ -1,4 +1,5 @@
 using Cheesse.Game.Adapters.Appearance;
+using Chess.Core.Model;
 using Godot;
 
 namespace Cheesse.Game.Adapters.Ui;
@@ -36,6 +37,8 @@ public partial class MenuView : Control
     private Button _soundButton = null!;
     private TextureRect _subpageLogo = null!;
     private Page _setupReturnPage = Page.Home;
+
+    public GameMode SelectedMode { get; private set; } = GameMode.Classic;
 
     public override void _Ready()
     {
@@ -142,9 +145,21 @@ public partial class MenuView : Control
         navigation.AddChild(_message);
     }
 
-    private void OpenSetup(Page fromPage)
+    private void OpenSetup(Page fromPage, GameMode mode = GameMode.Classic)
     {
         _setupReturnPage = fromPage;
+        SelectedMode = mode;
+        // Picada has a themed default; users may still customize teams and board.
+        bool picada = mode == GameMode.ReyDeLaPicada;
+        _appearance.Select(picada ? 1 : 0);
+        _boardSkin.Select(0);
+        _whiteSkin.Select(picada ? 1 : 0);
+        _blackSkin.Select(picada ? 1 : 0);
+        _setup.GetNode<Label>("Heading").Text = picada ? "REY DE LA PICADA" : "PREPARA TU PARTIDA";
+        _setup.GetNode<Label>("Preview/RuleTag").Text = picada
+            ? "OBJETIVO: REY EN D4 / E4 / D5 / E5"
+            : "REGLAS CLASICAS · PARTIDA NORMAL";
+        UpdatePreview();
         ShowPage(Page.Setup);
     }
 
@@ -154,6 +169,7 @@ public partial class MenuView : Control
         ModeSelectionPageBuilder.Build(
             _modes,
             () => OpenSetup(Page.Modes),
+            () => OpenSetup(Page.Modes, GameMode.ReyDeLaPicada),
             () => ShowPage(Page.Home));
     }
 
@@ -269,9 +285,11 @@ public partial class MenuView : Control
     {
         bool themed = _appearance.Selected == 1;
         _themeFields.Visible = themed;
-        _note.Text = themed
-            ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
-            : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";
+        _note.Text = SelectedMode == GameMode.ReyDeLaPicada
+            ? "REY DE LA PICADA: LLEVA TU REY A D4, E4, D5 O E5."
+            : themed
+                ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
+                : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";
         string? boardRoot = themed ?
             "res://assets/skins/boards/" + VisualThemeCatalog.Boards[Math.Clamp(_boardSkin.Selected, 0, VisualThemeCatalog.Boards.Length - 1)].Folder : null;
         for (int i = 0; i < _tiles.Length; i++)

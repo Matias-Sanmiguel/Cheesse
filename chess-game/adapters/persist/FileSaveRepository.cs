@@ -35,7 +35,8 @@ public sealed class FileSaveRepository : IGameRepository
             FenSerializer.Write(game.Board),
             SanNotation.ToPgn(game),
             AgainstRandom,
-            Theme
+            Theme,
+            game.Mode
         );
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -84,11 +85,12 @@ public sealed class FileSaveRepository : IGameRepository
             }
 
             var data = JsonSerializer.Deserialize<SaveData>(content);
-            if (data is null || data.Version != SaveVersion || data.Fen is null || data.Pgn is null)
+            if (data is null || data.Version != SaveVersion || data.Fen is null ||
+                data.Pgn is null || !Enum.IsDefined(data.Mode))
                 return false;
 
-            var history = SanNotation.FromPgn(data.Pgn, out var initialBoard);
-            var restored = new ChessGame(new ReplayEvents(), game.Repository, game.Clock, initialBoard);
+            var history = SanNotation.FromPgn(data.Pgn, out var initialBoard, data.Mode);
+            var restored = new ChessGame(new ReplayEvents(), game.Repository, game.Clock, initialBoard, data.Mode);
             foreach (var move in history)
             {
                 if (!restored.TryMove(move))
@@ -119,6 +121,7 @@ public sealed class FileSaveRepository : IGameRepository
         string? Fen,
         string? Pgn,
         bool AgainstRandom = false,
-        VisualTheme? Theme = null
+        VisualTheme? Theme = null,
+        GameMode Mode = GameMode.Classic
     );
 }

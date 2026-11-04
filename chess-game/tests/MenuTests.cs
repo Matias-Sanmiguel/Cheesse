@@ -94,10 +94,10 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible, "back returns to correct page");
             Press(root, Home + "Modes");
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "Modes navigates to mode selection");
-            Check(root.GetNode<Button>(Modes + "Mode1").Disabled &&
+            Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
                   root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
-                "unfinished modes are visibly unavailable");
+                "Rey de la Picada is available, Swiss and Fondue remain locked");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
                   modePage.HasNode("GameLogo"),
@@ -134,17 +134,36 @@ public partial class MenuTests : Node
                       PixelUiSkin.FontFor(UiFontWeight.Regular),
                     "mode " + i + " has independent editable description below the card");
             }
-            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR",
-                "classic mode is playable with a dynamic JUGAR label");
-            foreach (var locked in new[] { "Mode1", "Mode2", "Mode3" })
+            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR",
+                "classic and Picada are playable with dynamic JUGAR labels");
+            foreach (var locked in new[] { "Mode2", "Mode3" })
             {
                 Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
                       root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
                     locked + " is visibly locked with dynamic copy, without navigation");
             }
 
+            Press(root, Modes + "Mode1");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
+                "Picada opens its own match setup");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),
+                "Picada defaults to themed pieces and explains the center objective");
+            Press(root, Setup + "Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada &&
+                  root.GetNode<BoardView>("Board").ShowsPicadaGoals &&
+                  root.GetNode<Control>("InGamePresentation/ArtworkStage/PicadaBadge").Visible,
+                "Picada reaches gameplay with four highlighted goals and a HUD badge");
+            Press(root, "SidePanel/Margin/Content/Menu");
+            Press(root, Home + "Modes");
             Press(root, Modes + "Mode0");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic &&
+                  root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0,
+                "switching back to classic resets the default theme and selected rules");
             var appearance = root.GetNode<OptionButton>(Setup + "Appearance");
             var boardSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/Board");
             var cheeseSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/White");

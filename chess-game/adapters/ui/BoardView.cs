@@ -1,5 +1,6 @@
 
 using Chess.Core.Model;
+using Chess.Core.Rules;
 using Cheesse.Game.Adapters.Infra;
 using Godot;
 using Cheesse.Game.Adapters.Appearance;
@@ -33,9 +34,13 @@ public partial class BoardView : Node2D
     private Texture2D? _legalMoveOverlay;
     private Texture2D? _captureOverlay;
     private Texture2D? _checkOverlay;
+    private Texture2D? _goalOverlay;
+    private double _goalPulseTime;
+    private double _goalRedrawClock;
     private VisualTheme _visualTheme = VisualTheme.Classic;
 
     public VisualTheme CurrentTheme => _visualTheme;
+    public bool ShowsPicadaGoals => _game?.Mode == GameMode.ReyDeLaPicada;
     internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
@@ -54,6 +59,7 @@ public partial class BoardView : Node2D
         _legalMoveOverlay = LoadTextureIfExists(root + "legal_move_dot.png");
         _captureOverlay = LoadTextureIfExists(root + "capture_marker.png");
         _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
+        _goalOverlay = LoadTextureIfExists(root + "goal_square.png");
     }
 
     public void Attach(ChessGame game, GodotEventBus bus)
@@ -64,6 +70,8 @@ public partial class BoardView : Node2D
 
         _game = game;
         _bus = bus;
+        _goalPulseTime = 0;
+        _goalRedrawClock = 0;
 
         bus.StateChanged += OnStateChanged;
 
@@ -83,6 +91,55 @@ public partial class BoardView : Node2D
     {
         if (_bus is not null)
             _bus.StateChanged -= OnStateChanged;
+    }
+
+    public override void _Process(double delta)
+    {
+        // Pixel-art pulse at 8 fps, only while a Picada match is active.
+        if (!Visible || _game?.Mode != GameMode.ReyDeLaPicada ||
+            _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
+            return;
+        _goalPulseTime += delta;
+        _goalRedrawClock += delta;
+        if (_goalRedrawClock >= 0.125)
+        {
+            _goalRedrawClock %= 0.125;
+            QueueRedraw();
+        }
+    }
+
+    public void CelebratePicadaVictory(Square square)
+    {
+        if (_game?.Mode != GameMode.ReyDeLaPicada) return;
+        var sparkle = LoadTextureIfExists("res://assets/fx/sparkle_16x16.png");
+        var crumb = LoadTextureIfExists("res://assets/fx/cheese_crumb_8x8.png");
+        if (sparkle is null || crumb is null) return;
+
+        Vector2 center = GetSquarePosition(square) + new Vector2(SquareSize / 2f, SquareSize / 2f);
+        Vector2[] offsets =
+        [
+            new(-88, -56), new(-38, -90), new(38, -86), new(86, -52),
+            new(-94, 24), new(-42, 72), new(44, 74), new(94, 23)
+        ];
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            var particle = new Sprite2D
+            {
+                Name = "PicadaSpark",
+                Texture = i % 3 == 0 ? crumb : sparkle,
+                Position = center,
+                Scale = i % 3 == 0 ? new Vector2(3, 3) : new Vector2(2, 2),
+                ZIndex = 6,
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+            };
+            AddChild(particle);
+            var tween = CreateTween().SetParallel(true);
+            tween.TweenProperty(particle, "position", center + offsets[i], 0.64)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            tween.TweenProperty(particle, "modulate:a", 0f, 0.44).SetDelay(0.20);
+            tween.SetParallel(false);
+            tween.TweenCallback(Callable.From(() => particle.QueueFree()));
+        }
     }
 
     // Compatibilidad con InputAdapter de main.
@@ -163,6 +220,7 @@ public partial class BoardView : Node2D
     {
         DrawBoard();
         DrawLastMove();
+        DrawPicadaGoals();
         DrawCheckOverlay();
         DrawPieces();
         DrawSelectionIndicators();
@@ -198,6 +256,24 @@ public partial class BoardView : Node2D
         if (_lastMove is not Move move) return;
         DrawOverlay(move.From, _lastFromOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
         DrawOverlay(move.To, _lastToOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
+    }
+
+    private void DrawPicadaGoals()
+    {
+        if (!ShowsPicadaGoals) return;
+        float alpha = _game!.Status == GameStatus.PicadaVictory
+            ? 1f : 0.85f + 0.15f * Mathf.Sin((float)_goalPulseTime * 2.8f);
+        foreach (Square square in PicadaModeRules.GoalSquares)
+        {
+            var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
+            if (_goalOverlay is not null)
+                DrawTextureRect(_goalOverlay, rect, false, new Color(1, 1, 1, alpha));
+            else
+            {
+                DrawRect(rect, new Color(0.97f, 0.73f, 0.16f, 0.13f + 0.11f * alpha));
+                DrawRect(rect, new Color(0.96f, 0.66f, 0.11f, alpha), false, 4f);
+            }
+        }
     }
 
     private void DrawCheckOverlay()

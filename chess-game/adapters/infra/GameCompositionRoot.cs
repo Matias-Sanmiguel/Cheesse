@@ -62,11 +62,12 @@ public partial class GameCompositionRoot : Node
         _panel.SaveRequested += SaveGame;
         _panel.LoadRequested += LoadGame;
         _panel.NewGameRequested +=
-            () => StartNewGame(AgainstRandom, _repository.Theme);
+            () => StartNewGame(AgainstRandom, _repository.Theme, CurrentGame?.Mode ?? GameMode.Classic);
         _panel.MenuRequested += ShowMenu;
         _panel.RandomChanged += SetRandomOpponent;
         _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
-        _gameOver.RematchRequested += () => StartNewGame(AgainstRandom, _repository.Theme);
+        _gameOver.RematchRequested += () => StartNewGame(
+            AgainstRandom, _repository.Theme, CurrentGame?.Mode ?? GameMode.Classic);
         _gameOver.MainMenuRequested += ShowMenu;
         ShowMenu();
     }
@@ -95,17 +96,18 @@ public partial class GameCompositionRoot : Node
     
     public void StartHumanGame()
     {
-        StartNewGame(false, _menu.CreateVisualTheme());
+        StartNewGame(false, _menu.CreateVisualTheme(), _menu.SelectedMode);
     }
 
     public void StartRandomGame()
     {
-        StartNewGame(true, _menu.CreateVisualTheme());
+        StartNewGame(true, _menu.CreateVisualTheme(), _menu.SelectedMode);
     }
 
     private void StartNewGame(
         bool againstRandom,
-        VisualTheme theme)
+        VisualTheme theme,
+        GameMode mode)
     {
         _repository.AgainstRandom = againstRandom;
         _repository.Theme = VisualThemeCatalog.Normalize(theme);
@@ -113,7 +115,8 @@ public partial class GameCompositionRoot : Node
         EnterGame(new ChessGame(
             _bus,
             _repository,
-            _clock
+            _clock,
+            mode
         ));
     }
 
@@ -155,6 +158,9 @@ public partial class GameCompositionRoot : Node
         {
             _panel.SetMessage("");
             _bus.NotifyStateChanged();
+            if (CurrentGame is { Status: GameStatus.PicadaVictory } winner &&
+                winner.History.Count > 0)
+                _board.CelebratePicadaVictory(winner.History[^1].To);
             UpdateGameOver();
         }
     }

@@ -13,6 +13,7 @@ public partial class GameOverOverlay : CanvasLayer
 
     private Label _title = null!;
     private Label _reason = null!;
+    private Tween? _resultTween;
 
     public override void _Ready()
     {
@@ -27,21 +28,45 @@ public partial class GameOverOverlay : CanvasLayer
     public void ShowResult(ChessGame game)
     {
         if (game.Status is GameStatus.Ongoing or GameStatus.Check) return;
+        bool picada = game.Status == GameStatus.PicadaVictory;
         bool checkmate = game.Status == GameStatus.Checkmate;
-        _title.Text = checkmate
-            ? (game.Turn == PlayerColor.White ? "GANAN NEGRAS" : "GANAN BLANCAS")
-            : "TABLAS";
-        _reason.Text = game.Status switch
+        bool decisive = checkmate || picada;
+        string winner = game.Turn == PlayerColor.White ? "NEGRAS" : "BLANCAS";
+        _title.Text = picada ? "REY DE LA PICADA"
+            : checkmate ? "GANAN " + winner : "TABLAS";
+        _reason.Text = picada ? "GANAN " + winner + " - REY AL CENTRO"
+            : game.Status switch
+            {
+                GameStatus.Checkmate => "JAQUE MATE",
+                GameStatus.Stalemate => "REY AHOGADO",
+                GameStatus.DrawByFiftyMove => "REGLA DE 50 MOVIMIENTOS",
+                GameStatus.DrawByRepetition => "TRIPLE REPETICION",
+                GameStatus.DrawByInsufficientMaterial => "MATERIAL INSUFICIENTE",
+                _ => "FIN DE PARTIDA"
+            };
+        PixelUiSkin.ShowGameOverBanner(this, !decisive);
+
+        // Crown and a short reveal make Picada wins feel different from checkmate.
+        var banner = GetNode<TextureRect>("Overlay/Center/Panel/Content/ResultBanner");
+        var crown = banner.GetNodeOrNull<TextureRect>("PicadaCrown");
+        if (crown is null)
         {
-            GameStatus.Checkmate => "JAQUE MATE",
-            GameStatus.Stalemate => "REY AHOGADO",
-            GameStatus.DrawByFiftyMove => "REGLA DE 50 MOVIMIENTOS",
-            GameStatus.DrawByRepetition => "TRIPLE REPETICION",
-            GameStatus.DrawByInsufficientMaterial => "MATERIAL INSUFICIENTE",
-            _ => "FIN DE PARTIDA"
-        };
-        PixelUiSkin.ShowGameOverBanner(this, !checkmate);
+            crown = PixelUiSkin.Image("PicadaCrown", "icons/crown_16x16.png",
+                new Vector2(338, 30), new Vector2(32, 32), 2);
+            banner.AddChild(crown);
+        }
+        crown.Visible = picada;
+        var panel = GetNode<PanelContainer>("Overlay/Center/Panel");
+        _resultTween?.Kill();
+        panel.Modulate = Colors.White;
         Show();
+        if (picada)
+        {
+            panel.Modulate = new Color(1, 1, 1, 0.15f);
+            _resultTween = CreateTween();
+            _resultTween.TweenProperty(panel, "modulate:a", 1f, 0.45)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
     }
 
     private void OnRematch()
