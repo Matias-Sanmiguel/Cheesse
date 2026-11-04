@@ -17,6 +17,13 @@ public static class GameRules
     internal static GameStatus Evaluate(Board board, PlayerColor side, IEnumerable<Board>? positions)
     {
         ArgumentNullException.ThrowIfNull(board);
+        if (board.Mode == GameMode.Fondue &&
+            (!FondueRules.HasKing(board, PlayerColor.White) || !FondueRules.HasKing(board, PlayerColor.Black)))
+        {
+            if (!FondueRules.HasKing(board, PlayerColor.White) && !FondueRules.HasKing(board, PlayerColor.Black))
+                throw new ArgumentException("Fondue requires at least one surviving king.", nameof(board));
+            return GameStatus.KingMelted;
+        }
         var inCheck = CheckDetector.IsInCheck(board, side);
         var legalMoves = MoveGenerator.Legal(board, side);
 
@@ -27,18 +34,51 @@ public static class GameRules
         if (HasInsufficientMaterial(board))
             return GameStatus.DrawByInsufficientMaterial;
 
-        // CORE-F5 closes these draws without a separate claim interaction.
-        if (board.HalfmoveClock >= 100)
-            return GameStatus.DrawByFiftyMove;
+        // Claims use threefold / fifty moves; only fivefold / seventy-five are automatic.
+        if (board.HalfmoveClock >= 150)
+            return GameStatus.DrawBySeventyFiveMove;
 
         if (positions is not null)
         {
             var currentKey = PositionKey(board, side);
-            if (positions.Count(position => PositionKey(position, position.Turn) == currentKey) >= 3)
-                return GameStatus.DrawByRepetition;
+            if (positions.Count(position => PositionKey(position, position.Turn) == currentKey) >= 5)
+                return GameStatus.DrawByFivefoldRepetition;
         }
 
         return inCheck ? GameStatus.Check : GameStatus.Ongoing;
+    }
+
+    internal static GameStatus? ClaimStatus(Board board, IEnumerable<Board> positions)
+    {
+        if (board.HalfmoveClock >= 100) return GameStatus.DrawByFiftyMove;
+        var key = PositionKey(board, board.Turn);
+        return positions.Count(position => PositionKey(position, position.Turn) == key) >= 3
+            ? GameStatus.DrawByRepetition : null;
+    }
+
+    // shortcut: material checks cover common dead positions; use a solver for positional fortresses.
+    public static bool CanPossiblyMate(Board board, PlayerColor side)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        var own = new List<Piece>();
+        var opponents = new List<Piece>();
+        var bishopColors = new HashSet<int>();
+        for (var index = 0; index < 64; index++)
+        {
+            var square = Square.FromIndex(index);
+            if (board.At(square) is not Piece piece) continue;
+            (piece.Color == side ? own : opponents).Add(piece);
+            if (piece.Type == PieceType.Bishop) bishopColors.Add((square.File + square.Rank) % 2);
+        }
+        if (board.Mode == GameMode.Fondue) return own.Any(piece => piece.Type != PieceType.King);
+        if (own.Any(piece => piece.Type is PieceType.Pawn or PieceType.Rook or PieceType.Queen)) return true;
+        var knights = own.Count(piece => piece.Type == PieceType.Knight);
+        var bishops = own.Count(piece => piece.Type == PieceType.Bishop);
+        if (knights > 0)
+            return knights > 1 || bishops > 0 || opponents.Any(piece => piece.Type is not (PieceType.King or PieceType.Queen));
+        if (bishops > 0)
+            return bishopColors.Count > 1 || own.Concat(opponents).Any(piece => piece.Type is PieceType.Pawn or PieceType.Knight);
+        return false;
     }
 
     internal static string PositionKey(Board board, PlayerColor side)
@@ -49,7 +89,8 @@ public static class GameRules
             .Any(move => !CheckDetector.IsInCheck(board.WithMove(move), side));
         if (!canCaptureEnPassant)
             fields[3] = "-";
-        return string.Join(" ", fields.Take(4));
+        var mode = board.Mode == GameMode.Standard ? "" : board.Mode + ":";
+        return mode + string.Join(" ", fields.Take(4));
     }
 
     private static bool HasInsufficientMaterial(Board board)
@@ -71,6 +112,7 @@ public static class GameRules
                     break;
                 case PieceType.Bishop:
                 case PieceType.Knight:
+                    if (board.Mode == GameMode.Fondue) return false;
                     minors.Add((piece.Type, (square.File + square.Rank) % 2));
                     break;
                 default:

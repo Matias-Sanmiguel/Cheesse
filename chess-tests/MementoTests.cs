@@ -34,7 +34,8 @@ public class MementoTests
     [TestCase("7k/8/5KQ1/8/8/8/8/8 b - - 0 1", false)]
     [TestCase("7k/6Q1/5K2/8/8/8/8/8 b - - 0 1", false)]
     [TestCase("7k/8/8/8/8/8/8/7K w - - 0 1", false)]
-    [TestCase("7k/8/8/8/8/8/8/R6K w - - 100 50", false)]
+    [TestCase("7k/8/8/8/8/8/8/R6K w - - 100 50", true)]
+    [TestCase("7k/8/8/8/8/8/8/R6K w - - 150 75", false)]
     [TestCase(FenSerializer.InitialPosition, true)]
     [TestCase("4r2k/8/8/8/8/8/8/4K3 w - - 0 1", true)]
     public void State_accepts_moves_only_in_active_positions(string fen, bool acceptsMoves)

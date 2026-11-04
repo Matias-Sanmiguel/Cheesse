@@ -106,7 +106,7 @@ public class PgnTests
 
     [TestCase("7k/8/8/8/8/8/8/7K w - - 0 1")]
     [TestCase("7k/5K2/6Q1/8/8/8/8/8 b - - 0 1")]
-    [TestCase("7k/8/8/8/8/8/8/R6K w - - 100 51")]
+    [TestCase("7k/8/8/8/8/8/8/R6K w - - 150 76")]
     public void Draw_results_are_exported(string fen)
     {
         var pgn = SanNotation.ToPgn(Create(fen));
@@ -121,6 +121,7 @@ public class PgnTests
         for (var cycle = 0; cycle < 2; cycle++)
             Play(game, "g1f3", "g8f6", "f3g1", "f6g8");
 
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         var pgn = SanNotation.ToPgn(game);
         Assert.That(pgn, Does.Contain("[Result \"1/2-1/2\"]"));
         Assert.That(SanNotation.FromPgn(pgn, out _), Is.EqualTo(game.History));

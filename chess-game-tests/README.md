@@ -33,7 +33,7 @@ Run from PowerShell, passing the Godot .NET console executable:
 
 This builds the production game and runs its actual scenes and assembly inside
 an ignored sandbox with a separate user:// directory (Cheesse Menu Tests).
-It checks startup, human turns, random replies, save/continue, persisted opponent
+It checks startup, human turns, Stockfish replies, save/continue, persisted opponent
 mode, old saves, corrupt/missing saves, and resetting to a fresh game. Mouse
 input travels through the viewport and the scene buttons emit their real signals.
 The script fails if the test scene does not finish successfully.
@@ -43,7 +43,7 @@ The script fails if the test scene does not finish successfully.
     ./chess-game-tests/RunMenuTests.ps1 -Godot 'C:/path/to/Godot_console.exe' -TestScene SidePanelTests
 
 The isolated Godot test verifies layout at 1440x900, buttons, command/caretaker
-Undo and Redo, bus updates for turn/check/mate, save/load/new game, random-black
+Undo and Redo, bus updates for turn/check/mate, save/load/new game, Stockfish-black
 toggle, branching history, and the actual white/black pixels of the SVG atlas.
 
 ## Cross-platform UI runner
@@ -53,6 +53,7 @@ With Python 3 and Godot .NET (the standard Godot executable cannot load C#):
     python chess-game-tests/RunUiTests.py --godot godot-mono --scene MenuTests
     python chess-game-tests/RunUiTests.py --godot godot-mono --scene SidePanelTests
     python chess-game-tests/RunUiTests.py --godot godot-mono --scene MvpTests
+    python chess-game-tests/RunUiTests.py --godot godot-mono --scene ReleaseTests
 
 Each scene runs the production assembly and resources in an ignored sandbox with
 its own user directory. The runner checks both exit status and the PASS marker.
@@ -61,3 +62,14 @@ across mate and draws, winner/rematch, underpromotion/cancellation, input blocki
 and resizing to 1280x720. The pixel art layout uses a 1440x900 canvas and scales
 with the window. Persistence tests also verify that loading (including rejected
 saves) does not emit domain events for historical moves.
+
+Prepare the bundled engine first with `python scripts/release.py --engines-only`.
+The runners resolve that native binary automatically; override it with
+`CHEESSE_STOCKFISH_PATH` when necessary. The ReleaseTests scene exercises live clocks,
+expiration, Stockfish cancellation/reply, move history, resignation/draw agreement,
+FEN/PGN import/export and retaining current settings for another game. The persistence
+suite covers v2 clock/outcome metadata, rejected edited positions and legacy saves.
+
+Run native engine coverage in NUnit with:
+
+    CHEESSE_STOCKFISH_PATH="$PWD/chess-game/engines/stockfish" dotnet test chess-tests/Chess.Tests.csproj

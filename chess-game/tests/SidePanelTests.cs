@@ -135,7 +135,7 @@ public partial class SidePanelTests : Node
             var statusDot = panel.GetNode<TextureRect>("Margin/Content/StatusDot");
             Check(statusDot.Modulate.G > statusDot.Modulate.R,
                 "ongoing status is represented by a green dot");
-            Check(toggle.Text == "NEGRAS ALEATORIAS",
+            Check(toggle.Text == "NEGRAS CON STOCKFISH",
                 "settings explain the opponent control");
             Check(toggle.GetThemeIcon("on") == InGameUiSkin.Texture("05_icons/random_16.png") &&
                   toggle.GetThemeIcon("off") == InGameUiSkin.Texture("05_icons/switch_16.png"),
@@ -287,7 +287,7 @@ public partial class SidePanelTests : Node
             toggle.ButtonPressed = true;
             Check(root.AgainstRandom, "toggle enables RandomAI");
             Move(root, "e2", "e4");
-            await Frames();
+            await WaitFor(() => root.CurrentGame!.History.Count == 2);
             Check(root.CurrentGame!.History.Count == 2 && root.CurrentGame.Turn == PlayerColor.White, "random black replies");
             PressPanel(root, "History/Undo");
             Check(root.CurrentGame.History.Count == 1, "Undo removes random black move");
@@ -305,7 +305,7 @@ public partial class SidePanelTests : Node
             PressPanel(root, "NewGame");
             Move(root, "e2", "e4");
             toggle.ButtonPressed = true;
-            await Frames();
+            await WaitFor(() => root.CurrentGame!.History.Count == 2);
             Check(root.CurrentGame!.History.Count == 2, "enabling random on black turn makes a legal reply");
             PressPanel(root, "Files/Save");
             toggle.ButtonPressed = false;
@@ -380,6 +380,16 @@ public partial class SidePanelTests : Node
         {
             Position = position, GlobalPosition = position, ButtonIndex = MouseButton.Left, Pressed = false,
         }, true);
+    }
+
+    private async Task WaitFor(Func<bool> condition)
+    {
+        var deadline = Time.GetTicksMsec() + 15000;
+        while (!condition())
+        {
+            if (Time.GetTicksMsec() > deadline) throw new TimeoutException("Stockfish did not reply.");
+            await Frames();
+        }
     }
 
     private async Task Frames()

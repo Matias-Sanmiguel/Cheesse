@@ -27,20 +27,10 @@ public partial class GameOverOverlay : CanvasLayer
     public void ShowResult(ChessGame game)
     {
         if (game.Status is GameStatus.Ongoing or GameStatus.Check) return;
-        bool checkmate = game.Status == GameStatus.Checkmate;
-        _title.Text = checkmate
-            ? (game.Turn == PlayerColor.White ? "GANAN NEGRAS" : "GANAN BLANCAS")
-            : "TABLAS";
-        _reason.Text = game.Status switch
-        {
-            GameStatus.Checkmate => "JAQUE MATE",
-            GameStatus.Stalemate => "REY AHOGADO",
-            GameStatus.DrawByFiftyMove => "REGLA DE 50 MOVIMIENTOS",
-            GameStatus.DrawByRepetition => "TRIPLE REPETICION",
-            GameStatus.DrawByInsufficientMaterial => "MATERIAL INSUFICIENTE",
-            _ => "FIN DE PARTIDA"
-        };
-        PixelUiSkin.ShowGameOverBanner(this, !checkmate);
+        _title.Text = game.Winner == PlayerColor.White ? "GANAN BLANCAS" :
+            game.Winner == PlayerColor.Black ? "GANAN NEGRAS" : "TABLAS";
+        _reason.Text = SidePanelView.StatusText(game.Status).ToUpperInvariant();
+        PixelUiSkin.ShowGameOverBanner(this, game.Winner is null);
         Show();
     }
 

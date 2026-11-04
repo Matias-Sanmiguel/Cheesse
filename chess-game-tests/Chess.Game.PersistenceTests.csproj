@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../chess-game/adapters/appearance/*.cs" Link="Appearance/%(Filename)%(Extension)" />
     <ProjectReference Include="..\chess-core\Chess.Core.csproj" />
+    <Compile Include="../chess-game/adapters/persist/GameTextFiles.cs" Link="GameTextFiles.cs" />
     <Compile Include="..\chess-game\adapters\persist\FileSaveRepository.cs" Link="FileSaveRepository.cs" />
   </ItemGroup>
 </Project>

@@ -185,7 +185,7 @@ public partial class MenuTests : Node
             Check(human.History.Count == 1 && human.Turn == PlayerColor.Black, "human game waits for black");
             Move(root, "e7", "e5");
             Check(human.History.Count == 2, "both players can make legal moves");
-            Check(root.GetNode<Label>("SidePanel/Margin/Content/MovesScroll/MovesText").Text.Contains("e2-e4"),
+            Check(root.GetNode<Label>("SidePanel/Margin/Content/MovesScroll/MovesText").Text.Contains("e4"),
                 "HUD move history reflects actual game state");
             Press(root, "SidePanel/Margin/Content/Files/Save");
             Check(FileAccess.FileExists(SavePath), "save works after themed match");
@@ -202,7 +202,7 @@ public partial class MenuTests : Node
             Check(random.History.Count == 1, "white can move against the AI");
             Move(root, "e7", "e5");
             Check(random.History.Count == 1, "human cannot move the AI pieces");
-            await Frames();
+            await WaitFor(() => random.History.Count == 2);
             Check(random.History.Count == 2 && random.Turn == PlayerColor.White, "AI replies with a legal move");
             Press(root, "SidePanel/Margin/Content/Files/Save");
             var expectedFen = FenSerializer.Write(random.Board);
@@ -220,7 +220,13 @@ public partial class MenuTests : Node
             Check(FenSerializer.Write(root.CurrentGame!.Board) == expectedFen, "Continue restores board");
             Check(root.CurrentGame.History.SequenceEqual(expectedHistory), "Continue restores move history");
             Check(root.AgainstRandom, "Continue restores AI mode");
-            Check(root.CurrentGame.Undo(), "Continue allows undo");
+            Check(root.GetNode<BoardView>("Board").CurrentTheme ==
+                new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
+                "Continue preserves Nico's chosen theme alongside engine metadata");
+            Press(root, "SidePanel/Margin/Content/NewGame");
+            Check(root.GetNode<BoardView>("Board").CurrentTheme ==
+                new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
+                "rematch preserves the independently selected visual theme");
 
             Press(root, "SidePanel/Margin/Content/Menu");
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
@@ -235,6 +241,8 @@ public partial class MenuTests : Node
             var legacy = JsonNode.Parse(saved)!;
             legacy.AsObject().Remove("AgainstRandom");
             legacy.AsObject().Remove("Theme");
+            legacy.AsObject().Remove("AgainstStockfish");
+            legacy["Version"] = 1;
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString(legacy.ToJsonString());
             root.Free();
@@ -280,6 +288,16 @@ public partial class MenuTests : Node
     {
         Press(root, Home + "NewGame");
         Press(root, Setup + "Continue");
+    }
+
+    private async Task WaitFor(Func<bool> condition)
+    {
+        var deadline = Time.GetTicksMsec() + 15000;
+        while (!condition())
+        {
+            if (Time.GetTicksMsec() > deadline) throw new TimeoutException("Stockfish did not reply.");
+            await Frames();
+        }
     }
 
     private async Task Frames()

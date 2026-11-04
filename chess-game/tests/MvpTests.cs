@@ -83,7 +83,7 @@ public partial class MvpTests : Node
 
             foreach (var fen in new[] {
                 "7k/8/5KQ1/8/8/8/8/8 b - - 0 1",
-                "7k/8/8/8/8/8/8/R6K w - - 100 50" })
+                "7k/8/8/8/8/8/8/R6K w - - 150 76" })
             {
                 LoadPosition(root, fen);
                 Check(overlay.Visible, "loaded terminal position opens overlay");

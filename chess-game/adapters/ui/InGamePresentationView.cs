@@ -92,8 +92,8 @@ public partial class InGamePresentationView : Control
     }
 
     /// <summary>
-    /// Time played per side in the current session. Not a competitive 10-minute
-    /// chess clock: no timeout win rule exists in Chess.Core yet.
+    /// Keep the existing player cards and show the domain countdown for timed games.
+    /// Unlimited games retain the per-side session timers.
     /// </summary>
     public void Attach(ChessGame game)
     {
@@ -102,7 +102,7 @@ public partial class InGamePresentationView : Control
         _blackElapsed = 0;
         _whiteDisplayed = -1;
         _blackDisplayed = -1;
-        RefreshElapsedLabels();
+        RefreshClocks();
     }
 
     public override void _Process(double delta)
@@ -111,21 +111,27 @@ public partial class InGamePresentationView : Control
             _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
             return;
 
-        if (_game.Turn == PlayerColor.White)
-            _whiteElapsed += delta;
-        else
-            _blackElapsed += delta;
+        if (_game.TimeControl.InitialSeconds == 0 && !_game.Caretaker.CanRedo)
+        {
+            if (_game.Turn == PlayerColor.White) _whiteElapsed += delta;
+            else _blackElapsed += delta;
+        }
 
         _whiteCard.Modulate = _game.Turn == PlayerColor.White ? Colors.White : new Color(0.84f, 0.84f, 0.84f);
         _blackCard.Modulate = _game.Turn == PlayerColor.Black ? Colors.White : new Color(0.84f, 0.84f, 0.84f);
-        RefreshElapsedLabels();
+        RefreshClocks();
     }
 
-    private void RefreshElapsedLabels()
+    public void RefreshClocks()
     {
+        if (_game is null) return;
         static string Format(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
-        int white = Math.Max(0, (int)_whiteElapsed);
-        int black = Math.Max(0, (int)_blackElapsed);
+        bool timed = _game.TimeControl.InitialSeconds > 0;
+        int white = Math.Max(0, timed ? (int)Math.Ceiling(_game.ClockState.WhiteSeconds) : (int)_whiteElapsed);
+        int black = Math.Max(0, timed ? (int)Math.Ceiling(_game.ClockState.BlackSeconds) : (int)_blackElapsed);
+        string hint = timed ? "Tiempo restante de la partida; se conserva al guardar." :
+            "Tiempo jugado en esta sesión; no es una partida a contrarreloj ni se guarda.";
+        _whiteClock.TooltipText = _blackClock.TooltipText = hint;
 
         if (white != _whiteDisplayed)
         {
@@ -294,7 +300,7 @@ public partial class InGamePresentationView : Control
 
         _helpPanel = Popup("HelpPopup", new Vector2(1090, 52), new Vector2(312, 100),
             "JUGADA: elegi una pieza y despues su destino.\nGUARDAR: conserva el estado de la partida.");
-        _settingsPanel = Popup("SettingsPopup", new Vector2(1090, 52), new Vector2(312, 158),
+        _settingsPanel = Popup("SettingsPopup", new Vector2(1090, 52), new Vector2(312, 484),
             "OPCIONES DE PARTIDA\n\nSONIDO: boton de altavoz superior.");
         _settingsPanel.GetNode<Label>("Text").Size = new Vector2(292, 70);
 
@@ -306,7 +312,7 @@ public partial class InGamePresentationView : Control
         opponent.Name = "Random";
         opponent.Position = new Vector2(16, 85);
         opponent.Size = new Vector2(280, 28);
-        opponent.Text = "NEGRAS ALEATORIAS";
+        opponent.Text = "NEGRAS CON STOCKFISH";
         opponent.TooltipText = "La IA juega con las piezas negras";
         opponent.AddThemeFontSizeOverride("font_size", 16);
         opponent.AddThemeColorOverride("font_color", InGameUiSkin.Ink);
@@ -317,6 +323,31 @@ public partial class InGamePresentationView : Control
             "Se puede cambiar durante la partida.",
             new Vector2(16, 118), new Vector2(280, 20), 13,
             InGameUiSkin.Ink, UiFontWeight.Regular));
+        var difficulty = _sidebar.GetNode<OptionButton>("Margin/Content/Difficulty");
+        difficulty.Reparent(_settingsPanel, false);
+        difficulty.Position = new Vector2(16, 176);
+        difficulty.Size = new Vector2(280, 38);
+        PixelUiSkin.StyleOption(difficulty);
+        difficulty.AddThemeFontSizeOverride("font_size", 18);
+        _settingsPanel.AddChild(InGameUiSkin.Text("DifficultyLabel", "NIVEL DE STOCKFISH",
+            new Vector2(16, 145), new Vector2(280, 26), 17, InGameUiSkin.Ink));
+        _sidebar.GetNode<Button>("Margin/Content/TextFiles/Import").Text = "IMPORTAR";
+        _sidebar.GetNode<Button>("Margin/Content/TextFiles/Export").Text = "EXPORTAR";
+        foreach (var (name, y, height) in new[] { ("TextFiles", 235, 38), ("EndActions", 289, 114), ("Claim", 427, 38) })
+        {
+            var action = _sidebar.GetNode<Control>("Margin/Content/" + name);
+            action.Reparent(_settingsPanel, false);
+            action.Position = new Vector2(16, y);
+            foreach (var button in action is Button single ? new[] { single } : action.GetChildren().OfType<Button>())
+                InGameUiSkin.StyleButton(button, "burgundy", fontSize: 16);
+            // Reflow after shortening labels and applying the pixel font's minimum sizes.
+            action.ResetSize();
+            action.Size = new Vector2(280, height);
+        }
+        _settingsPanel.GetNode<Button>("TextFiles/Import").Text = "IMPORTAR";
+        _settingsPanel.GetNode<Button>("TextFiles/Import").TooltipText = "Importar FEN / PGN";
+        _settingsPanel.GetNode<Button>("TextFiles/Export").Text = "EXPORTAR";
+        _settingsPanel.GetNode<Button>("TextFiles/Export").TooltipText = "Exportar FEN / PGN";
         _helpText = _helpPanel.GetNode<Label>("Text");
     }
 

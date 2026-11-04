@@ -98,6 +98,7 @@ public class ChessGameTests
         var game = Create();
         for (var cycle = 0; cycle < 2; cycle++)
             Play(game, "g1f3", "g8f6", "f3g1", "f6g8");
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.DrawByRepetition));
 
         for (var ply = 0; ply < 4; ply++)
@@ -106,6 +107,7 @@ public class ChessGameTests
         Play(game, "g1f3", "g8f6", "f3g1");
         Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
         Play(game, "f6g8");
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.DrawByRepetition));
     }
 
@@ -157,6 +159,7 @@ public class ChessGameTests
         target.RestoreFrom(source);
         Play(target, "g1f3", "g8f6", "f3g1", "f6g8");
 
+        Assert.That(target.ClaimDraw(target.Turn), Is.True);
         Assert.That(target.Status, Is.EqualTo(GameStatus.DrawByRepetition));
         Assert.That(source.Status, Is.EqualTo(GameStatus.Ongoing));
         Assert.That(target.Undo(), Is.True);
@@ -263,6 +266,7 @@ public class ChessGameTests
         var move = Move("a1", "a2");
 
         Assert.That(game.TryMove(move), Is.True);
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(events.Published, Is.EqualTo(new object[]
         {
             new PieceMoved(move, new Piece(PieceType.Rook, PlayerColor.White)),
@@ -283,6 +287,7 @@ public class ChessGameTests
             Play(game, "f6g8");
         }
 
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         var repeated = Move("f6", "g8");
         Assert.That(events.Published, Has.Count.EqualTo(3));
         Assert.That(events.Published[0], Is.EqualTo(new PieceMoved(repeated, new Piece(PieceType.Knight, PlayerColor.Black))));

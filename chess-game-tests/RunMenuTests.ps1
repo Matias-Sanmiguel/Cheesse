@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Godot,
-    [ValidateSet('MenuTests', 'SidePanelTests', 'MvpTests')]
+    [ValidateSet('MenuTests', 'SidePanelTests', 'MvpTests', 'ReleaseTests')]
     [string]$TestScene = 'MenuTests'
 )
 
@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $workspacePath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $gamePath = Join-Path $workspacePath 'chess-game'
 
-dotnet build (Join-Path $gamePath 'Chess.Game.csproj') --no-restore
+dotnet build (Join-Path $gamePath 'Chess.Game.csproj')
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Reuse the production assembly and scenes with a separate Godot project name.
@@ -36,9 +36,18 @@ $config = $config.Replace('config/icon="res://icon.svg"', '')
 & $Godot --headless --editor --path $sandboxPath --import
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$testOutput = & $Godot --headless --path $sandboxPath --quit-after 600
-$testExitCode = $LASTEXITCODE
+$previousEngine = $env:CHEESSE_STOCKFISH_PATH
+try {
+    if (-not $env:CHEESSE_STOCKFISH_PATH) {
+        $engineName = if ($env:OS -eq 'Windows_NT') { 'stockfish.exe' } else { 'stockfish' }
+        $env:CHEESSE_STOCKFISH_PATH = Join-Path $gamePath ('engines/' + $engineName)
+    }
+    $testOutput = & $Godot --headless --path $sandboxPath --quit-after 3600 --max-fps 60
+    $testExitCode = $LASTEXITCODE
+} finally {
+    $env:CHEESSE_STOCKFISH_PATH = $previousEngine
+}
 $testOutput | Write-Output
 if ($testExitCode -ne 0) { exit $testExitCode }
-if (-not ($testOutput -match '^PASS: (menu|sidepanel|mvp)')) { throw 'UI tests did not complete.' }
+if (-not ($testOutput -match '^PASS: (menu|sidepanel|mvp|release)')) { throw 'UI tests did not complete.' }
 exit 0

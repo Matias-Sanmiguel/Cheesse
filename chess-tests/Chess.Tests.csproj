@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <Compile Include="../chess-game/adapters/ai/RandomAI.cs" Link="Adapters/RandomAI.cs" />
+    <Compile Include="../chess-game/adapters/ai/StockfishAI.cs" Link="Adapters/StockfishAI.cs" />
     <ProjectReference Include="..\chess-core\Chess.Core.csproj" />
   </ItemGroup>
 </Project>
