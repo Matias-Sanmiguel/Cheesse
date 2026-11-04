@@ -352,21 +352,20 @@ public partial class MenuView : Control
 
         _note = PixelUiSkin.Label("Note",
             "LAS SKINS NO CAMBIAN LAS REGLAS.",
-            new Vector2(44, 459), new Vector2(572, 44), 18,
+            new Vector2(44, 424), new Vector2(572, 44), 18,
             light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Medium);
         form.AddChild(_note);
 
-        // Keep the exact button assets/icons and the existing game callbacks.
-        form.AddChild(PixelUiSkin.Button("Human", "CONTRA HUMANO",
-            new Vector2(43, 509), new Vector2(575, 48),
-            () => HumanRequested?.Invoke(), "play", 26));
-        form.AddChild(PixelUiSkin.Button("Random", "CONTRA LA IA ALEATORIA",
-            new Vector2(43, 565), new Vector2(575, 48),
-            () => RandomRequested?.Invoke(), "dice", 26));
-        _continue = PixelUiSkin.Button("Continue", "CONTINUAR PARTIDA",
-            new Vector2(43, 621), new Vector2(575, 48),
-            () => ContinueRequested?.Invoke(), "load", 26);
+        // Keep the same button textures and original 16px icon art. Native
+        // Button.Icon laid the icons beyond the 48px-high button artwork;
+        // explicit 32x32 child images align them within the button at x2.
+        form.AddChild(MakeSetupActionButton("Human", "CONTRA HUMANO", "play",
+            new Vector2(43, 474), () => HumanRequested?.Invoke()));
+        form.AddChild(MakeSetupActionButton("Random", "CONTRA LA IA ALEATORIA", "dice",
+            new Vector2(43, 530), () => RandomRequested?.Invoke()));
+        _continue = MakeSetupActionButton("Continue", "CONTINUAR PARTIDA", "load",
+            new Vector2(43, 586), () => ContinueRequested?.Invoke());
         _continue.Disabled = true;
         form.AddChild(_continue);
 
@@ -379,6 +378,19 @@ public partial class MenuView : Control
         _whiteSkin.ItemSelected += _ => UpdatePreview();
         _blackSkin.ItemSelected += _ => UpdatePreview();
         UpdatePreview();
+    }
+
+    private static Button MakeSetupActionButton(string name, string label,
+        string icon, Vector2 position, Action onPressed)
+    {
+        // Keep Godot's standard button text centered and handle the decorative
+        // icon separately so its full native x2 sprite stays inside the frame.
+        var button = PixelUiSkin.Button(name, label, position,
+            new Vector2(575, 48), onPressed, fontSize: 26);
+        button.AddChild(PixelUiSkin.Image("ActionIcon",
+            "icons/" + icon + "_16x16.png",
+            new Vector2(18, 8), new Vector2(32, 32), 2));
+        return button;
     }
 
     private static Button MakeStyleCard(string name, string label, string illustration,
