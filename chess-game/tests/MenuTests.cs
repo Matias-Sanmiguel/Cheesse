@@ -169,7 +169,18 @@ public partial class MenuTests : Node
             Check(root.CurrentGame.Status == GameStatus.PicadaVictory &&
                   root.CurrentGame.History.Count == 7,
                 "Picada victory is triggered by a legal center move through UI input");
+            var victoryFx = root.GetNodeOrNull<Node2D>("Board/PicadaVictoryFx");
+            Check(victoryFx is not null && victoryFx.Visible &&
+                  victoryFx.HasNode("WinningCrown") &&
+                  victoryFx.HasNode("VictoryPlaque/VictoryCaption") &&
+                  victoryFx.GetChildren().OfType<Sprite2D>().Count() >= 24 &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Picada starts a visible crown, caption and 24 particle celebration before the result");
             await ToSignal(GetTree().CreateTimer(0.95), SceneTreeTimer.SignalName.Timeout);
+            Check(root.GetNodeOrNull<Node2D>("Board/PicadaVictoryFx") is { Visible: true } &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Picada particles remain on the board long enough to be noticeable");
+            await ToSignal(GetTree().CreateTimer(1.25), SceneTreeTimer.SignalName.Timeout);
             Check(root.GetNode<GameOverOverlay>("GameOverOverlay").Visible &&
                   root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Reason").Text.Contains("REY AL CENTRO") &&
                   root.GetNode<TextureRect>("GameOverOverlay/Overlay/Center/Panel/Content/ResultBanner/PicadaCrown").Visible,
