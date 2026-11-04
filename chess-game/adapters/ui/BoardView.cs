@@ -23,6 +23,18 @@ public partial class BoardView : Node2D
     private readonly HashSet<Square> _legalDestinations = new();
     private Move? _lastMove;
 
+    // Visual-only sliding piece animation; the chess board state remains authoritative.
+    private const double PieceSlideDuration = 0.20;
+    private Board? _observedBoard;
+    private Move? _observedLastMove;
+    private int _observedHistoryCount;
+    private Tween? _pieceSlideTween;
+    private readonly List<Sprite2D> _slidingSprites = new();
+    private readonly HashSet<Square> _slidingDestinations = new();
+    private int _slideSpriteSerial;
+
+    public bool IsMoveAnimating => _pieceSlideTween?.IsRunning() == true;
+
     private readonly Dictionary<(PieceType, PlayerColor), Texture2D>
         _pieceTextures = new();
 
@@ -79,8 +91,13 @@ public partial class BoardView : Node2D
             _bus.StateChanged -= OnStateChanged;
 
         ClearPicadaVictoryFx();
+        CancelPieceSlide();
         _game = game;
         _bus = bus;
+        // Re-entering a loaded or fresh game must show its exact saved position.
+        _observedBoard = game.Board;
+        _observedHistoryCount = game.History.Count;
+        _observedLastMove = game.History.Count == 0 ? null : game.History[^1];
         _goalPulseTime = 0;
         _goalRedrawClock = 0;
 
@@ -93,6 +110,7 @@ public partial class BoardView : Node2D
     {
         ArgumentNullException.ThrowIfNull(theme);
 
+        CancelPieceSlide();
         _visualTheme = VisualThemeCatalog.Normalize(theme);
 
         LoadTextures();
@@ -102,6 +120,7 @@ public partial class BoardView : Node2D
     {
         if (_bus is not null)
             _bus.StateChanged -= OnStateChanged;
+        CancelPieceSlide();
     }
 
     public override void _Process(double delta)
@@ -320,6 +339,90 @@ public partial class BoardView : Node2D
         ClearSelection();
     }
 
+    // Slide the existing themed piece sprite across the board, then reveal the
+    // already-updated destination. Captures, promotion and castling stay in sync.
+    private void BeginPieceSlide(Move move, Piece movingPiece, bool backwards)
+    {
+        CancelPieceSlide();
+        if (!Visible) return;
+
+        Square from = backwards ? move.To : move.From;
+        Square to = backwards ? move.From : move.To;
+        var movingSprite = MakeSlidingSprite(movingPiece, from);
+        if (movingSprite is null) return;
+
+        _slidingDestinations.Add(to);
+        var tween = CreateTween().SetParallel(true)
+            .SetTrans(Tween.TransitionType.Cubic)
+            .SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(movingSprite, "position", SquareCenter(to), PieceSlideDuration);
+
+        // In castling, move the rook at the same time as the king.
+        if (movingPiece.Type == PieceType.King &&
+            move.From.Rank == move.To.Rank && Math.Abs(move.To.File - move.From.File) == 2)
+        {
+            bool kingside = move.To.File > move.From.File;
+            int rank = move.From.Rank;
+            Square rookFrom = new(kingside ? 7 : 0, rank);
+            Square rookTo = new(kingside ? 5 : 3, rank);
+            if (backwards) (rookFrom, rookTo) = (rookTo, rookFrom);
+
+            var rook = MakeSlidingSprite(new Piece(PieceType.Rook, movingPiece.Color), rookFrom);
+            if (rook is not null)
+            {
+                _slidingDestinations.Add(rookTo);
+                tween.TweenProperty(rook, "position", SquareCenter(rookTo), PieceSlideDuration);
+            }
+        }
+
+        _pieceSlideTween = tween;
+        tween.Finished += FinishPieceSlide;
+        QueueRedraw();
+    }
+
+    private Sprite2D? MakeSlidingSprite(Piece piece, Square source)
+    {
+        if (!_pieceTextures.TryGetValue((piece.Type, piece.Color), out var texture))
+            return null;
+
+        var sprite = new Sprite2D
+        {
+            Name = "SlidingPiece" + _slideSpriteSerial++,
+            Texture = texture,
+            Position = SquareCenter(source),
+            Scale = new Vector2((float)SquareSize / texture.GetWidth(),
+                                (float)SquareSize / texture.GetHeight()),
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            ZIndex = 10
+        };
+        AddChild(sprite);
+        _slidingSprites.Add(sprite);
+        return sprite;
+    }
+
+    private static Vector2 SquareCenter(Square square) =>
+        GetSquarePosition(square) + new Vector2(SquareSize / 2f, SquareSize / 2f);
+
+    private void CancelPieceSlide()
+    {
+        _pieceSlideTween?.Kill();
+        FinishPieceSlide();
+    }
+
+    private void FinishPieceSlide()
+    {
+        _pieceSlideTween = null;
+        foreach (var sprite in _slidingSprites)
+        {
+            if (!GodotObject.IsInstanceValid(sprite)) continue;
+            sprite.Visible = false;
+            sprite.QueueFree();
+        }
+        _slidingSprites.Clear();
+        _slidingDestinations.Clear();
+        QueueRedraw();
+    }
+
     // Orden de capas.
     public override void _Draw()
     {
@@ -427,7 +530,8 @@ public partial class BoardView : Node2D
             {
                 var square = new Square(file, rank);
 
-                if (_game.Board.At(square) is not Piece piece)
+                if (_game.Board.At(square) is not Piece piece ||
+                    _slidingDestinations.Contains(square))
                     continue;
 
                 if (_pieceTextures.TryGetValue(
@@ -697,9 +801,37 @@ public partial class BoardView : Node2D
         );
     }
 
-    // Evento integrado en main: movimientos, undo, redo y carga.
+    // Domain events can refresh the screen more than once per move; animate each
+    // committed position transition only once and snap on loads or history jumps.
     private void OnStateChanged()
     {
+        if (_game is null) return;
+
+        int count = _game.History.Count;
+        if (count == _observedHistoryCount + 1 && _observedBoard is not null)
+        {
+            Move move = _game.History[^1];
+            if (_observedBoard.At(move.From) is Piece piece)
+                BeginPieceSlide(move, piece, backwards: false);
+            else
+                CancelPieceSlide();
+        }
+        else if (count == _observedHistoryCount - 1 && _observedBoard is not null &&
+                 _observedLastMove is Move undone)
+        {
+            if (_observedBoard.At(undone.To) is Piece piece)
+                BeginPieceSlide(undone, piece, backwards: true);
+            else
+                CancelPieceSlide();
+        }
+        else if (!ReferenceEquals(_observedBoard, _game.Board))
+        {
+            CancelPieceSlide();
+        }
+
+        _observedBoard = _game.Board;
+        _observedHistoryCount = count;
+        _observedLastMove = count == 0 ? null : _game.History[^1];
         RefreshFromGame();
     }
 }
