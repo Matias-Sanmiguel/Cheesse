@@ -257,7 +257,7 @@ public partial class GameCompositionRoot : Node
             // Let the crown/cheese particles play on the actual board first.
             // Undo, starting another match or opening the menu cancels this result.
             _gameOver.Hide();
-            await ToSignal(GetTree().CreateTimer(0.72), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(BoardView.PicadaVictoryEffectDurationSeconds + 0.25), SceneTreeTimer.SignalName.Timeout);
             if (!GodotObject.IsInstanceValid(this) || revision != _gameOverRevision ||
                 !ReferenceEquals(CurrentGame, game) || _menu.Visible ||
                 game.Status != GameStatus.PicadaVictory)
