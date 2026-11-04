@@ -191,6 +191,15 @@ public partial class MenuTests : Node
                   modalContent.GetNode<Label>("TimeLabel").Text == "TIEMPO" &&
                   modalContent.GetNode<Label>("TimeValue").Text.Contains(':'),
                 "Picada wins show a dynamic winner, reason and elapsed time");
+            var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
+            Check(winnerIcon.Texture is ImageTexture &&
+                  winnerIcon.Texture.GetImage().GetPixel(0, 0).A < 0.01f &&
+                  winnerIcon.Position.IsEqualApprox(new Vector2(23 * 4, 65 * 4)) &&
+                  winnerIcon.Size.IsEqualApprox(new Vector2(24 * 4, 24 * 4)),
+                "winner ribbon shows the transparent chess king without the square backing");
+            Check(modalContent.GetNode<TextureRect>("Rematch/RematchIcon").Texture is ImageTexture &&
+                  modalContent.GetNode<TextureRect>("MainMenu/MainMenuIcon").Texture is ImageTexture,
+                "action icons are recolored from the original pixel art for proper contrast");
             Check(resultPanel.Size.IsEqualApprox(new Vector2(864, 776)) &&
                   resultBanner.Position.IsEqualApprox(new Vector2(48, 0)) &&
                   resultBanner.Size.IsEqualApprox(new Vector2(768, 256)) &&
