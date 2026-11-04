@@ -148,6 +148,33 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
                 "Picada opens its own match setup");
+            var setupPage = root.GetNode<Control>("Menu/Stage/SetupPage");
+            var setupPreview = setupPage.GetNode<Control>("Preview");
+            var setupOptions = setupPage.GetNode<Control>("Options");
+            Check(!root.GetNode<TextureRect>("Menu/Stage/CompactLogo").Visible &&
+                  setupPage.GetNode<Label>("Heading").Text == "PREPARA TU PARTIDA" &&
+                  setupPreview.Position.IsEqualApprox(new Vector2(60, 170)) &&
+                  setupOptions.Position.IsEqualApprox(new Vector2(715, 170)) &&
+                  setupPreview.Size.IsEqualApprox(new Vector2(630, 680)) &&
+                  setupOptions.Size.IsEqualApprox(new Vector2(665, 680)),
+                "setup uses the centered two-column layout without the top logo");
+            Check(setupPreview.HasNode("BoardFrame") &&
+                  setupPreview.HasNode("WhiteFrame") &&
+                  setupPreview.HasNode("BlackFrame") &&
+                  setupOptions.HasNode("ClassicStyle") &&
+                  setupOptions.HasNode("PicadaStyle") &&
+                  !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
+                "setup retains its original previews and uses two real style selection cards");
+            Press(root, Setup + "ClassicStyle");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
+                  !root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  root.GetNode<Control>(Setup + "ClassicInfo").Visible,
+                "classic style card selects the classic preview and explanatory block");
+            Press(root, Setup + "PicadaStyle");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  !root.GetNode<Control>(Setup + "ClassicInfo").Visible,
+                "Picada style card restores themed selection and the original dropdowns");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),
                 "Picada defaults to themed pieces and explains the center objective");
