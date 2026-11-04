@@ -96,7 +96,9 @@ public static class GameTextFiles
                 throw new FormatException("La casilla al paso no coincide con un peón rival.");
         }
         var previousSide = board.Turn == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
-        if (CheckDetector.IsInCheck(board, previousSide))
+        // Fondue demo setups may deliberately expose a king to an indirect melt.
+        var validationBoard = board.Mode == GameMode.Fondue ? board.WithMode(GameMode.Standard) : board;
+        if (CheckDetector.IsInCheck(validationBoard, previousSide))
             throw new FormatException("El jugador que acaba de mover no puede quedar en jaque.");
     }
 }

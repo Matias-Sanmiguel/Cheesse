@@ -16,4 +16,5 @@ public enum GameStatus
     Timeout,
     DrawByTimeout,
     DrawByResignation,
+    KingMelted,
 }

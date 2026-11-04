@@ -151,6 +151,12 @@ public partial class GameCompositionRoot : Node
     private async void RequestComputerMove()
     {
         if (CurrentGame is not { } game) return;
+        if (game.Board.Mode != GameMode.Standard)
+        {
+            SetStockfishOpponent(false);
+            _panel.SetMessage("Stockfish estándar no admite este modo. Podés seguir entre humanos.");
+            return;
+        }
         if (game.CanClaimDraw && game.ClaimDraw(PlayerColor.Black)) return;
         var generation = ++_searchGeneration;
         var expectedBoard = game.Board;

@@ -60,7 +60,9 @@ public static class SanNotation
         }
 
         var next = board.WithMove(move);
-        if (CheckDetector.IsInCheck(next, next.Turn))
+        if (next.Mode == GameMode.Fondue && GameRules.Evaluate(next, next.Turn) == GameStatus.KingMelted)
+            text.Append('#');
+        else if (CheckDetector.IsInCheck(next, next.Turn))
             text.Append(MoveGenerator.Legal(next, next.Turn).Count == 0 ? '#' : '+');
 
         return text.ToString();
@@ -105,12 +107,13 @@ public static class SanNotation
             status = GameRules.Evaluate(board, board.Turn, positions);
         }
 
-        var result = outcome ?? Result(status, board.Turn);
+        var result = outcome ?? Result(status, board);
         tokens.Add(result);
         var pgn = new StringBuilder();
         pgn.Append("[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n");
         pgn.Append("[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n");
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
+        if (initialBoard.Mode == GameMode.Fondue) pgn.Append("[Variant \"Fondue\"]\n");
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -168,6 +171,13 @@ public static class SanNotation
             throw new FormatException("A custom PGN position requires both SetUp and FEN tags.");
 
         initialBoard = FenSerializer.Load(setup == "1" ? tags["FEN"] : FenSerializer.InitialPosition);
+        if (tags.TryGetValue("Variant", out var variant))
+            initialBoard = initialBoard.WithMode(variant switch
+            {
+                "Fondue" => GameMode.Fondue,
+                "Standard" => GameMode.Standard,
+                _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
+            });
         var board = initialBoard;
         var history = new List<Move>();
         var positions = new List<Board> { board };
@@ -208,7 +218,7 @@ public static class SanNotation
             (tags.TryGetValue("Result", out var declaredResult) && declaredResult != termination))
             throw new FormatException("Missing or inconsistent PGN result.");
 
-        var naturalResult = Result(GameRules.Evaluate(board, board.Turn, positions), board.Turn);
+        var naturalResult = Result(GameRules.Evaluate(board, board.Turn, positions), board);
         if (naturalResult != "*" && termination != naturalResult)
             throw new FormatException("PGN result conflicts with the final position.");
         result = termination;
@@ -270,9 +280,10 @@ public static class SanNotation
         return mainLine.ToString();
     }
 
-    private static string Result(GameStatus status, PlayerColor turn) => status switch
+    private static string Result(GameStatus status, Board board) => status switch
     {
-        GameStatus.Checkmate => turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.Checkmate => board.Turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.KingMelted => FondueRules.HasKing(board, PlayerColor.White) ? "1-0" : "0-1",
         GameStatus.Stalemate or GameStatus.DrawByFiftyMove or
             GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial or
             GameStatus.DrawByFivefoldRepetition or GameStatus.DrawBySeventyFiveMove or

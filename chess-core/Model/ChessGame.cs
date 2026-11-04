@@ -43,7 +43,9 @@ public sealed class ChessGame
     public Board Board { get; private set; }
     public PlayerColor Turn => Board.Turn;
     public GameStatus Status { get; private set; }
-    public PlayerColor? Winner => Status == GameStatus.Checkmate ? Opponent(Turn) : _winner;
+    public PlayerColor? Winner => Status == GameStatus.KingMelted
+        ? FondueRules.HasKing(Board, PlayerColor.White) ? PlayerColor.White : PlayerColor.Black
+        : Status == GameStatus.Checkmate ? Opponent(Turn) : _winner;
     public PlayerColor? DrawOfferedBy { get; private set; }
     public TimeControl TimeControl { get; private set; }
     public ClockSnapshot ClockState => _clockState;
@@ -161,6 +163,7 @@ public sealed class ChessGame
             _clockState = mover == PlayerColor.White
                 ? _clockState with { WhiteSeconds = _clockState.WhiteSeconds + TimeControl.IncrementSeconds }
                 : _clockState with { BlackSeconds = _clockState.BlackSeconds + TimeControl.IncrementSeconds };
+        var previousBoard = Board;
         Board = Board.WithMove(move);
         _positions.Add(Board);
         _history.Add(move);
@@ -173,10 +176,23 @@ public sealed class ChessGame
         }
         _clockHistory.Add(_clockState);
         Events.Publish(new PieceMoved(move, piece));
+        if (Board.Mode == GameMode.Fondue && FondueRules.CapturedSquare(previousBoard, move) is not null)
+        {
+            var removed = new List<MeltedPiece>();
+            for (var index = 0; index < 64; index++)
+            {
+                var square = Square.FromIndex(index);
+                if (square != move.From && previousBoard.At(square) is Piece melted && Board.At(square) is null)
+                    removed.Add(new MeltedPiece(square, melted));
+            }
+            removed.Add(new MeltedPiece(move.To, move.Promotion is PieceType promotion ? piece with { Type = promotion } : piece));
+            Events.Publish(new PiecesMelted(move, removed));
+        }
         if (Status is GameStatus.Check or GameStatus.Checkmate) Events.Publish(new CheckRaised(Turn));
         if (!State.AcceptsMoves) Events.Publish(new GameEnded(Status));
         PublishDrawEvent();
-        if (move.Promotion is PieceType promotedTo) Events.Publish(new PromotionOccurred(move.To, promotedTo));
+        if (move.Promotion is PieceType promotedTo && Board.At(move.To) is not null)
+            Events.Publish(new PromotionOccurred(move.To, promotedTo));
         return true;
     }
 
@@ -294,7 +310,9 @@ public sealed class ChessGame
         if (status != natural && !(GameState.For(natural).AcceptsMoves && (manual || claimed &&
                 (GameRules.ClaimStatus(Board, _positions) == status || ClaimableDrawMoves().Any(move => ClaimStatusAfter(move) == status)))))
             throw new ArgumentException("Saved outcome conflicts with the position.");
-        var expectedWinner = status == GameStatus.Checkmate ? Opponent(Turn) : (PlayerColor?)null;
+        var expectedWinner = status == GameStatus.KingMelted
+            ? FondueRules.HasKing(Board, PlayerColor.White) ? PlayerColor.White : PlayerColor.Black
+            : status == GameStatus.Checkmate ? Opponent(Turn) : (PlayerColor?)null;
         if (status is GameStatus.Resigned or GameStatus.Timeout)
         {
             if (winner is null) throw new ArgumentException("Winning outcome requires a winner.");

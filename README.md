@@ -1,5 +1,7 @@
 # Cheesse
 
+Variant development: [Fondue rules, API and demo positions](docs/fondue.md).
+
 A desktop chess game for playing against Stockfish 19.
 
 Run the package for your computer:

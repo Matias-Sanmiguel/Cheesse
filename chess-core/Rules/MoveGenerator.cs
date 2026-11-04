@@ -35,6 +35,10 @@ public static class MoveGenerator
     {
         ArgumentNullException.ThrowIfNull(board);
 
+        if (board.Mode == GameMode.Fondue &&
+            (!FondueRules.HasKing(board, PlayerColor.White) || !FondueRules.HasKing(board, PlayerColor.Black)))
+            return [];
+
         // F2 genera los movimientos pseudo-legales.
         var candidates = Generate(board, side);
 

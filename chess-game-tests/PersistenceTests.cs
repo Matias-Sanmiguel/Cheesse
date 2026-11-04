@@ -65,6 +65,7 @@ public partial class PersistenceTests : Node
 
     private void RunCases(FileSaveRepository repository)
     {
+        Fondue_mode_and_melted_king_survive_save_load(repository);
         Claimed_draw_results_roundtrip(repository);
         Invalid_positions_in_edited_saves_are_rejected(repository);
         Clock_and_outcome_survive_save_and_restart(repository);
@@ -93,6 +94,30 @@ public partial class PersistenceTests : Node
         SaveFailureKeepsPreviousFile(repository);
         Check(!DirAccess.GetFilesAt("user://").Any(name =>
             name.StartsWith("cheesse-save.txt.") && name.EndsWith(".tmp")), "temporary files cleaned");
+    }
+
+    private void Fondue_mode_and_melted_king_survive_save_load(FileSaveRepository repository)
+    {
+        var ports = Create(repository);
+        foreach (var fen in new[]
+        {
+            "7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1",
+            "7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1",
+        })
+        {
+            var initial = FenSerializer.Load(fen).WithMode(GameMode.Fondue);
+            var game = new ChessGame(ports.Events, repository, ports.Clock, initial);
+            var move = fen.Contains("K2R4") ? "d1d5" : "g1g7";
+            Play(game, move);
+            repository.Save(game);
+            var restored = Create(repository);
+            Check(repository.Load(restored), "Fondue save loads: " + fen);
+            Check(restored.Board.Mode == GameMode.Fondue, "Fondue mode restored");
+            Check(FenSerializer.Write(restored.Board) == FenSerializer.Write(game.Board), "Fondue chain restored");
+            Check(restored.Status == game.Status && restored.Winner == game.Winner, "Fondue outcome restored");
+            Check(restored.Undo() && FenSerializer.Write(restored.Board) == fen, "Fondue undo after load");
+            Check(restored.Redo() && restored.Status == game.Status, "Fondue redo after load");
+        }
     }
 
     private void Claimed_draw_results_roundtrip(FileSaveRepository repository)

@@ -22,7 +22,7 @@ public static class SpecialMoves
         //El rey no puede estar actualmente en jaque.
         PlayerColor opponent = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
 
-        if (board.IsAttacked(kingSquare, opponent))
+        if (CheckDetector.IsInCheck(board, side))
             return moves;
 
         //Enroque corto
@@ -35,7 +35,7 @@ public static class SpecialMoves
         Square gSquare = new Square(6, rank);
 
         if (canCastleShort && shortRook is Piece rookShort && rookShort.Type == PieceType.Rook && rookShort.Color == side && board.At(fSquare) == null && board.At(gSquare) == null &&
-            !board.IsAttacked(fSquare, opponent) && !board.IsAttacked(gSquare, opponent))
+            SafeTransit(fSquare) && !board.IsAttacked(gSquare, opponent))
         {
             moves.Add(new Move(kingSquare, gSquare));
         }
@@ -51,12 +51,16 @@ public static class SpecialMoves
         Square dSquare = new Square(3, rank);
 
         if (canCastleLong && longRook is Piece rookLong && rookLong.Type == PieceType.Rook && rookLong.Color == side &&
-            board.At(bSquare) == null && board.At(cSquare) == null && board.At(dSquare) == null && !board.IsAttacked(dSquare, opponent) && !board.IsAttacked(cSquare, opponent))
+            board.At(bSquare) == null && board.At(cSquare) == null && board.At(dSquare) == null && SafeTransit(dSquare) && !board.IsAttacked(cSquare, opponent))
         {
             moves.Add(new Move(kingSquare, cSquare));
         }
 
         return moves;
+
+        bool SafeTransit(Square square) => board.Mode == GameMode.Fondue
+            ? !CheckDetector.IsInCheck(board.WithPiece(kingSquare, null).WithPiece(square, king), side)
+            : !board.IsAttacked(square, opponent);
     }
 
 

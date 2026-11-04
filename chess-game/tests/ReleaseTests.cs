@@ -78,6 +78,14 @@ public partial class ReleaseTests : Node
             root.CurrentGame!.ConfigureClock(new TimeControl(1, 0));
             await WaitUntil(() => root.CurrentGame.Status == GameStatus.Timeout);
             Check(root.CurrentGame.Winner == PlayerColor.Black && root.GetNode<GameOverOverlay>("GameOverOverlay").Visible, "real countdown expires and displays winner");
+            Check(root.ImportGameText("[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/8/8/8/8/8/8/K2R4 b - - 0 1\"]\n[Result \"*\"]\n\n*", ".pgn"), "Fondue analysis imports");
+            root.GetNode<CheckButton>(Content + "Random").ButtonPressed = true;
+            await Frames();
+            Check(!root.IsThinking && !root.AgainstStockfish, "unsupported Fondue engine fails safely");
+            Check(root.CurrentGame!.Board.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
+                "unsupported engine leaves Fondue position untouched");
+            Play(root, "h8h7");
+            Check(root.CurrentGame.History.Count == 1, "Fondue continues between humans after engine fallback");
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }

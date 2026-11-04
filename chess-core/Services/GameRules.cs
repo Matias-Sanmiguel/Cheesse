@@ -17,6 +17,13 @@ public static class GameRules
     internal static GameStatus Evaluate(Board board, PlayerColor side, IEnumerable<Board>? positions)
     {
         ArgumentNullException.ThrowIfNull(board);
+        if (board.Mode == GameMode.Fondue &&
+            (!FondueRules.HasKing(board, PlayerColor.White) || !FondueRules.HasKing(board, PlayerColor.Black)))
+        {
+            if (!FondueRules.HasKing(board, PlayerColor.White) && !FondueRules.HasKing(board, PlayerColor.Black))
+                throw new ArgumentException("Fondue requires at least one surviving king.", nameof(board));
+            return GameStatus.KingMelted;
+        }
         var inCheck = CheckDetector.IsInCheck(board, side);
         var legalMoves = MoveGenerator.Legal(board, side);
 
@@ -63,6 +70,7 @@ public static class GameRules
             (piece.Color == side ? own : opponents).Add(piece);
             if (piece.Type == PieceType.Bishop) bishopColors.Add((square.File + square.Rank) % 2);
         }
+        if (board.Mode == GameMode.Fondue) return own.Any(piece => piece.Type != PieceType.King);
         if (own.Any(piece => piece.Type is PieceType.Pawn or PieceType.Rook or PieceType.Queen)) return true;
         var knights = own.Count(piece => piece.Type == PieceType.Knight);
         var bishops = own.Count(piece => piece.Type == PieceType.Bishop);
@@ -81,7 +89,8 @@ public static class GameRules
             .Any(move => !CheckDetector.IsInCheck(board.WithMove(move), side));
         if (!canCaptureEnPassant)
             fields[3] = "-";
-        return string.Join(" ", fields.Take(4));
+        var mode = board.Mode == GameMode.Standard ? "" : board.Mode + ":";
+        return mode + string.Join(" ", fields.Take(4));
     }
 
     private static bool HasInsufficientMaterial(Board board)
@@ -103,6 +112,7 @@ public static class GameRules
                     break;
                 case PieceType.Bishop:
                 case PieceType.Knight:
+                    if (board.Mode == GameMode.Fondue) return false;
                     minors.Add((piece.Type, (square.File + square.Rank) % 2));
                     break;
                 default:

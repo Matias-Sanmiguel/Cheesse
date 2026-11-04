@@ -8,6 +8,14 @@ public static class CheckDetector
     {
         ArgumentNullException.ThrowIfNull(board);
 
+        if (board.Mode == GameMode.Fondue)
+        {
+            if (!FondueRules.HasKing(board, side)) return true;
+            var enemy = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+            if (!FondueRules.HasKing(board, enemy)) return false;
+            if (FondueRules.IsThreatened(board, side)) return true;
+        }
+
         // Buscar el rey del jugador indicado.
         var kingSquare = FindKing(board, side);
 

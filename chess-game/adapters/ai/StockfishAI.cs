@@ -29,6 +29,8 @@ public sealed class StockfishAI : IAIPlayer
     {
         ArgumentNullException.ThrowIfNull(game);
         cancellationToken.ThrowIfCancellationRequested();
+        if (game.Board.Mode != GameMode.Standard)
+            throw new NotSupportedException("Stockfish estándar no admite este modo; usá dos jugadores o RandomAI.");
         // Capture before yielding: the UI may continue, undo, or replace its game while we search.
         var legalMoves = game.LegalMoves().ToArray();
         if (legalMoves.Length == 0)
