@@ -22,6 +22,19 @@ public partial class ReleaseTests : Node
             AddChild(root);
             await Frames();
             await Capture("menu");
+            if (OS.GetCmdlineUserArgs().Contains("--screenshots"))
+            {
+                ClickControl(root, "Menu/Stage/HomePage/Navigation/Modes");
+                await Frames();
+                await Capture("mode-selection");
+                ClickControl(root, "Menu/Stage/ModesPage/Mode1");
+                await Frames();
+                await Capture("picada-setup");
+                ClickControl(root, "Menu/Stage/SetupPage/Back");
+                await Frames();
+                ClickControl(root, "Menu/Stage/ModesPage/Mode0");
+                await Frames();
+            }
             root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(2);
             root.StartHumanGame();
             Check(root.CurrentGame!.TimeControl == new TimeControl(300, 3), "menu selects 5+3 clock");

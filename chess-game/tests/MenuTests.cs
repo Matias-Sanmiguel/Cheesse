@@ -153,23 +153,26 @@ public partial class MenuTests : Node
             var setupOptions = setupPage.GetNode<Control>("Options");
             Check(!root.GetNode<TextureRect>("Menu/Stage/CompactLogo").Visible &&
                   setupPage.GetNode<Label>("Heading").Text == "PREPARA TU PARTIDA" &&
-                  setupPreview.Position.IsEqualApprox(new Vector2(60, 170)) &&
-                  setupOptions.Position.IsEqualApprox(new Vector2(715, 170)) &&
-                  setupPreview.Size.IsEqualApprox(new Vector2(630, 680)) &&
-                  setupOptions.Size.IsEqualApprox(new Vector2(665, 680)),
-                "setup uses the centered two-column layout without the top logo");
-            Check(setupPreview.HasNode("BoardFrame") &&
-                  setupPreview.HasNode("WhiteFrame") &&
-                  setupPreview.HasNode("BlackFrame") &&
-                  setupOptions.HasNode("ClassicStyle") &&
-                  setupOptions.HasNode("PicadaStyle") &&
+                  setupPreview.Position.IsEqualApprox(new Vector2(62, 182)) &&
+                  setupOptions.Position.IsEqualApprox(new Vector2(696, 182)) &&
+                  setupPreview.Size.IsEqualApprox(new Vector2(604, 660)) &&
+                  setupOptions.Size.IsEqualApprox(new Vector2(680, 660)) &&
+                  setupPreview.GetNode<TextureRect>("PanelArt").Texture?.GetWidth() == 604 &&
+                  setupOptions.GetNode<TextureRect>("PanelArt").Texture?.GetWidth() == 680,
+                "setup uses the supplied native V4 panels at exact x4 scale without an extra logo");
+            Check(setupPreview.GetNode<TextureRect>("BoardFrame").Texture?.GetWidth() == 328 &&
+                  setupPreview.GetNode<TextureRect>("WhiteFrame").Texture?.GetWidth() == 160 &&
+                  setupPreview.GetNode<TextureRect>("BlackFrame").Texture?.GetWidth() == 160 &&
+                  setupPreview.GetNode<TextureRect>("DetailsSeparator").Texture?.GetWidth() == 528 &&
+                  setupOptions.GetNode<Button>("ClassicStyle").Size.X == 292 &&
+                  setupOptions.GetNode<Button>("PicadaStyle").Size.X == 292 &&
                   !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
-                "setup retains its original previews and uses two real style selection cards");
-            Check(setupOptions.GetNode<Label>("Note").Position.Y == 424 &&
-                  setupOptions.GetNode<Button>("Human").Position.Y == 474 &&
-                  setupOptions.GetNode<Button>("Random").Position.Y == 530 &&
-                  setupOptions.GetNode<Button>("Continue").Position.Y == 586 &&
-                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 40,
+                "V4 preview frames, separator and style cards use exact integer scaling");
+            Check(setupOptions.GetNode<Label>("Note").Position.Y == 429 &&
+                  setupOptions.GetNode<Button>("Human").Position.Y == 470 &&
+                  setupOptions.GetNode<Button>("Random").Position.Y == 526 &&
+                  setupOptions.GetNode<Button>("Continue").Position.Y == 582 &&
+                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 28,
                 "setup note and action buttons have ample bottom padding");
             foreach (var action in new[] { "Human", "Random", "Continue" })
             {
@@ -183,14 +186,25 @@ public partial class MenuTests : Node
             }
             Press(root, Setup + "ClassicStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
-                  !root.GetNode<Control>(Setup + "ThemeFields").Visible &&
-                  root.GetNode<Control>(Setup + "ClassicInfo").Visible,
-                "classic style card selects the classic preview and explanatory block");
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/Board").Disabled &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
+                  setupPreview.GetNode<ColorRect>("Square0").Color == new Color("eeeed2") &&
+                  setupPreview.GetNode<ColorRect>("Square1").Color == new Color("769656") &&
+                  setupPreview.GetNode<TextureRect>("Tile0").Texture is null &&
+                  setupOptions.GetNode<Button>("ClassicStyle").GetNode<TextureRect>("CardArt").Texture ==
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/classic_selected_73x28.png", 4),
+                "classic style displays original green/ivory board and disabled theme controls");
             Press(root, Setup + "PicadaStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
                   root.GetNode<Control>(Setup + "ThemeFields").Visible &&
-                  !root.GetNode<Control>(Setup + "ClassicInfo").Visible,
-                "Picada style card restores themed selection and the original dropdowns");
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/Board").Disabled &&
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
+                  setupOptions.GetNode<Button>("PicadaStyle").GetNode<TextureRect>("CardArt").Texture ==
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_selected_73x28.png", 4),
+                "Picada style selects V4 artwork and enables existing theme dropdowns");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),
                 "Picada defaults to themed pieces and explains the center objective");
@@ -281,8 +295,10 @@ public partial class MenuTests : Node
             var boardSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/Board");
             var cheeseSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/White");
             var meatSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/Black");
-            Check(appearance.Selected == 0 && !root.GetNode<Control>(Setup + "ThemeFields").Visible,
-                "classic theme is default");
+            Check(appearance.Selected == 0 &&
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  boardSkin.Disabled && cheeseSkin.Disabled && meatSkin.Disabled,
+                "classic theme is default with green board and visible disabled selectors");
             Check(boardSkin.ItemCount == 8 && cheeseSkin.ItemCount == 7 && meatSkin.ItemCount == 7,
                 "all eight board options, six cheeses and six meats are available");
             appearance.Select(1);
