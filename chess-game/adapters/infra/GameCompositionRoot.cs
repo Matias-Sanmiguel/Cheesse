@@ -18,6 +18,7 @@ public partial class GameCompositionRoot : Node
     private MenuView _menu = null!;
     private BoardView _board = null!;
     private SidePanelView _panel = null!;
+    private InGamePresentationView _ingame = null!;
     private InputAdapter _input = null!;
     private GameCaretaker? _caretaker;
     private RandomAI? _ai;
@@ -37,6 +38,18 @@ public partial class GameCompositionRoot : Node
         _menu = GetNode<MenuView>("Menu");
         _board = GetNode<BoardView>("Board");
         _panel = GetNode<SidePanelView>("SidePanel");
+
+        // Background, frame, player cards and utilities live behind BoardView.
+        // BoardView itself and all chess rules remain unchanged.
+        _ingame = new InGamePresentationView
+        {
+            Name = "InGamePresentation",
+            Visible = false
+        };
+        AddChild(_ingame);
+        MoveChild(_ingame, 0);
+        _ingame.Configure(_board, _panel, _menu);
+
         _input = GetNode<InputAdapter>("Input");
         _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
         _menu.HumanRequested += StartHumanGame;
@@ -123,8 +136,10 @@ public partial class GameCompositionRoot : Node
         _board.Attach(game, _bus);
         _board.SetVisualTheme(_repository.Theme);   
         _panel.Attach(game, _caretaker, _bus, AgainstRandom, () => _repository.HasSave);
+        _ingame.Attach(game);
         _input.Attach(game, _board, _promotionDialog, ApplyMove, () => game.State.AcceptsMoves && !_gameOver.Visible && (!AgainstRandom || game.Turn == PlayerColor.White));
         _menu.Hide();
+        _ingame.Show();
         _board.Show();
         _panel.Show();
         _bus.NotifyStateChanged();
@@ -175,6 +190,7 @@ public partial class GameCompositionRoot : Node
         _input.ClearSelection();
         _board.Hide();
         _panel.Hide();
+        _ingame.Hide();
         _menu.SetMessage("");
         _menu.SetContinueAvailable(_repository.HasSave);
         _menu.Show();
