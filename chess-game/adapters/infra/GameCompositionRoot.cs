@@ -24,6 +24,7 @@ public partial class GameCompositionRoot : Node
     private RandomAI? _ai;
     private PromotionDialog _promotionDialog = null!;
     private GameOverOverlay _gameOver = null!;
+    private int _gameOverRevision;
 
     public ChessGame? CurrentGame { get; private set; }
     public bool AgainstRandom => _ai is not null;
@@ -180,6 +181,9 @@ public partial class GameCompositionRoot : Node
         _input.ClearSelection();
         _panel.SetMessage("");
         _bus.NotifyStateChanged();
+        if (CurrentGame is { Status: GameStatus.PicadaVictory } winner &&
+            winner.History.Count > 0)
+            _board.CelebratePicadaVictory(winner.History[^1].To);
         UpdateGameOver();
     }
 
@@ -194,6 +198,7 @@ public partial class GameCompositionRoot : Node
 
     public void ShowMenu()
     {
+        _gameOverRevision++;
         _gameOver.Hide();
         _input.SetProcessUnhandledInput(false);
         _input.ClearSelection();
@@ -237,14 +242,28 @@ public partial class GameCompositionRoot : Node
         }
     }
 
-    private void UpdateGameOver()
+    private async void UpdateGameOver()
     {
-        if (CurrentGame is null || CurrentGame.Status is GameStatus.Ongoing or GameStatus.Check)
+        int revision = ++_gameOverRevision;
+        var game = CurrentGame;
+        if (game is null || game.Status is GameStatus.Ongoing or GameStatus.Check)
         {
             _gameOver.Hide();
             return;
         }
 
-        _gameOver.ShowResult(CurrentGame);
+        if (game.Status == GameStatus.PicadaVictory)
+        {
+            // Let the crown/cheese particles play on the actual board first.
+            // Undo, starting another match or opening the menu cancels this result.
+            _gameOver.Hide();
+            await ToSignal(GetTree().CreateTimer(0.72), SceneTreeTimer.SignalName.Timeout);
+            if (!GodotObject.IsInstanceValid(this) || revision != _gameOverRevision ||
+                !ReferenceEquals(CurrentGame, game) || _menu.Visible ||
+                game.Status != GameStatus.PicadaVictory)
+                return;
+        }
+
+        _gameOver.ShowResult(game);
     }
 }

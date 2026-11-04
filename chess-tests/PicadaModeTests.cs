@@ -30,6 +30,7 @@ public class PicadaModeTests
         Assert.That(game.TryMove(Move("d6", "d5")), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.PicadaVictory));
         Assert.That(game.Turn, Is.EqualTo(PlayerColor.White));
+        Assert.That(SanNotation.ToPgn(game), Does.Contain("[Result \"0-1\"]"));
     }
 
     [Test]

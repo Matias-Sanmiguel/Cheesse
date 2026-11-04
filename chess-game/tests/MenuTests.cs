@@ -254,6 +254,7 @@ public partial class MenuTests : Node
             var legacy = JsonNode.Parse(saved)!;
             legacy.AsObject().Remove("AgainstRandom");
             legacy.AsObject().Remove("Theme");
+            legacy.AsObject().Remove("Mode");
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString(legacy.ToJsonString());
             root.Free();
