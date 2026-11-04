@@ -161,23 +161,49 @@ public partial class InGamePresentationView : Control
         float boardX = FrameLeft + FrameInset;
         float boardY = FrameTop + FrameInset;
 
-        // BoardView draws the coordinate glyphs; place the badge art under the
-        // actual glyph centers rather than guessing by using fixed left offsets.
-        Font coordFont = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
+        // Drawing the wooden rim above BoardView must NOT hide the rank/file
+        // badges or their text. The board still draws its native coordinates;
+        // re-create those labels on a dedicated foreground layer because the
+        // original DrawString calls are underneath the opaque rim.
+        // Draw order: board 0 < wooden frame 1 < coordinate badges 2 < text 3.
         const int coordSize = 16;
+        const float badgeSize = 44f; // source 22x22 at integer x2 (no pixel distortion)
+        Font coordFont = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
         float baseline = boardY + BoardSize + 22f;
-        float opticalCenterY = baseline - (coordFont.GetAscent(coordSize) - coordFont.GetDescent(coordSize)) / 2f;
-        float fileBadgeY = Mathf.Min(Mathf.Round(opticalCenterY - 22f), FrameTop + 844f - 44f);
+        float opticalCenterY = baseline -
+            (coordFont.GetAscent(coordSize) - coordFont.GetDescent(coordSize)) / 2f;
+        float fileBadgeY = Mathf.Min(Mathf.Round(opticalCenterY - badgeSize / 2f),
+            FrameTop + 844f - badgeSize);
+
+        void Coordinate(string name, string value, Vector2 position)
+        {
+            var badge = InGameUiSkin.Sprite(name,
+                "02_board_ui/coordinate_badge_22x22.png", position,
+                new Vector2(badgeSize, badgeSize));
+            badge.ZIndex = 2;
+            badge.MouseFilter = MouseFilterEnum.Ignore;
+            _stage.AddChild(badge);
+
+            var text = InGameUiSkin.Text(name + "Text", value, position,
+                new Vector2(badgeSize, badgeSize), coordSize,
+                new Color("E9E3D6"), UiFontWeight.Medium,
+                HorizontalAlignment.Center);
+            text.ZIndex = 3;
+            text.MouseFilter = MouseFilterEnum.Ignore;
+            _stage.AddChild(text);
+        }
+
         for (int i = 0; i < 8; i++)
         {
-            string rankText = (8 - i).ToString();
-            float textWidth = coordFont.GetStringSize(rankText,
+            string rank = (8 - i).ToString();
+            float textWidth = coordFont.GetStringSize(rank,
                 HorizontalAlignment.Left, -1, coordSize).X;
             float rankTextCenter = boardX - 12f - textWidth / 2f;
-            Art("RankBadge" + (8 - i), "02_board_ui/coordinate_badge_22x22.png",
-                Mathf.Round(rankTextCenter - 22f), boardY + 96 * i + 26, 44, 44);
-            Art("FileBadge" + i, "02_board_ui/coordinate_badge_22x22.png",
-                boardX + 96 * i + 26, fileBadgeY, 44, 44);
+            Coordinate("RankBadge" + rank, rank,
+                new Vector2(Mathf.Round(rankTextCenter - badgeSize / 2f),
+                    boardY + 96 * i + 26));
+            Coordinate("FileBadge" + i, ((char)('a' + i)).ToString(),
+                new Vector2(boardX + 96 * i + 26, fileBadgeY));
         }
 
         // The 128x66 artwork is kept at its native height. Nine-patch extends

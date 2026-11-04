@@ -146,11 +146,32 @@ public partial class SidePanelTests : Node
             var rank8 = root.GetNode<TextureRect>(stagePath + "RankBadge8");
             Check(Mathf.Abs(rank8.GlobalPosition.X + rank8.Size.X / 2f - rankGlyphCenter) < 1f,
                 "number 8 is centered horizontally on its badge");
-            foreach (string name in new[] { "RankBadge1", "RankBadge8", "FileBadge0", "FileBadge7" })
+            // Regression: when the wooden frame is drawn above the board it
+            // must NEVER cover the original rank/file badge art or lettering.
+            // All sixteen badges and their text remain foreground, visible and
+            // mouse-transparent. A sample of only four missed this regression.
+            for (int i = 0; i < 8; i++)
             {
-                var image = root.GetNode<TextureRect>(stagePath + name);
-                Check(image.Size.IsEqualApprox(new Vector2(44, 44)),
-                    name + " is a square integer x2 sprite");
+                string rank = (8 - i).ToString();
+                string fileLabel = ((char)('a' + i)).ToString();
+                foreach (var coordinate in new[]
+                {
+                    (name: "RankBadge" + rank, label: rank),
+                    (name: "FileBadge" + i, label: fileLabel)
+                })
+                {
+                    var image = root.GetNode<TextureRect>(stagePath + coordinate.name);
+                    var text = root.GetNode<Label>(stagePath + coordinate.name + "Text");
+                    Check(image.Size.IsEqualApprox(new Vector2(44, 44)) &&
+                          image.Visible && image.ZIndex > frame.ZIndex,
+                        coordinate.name + " remains visible above wooden frame");
+                    Check(text.Text == coordinate.label && text.Visible &&
+                          text.ZIndex > image.ZIndex && text.Position == image.Position,
+                        coordinate.name + " shows the centered coordinate above badge");
+                    Check(image.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                          text.MouseFilter == Control.MouseFilterEnum.Ignore,
+                        coordinate.name + " never captures chessboard mouse input");
+                }
             }
             // A single bad TextureRect dimension is enough to damage pixel art.
             // Check all supplied sprites, not only the ones reported in screenshots.
