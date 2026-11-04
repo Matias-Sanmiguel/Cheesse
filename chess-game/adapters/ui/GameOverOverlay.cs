@@ -86,6 +86,58 @@ public partial class GameOverOverlay : CanvasLayer
         return icon;
     }
 
+    // Recolor the original 12x12 artwork without losing its pixel silhouette.
+    // Dark ink contrasts with the gold button; cream ink contrasts with the brown one.
+    private static Texture2D? RecolorIcon(Texture2D? source, Color ink)
+    {
+        if (source is null) return null;
+        var image = source.GetImage();
+        if (image.IsCompressed()) image.Decompress();
+        image.Convert(Image.Format.Rgba8);
+        for (int y = 0; y < image.GetHeight(); y++)
+        for (int x = 0; x < image.GetWidth(); x++)
+        {
+            var pixel = image.GetPixel(x, y);
+            if (pixel.A > 0f)
+                image.SetPixel(x, y, new Color(ink.R, ink.G, ink.B, pixel.A));
+        }
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    // The winner is a real chess king sprite with a 1px contour, not the
+    // old 12x12 square-backed team icon. Transparent surroundings stay transparent.
+    private static Texture2D? OutlinedPiece(Texture2D? source, Color contour)
+    {
+        if (source is null) return null;
+        var image = source.GetImage();
+        if (image.IsCompressed()) image.Decompress();
+        image.Convert(Image.Format.Rgba8);
+        int width = image.GetWidth(), height = image.GetHeight();
+        var outlined = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
+        outlined.Fill(Colors.Transparent);
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            if (image.GetPixel(x, y).A < 0.5f) continue;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height &&
+                    image.GetPixel(nx, ny).A < 0.5f)
+                    outlined.SetPixel(nx, ny, contour);
+            }
+        }
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            var pixel = image.GetPixel(x, y);
+            if (pixel.A > 0f) outlined.SetPixel(x, y, pixel);
+        }
+        return ImageTexture.CreateFromImage(outlined);
+    }
+
     private static Label AddText(Control parent, string name, string value,
         float x, float y, float width, float height, int fontSize, Color color,
         UiFontWeight weight = UiFontWeight.SemiBold)
@@ -138,8 +190,10 @@ public partial class GameOverOverlay : CanvasLayer
         button.Pressed += action;
         _content.AddChild(button);
 
-        AddIcon(button, name + "Icon", "04_icons/" + icon + "_12x12.png",
+        var buttonIcon = AddIcon(button, name + "Icon", "04_icons/" + icon + "_12x12.png",
             7, 3, 12, 12);
+        buttonIcon.Texture = RecolorIcon(buttonIcon.Texture,
+            material == "primary" ? new Color("47281d") : new Color("fff0c8"));
         AddText(button, name + "Label", text, 24, 0, 128, 18, 32,
             material == "primary" ? new Color("47281d") : new Color("fff0c8"),
             UiFontWeight.Bold);
@@ -156,10 +210,10 @@ public partial class GameOverOverlay : CanvasLayer
 
         AddSprite(_content, "WinnerRibbon", "02_panel/winner_ribbon_180x24.png",
             18, 65, 180, 24);
-        _winnerIcon = AddSprite(_content, "WinnerIcon", "04_icons/white_12x12.png",
-            29, 71, 12, 12);
-        // Reserve space for the icon, keeping the whole winner row balanced.
-        _title = AddText(_content, "Title", "GANARON BLANCAS", 45, 70, 142, 13, 32,
+        _winnerIcon = AddIcon(_content, "WinnerIcon", "res://assets/pieces/white/king.png",
+            23, 65, 24, 24);
+        // Keep the enlarged chess king and the title balanced within the ribbon.
+        _title = AddText(_content, "Title", "GANARON BLANCAS", 49, 70, 138, 13, 32,
             new Color("fff0c8"), UiFontWeight.Bold);
 
         AddSprite(_content, "ReasonRibbon", "02_panel/result_reason_158x13.png",
@@ -196,8 +250,21 @@ public partial class GameOverOverlay : CanvasLayer
 
         _title.Text = decisive ? "GANARON " + (winnerIsWhite ? "BLANCAS" : "NEGRAS") : "PARTIDA EN TABLAS";
         _title.AddThemeFontSizeOverride("font_size", decisive ? 32 : 29);
-        _winnerIcon.Texture = Texture("04_icons/" +
-            (!decisive ? "trophy" : winnerIsWhite ? "white" : "black") + "_12x12.png");
+        if (decisive)
+        {
+            string king = winnerIsWhite ? "white" : "black";
+            _winnerIcon.Texture = OutlinedPiece(
+                Texture("res://assets/pieces/" + king + "/king.png"),
+                new Color(winnerIsWhite ? "3c261c" : "ffe0a0"));
+            _winnerIcon.Position = Size(23, 65);
+            _winnerIcon.Size = Size(24, 24);
+        }
+        else
+        {
+            _winnerIcon.Texture = Texture("04_icons/trophy_12x12.png");
+            _winnerIcon.Position = Size(29, 71);
+            _winnerIcon.Size = Size(12, 12);
+        }
         _reason.Text = game.Status switch
         {
             GameStatus.Checkmate => "JAQUE MATE",
