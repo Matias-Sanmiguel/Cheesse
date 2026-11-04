@@ -76,11 +76,27 @@ public partial class SidePanelTests : Node
                 "cards follow the black-top white-bottom chess orientation");
             Check(whiteCard.PatchMarginLeft == 58 && whiteCard.PatchMarginTop == 10,
                 "nine-patch preserves the artwork around player icons and borders");
-            foreach (string badge in new[] { "WhiteBadge", "BlackBadge" })
+            foreach (var side in new[] { "White", "Black" })
             {
-                var image = root.GetNode<TextureRect>(stagePath + badge);
-                Check(image.Size.IsEqualApprox(new Vector2(32, 32)),
-                    badge + " keeps its native 32x32 pixels");
+                var card = side == "White" ? whiteCard : blackCard;
+                var badge = root.GetNode<TextureRect>(stagePath + side + "Badge");
+                var name = root.GetNode<Label>(stagePath + side + "Name");
+                var timerIcon = root.GetNode<TextureRect>(stagePath + side + "TimerIcon");
+                var timer = root.GetNode<Label>(stagePath + side + "Clock");
+
+                Check(badge.Size.IsEqualApprox(new Vector2(32, 32)) &&
+                      (badge.Position - card.Position).IsEqualApprox(new Vector2(10, 16)),
+                    side + " icon is native-size and centered in its card's icon well");
+                Check(name.HorizontalAlignment == HorizontalAlignment.Center &&
+                      (name.Position - card.Position).IsEqualApprox(new Vector2(56, 13)) &&
+                      name.Size.IsEqualApprox(new Vector2(116, 20)),
+                    side + " title is centered within the text area, clear of borders");
+                Check((timerIcon.Position - card.Position).IsEqualApprox(new Vector2(76, 35)) &&
+                      (timer.Position - card.Position).IsEqualApprox(new Vector2(99, 34)),
+                    side + " clock icon and value share a compact row");
+                Check(name.Position.Y + name.Size.Y <= timer.Position.Y + 1 &&
+                      timer.Position.Y + timer.Size.Y < card.Position.Y + card.Size.Y - 4,
+                    side + " clock and title are close with safe vertical margins");
             }
             foreach (string art in new[] { "ModeBar", "TurnBar" })
             {
@@ -146,8 +162,8 @@ public partial class SidePanelTests : Node
             var blackClock = root.GetNode<Label>(stagePath + "BlackClock");
             Check(blackClock.GlobalPosition.Y < whiteClock.GlobalPosition.Y,
                 "black time displays above white time in the left column");
-            Check(Mathf.Abs(blackClock.Position.Y - blackCard.Position.Y - 35) < 0.1f &&
-                  Mathf.Abs(whiteClock.Position.Y - whiteCard.Position.Y - 35) < 0.1f,
+            Check(Mathf.Abs(blackClock.Position.Y - blackCard.Position.Y - 34) < 0.1f &&
+                  Mathf.Abs(whiteClock.Position.Y - whiteCard.Position.Y - 34) < 0.1f,
                 "both timers share consistent padding inside their cards");
             Check(whiteClock.Text == "00:00" && blackClock.Text == "00:00",
                 "session timers start at zero instead of displaying fake chess clocks");

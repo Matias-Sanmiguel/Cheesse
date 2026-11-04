@@ -198,19 +198,27 @@ public partial class InGamePresentationView : Control
         // Only these decorations move; the board remains native-size.
         _blackCard = Card("BlackCard", "02_board_ui/player_card_black_128x66.png", 12, 184);
         _whiteCard = Card("WhiteCard", "02_board_ui/player_card_white_128x66.png", 12, 642);
-        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 31, 201, 32, 32);
-        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 31, 659, 32, 32);
-        Art("BlackTimerIcon", "05_icons/timer_16.png", 79, 223, 16, 16);
-        Art("WhiteTimerIcon", "05_icons/timer_16.png", 79, 681, 16, 16);
+        // Each source card has a native 36px icon well near its left edge.
+        // Position the untouched 32px badges by the well center, not by the
+        // visually wider 188px nine-patch card. Both use the same layout.
+        Art("BlackBadge", "02_board_ui/player_salami_badge_32x32.png", 22, 200, 32, 32);
+        Art("WhiteBadge", "02_board_ui/player_cheese_badge_32x32.png", 22, 658, 32, 32);
 
-        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS", new Vector2(78, 191),
-            new Vector2(112, 24), 17, InGameUiSkin.Ivory, UiFontWeight.SemiBold));
-        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS", new Vector2(78, 649),
-            new Vector2(112, 24), 17, InGameUiSkin.Ink, UiFontWeight.SemiBold));
-        _blackClock = InGameUiSkin.Text("BlackClock", "00:00", new Vector2(103, 219),
-            new Vector2(89, 27), 18, InGameUiSkin.Ivory);
-        _whiteClock = InGameUiSkin.Text("WhiteClock", "00:00", new Vector2(103, 677),
-            new Vector2(89, 27), 18, InGameUiSkin.Ink);
+        // Center names in the right-hand text area. Bring the clock icon and
+        // digits into a compact second row with breathing room from the border.
+        Art("BlackTimerIcon", "05_icons/timer_16.png", 88, 219, 16, 16);
+        Art("WhiteTimerIcon", "05_icons/timer_16.png", 88, 677, 16, 16);
+
+        _stage.AddChild(InGameUiSkin.Text("BlackName", "NEGRAS", new Vector2(68, 197),
+            new Vector2(116, 20), 17, InGameUiSkin.Ivory, UiFontWeight.SemiBold,
+            HorizontalAlignment.Center));
+        _stage.AddChild(InGameUiSkin.Text("WhiteName", "BLANCAS", new Vector2(68, 655),
+            new Vector2(116, 20), 17, InGameUiSkin.Ink, UiFontWeight.SemiBold,
+            HorizontalAlignment.Center));
+        _blackClock = InGameUiSkin.Text("BlackClock", "00:00", new Vector2(111, 218),
+            new Vector2(70, 22), 18, InGameUiSkin.Ivory);
+        _whiteClock = InGameUiSkin.Text("WhiteClock", "00:00", new Vector2(111, 676),
+            new Vector2(70, 22), 18, InGameUiSkin.Ink);
         const string timerHint = "Tiempo jugado en esta sesión; no es una partida a contrarreloj ni se guarda.";
         _whiteClock.TooltipText = timerHint;
         _blackClock.TooltipText = timerHint;
