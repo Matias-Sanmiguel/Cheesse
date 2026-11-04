@@ -298,7 +298,7 @@ public partial class BoardView : Node2D
 
     private void DrawCoordinates()
     {
-        Font font = ThemeDB.FallbackFont;
+        Font font = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
         const int fontSize = 16;
 
         Color color = new("E9E3D6");

@@ -43,6 +43,27 @@ public partial class MenuTests : Node
             Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png"), "new 128x32 compact logo imported");
             Check(ResourceLoader.Exists("res://assets/backgrounds/menu_background.png"), "new 360x225 tavern background imported");
             Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"), "four mode illustrations imported");
+            foreach (string variant in new[] { "Regular", "Medium", "SemiBold", "Bold" })
+            {
+                Check(ResourceLoader.Exists("res://assets/ui/fonts/PixelifySans-" + variant + ".ttf"),
+                    "Pixelify Sans " + variant + " is bundled and importable");
+            }
+            Check(root.GetNode<Button>(Home + "NewGame").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Bold), "main menu action uses Bold");
+            Check(root.GetNode<Button>(Setup + "Human").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.SemiBold), "game action uses SemiBold");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Medium), "selector uses Medium");
+            Check(root.GetNode<Label>(Setup + "AppearanceLabel").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Medium), "configuration label uses Medium");
+            Check(root.GetNode<Label>("Menu/Stage/ModesPage/Hint").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Medium), "instruction uses Medium");
+            Check(root.GetNode<Label>("Menu/Stage/ModesPage/Mode1/Description").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Regular), "description uses Regular");
+            Check(root.GetNode<Label>("Menu/Stage/SetupPage/Options/Heading").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.Bold), "section title uses Bold");
+            Check(root.GetNode<Label>("SidePanel/Margin/Content/Turn").GetThemeFont("font") ==
+                  PixelUiSkin.FontFor(UiFontWeight.SemiBold), "HUD turn label uses SemiBold");
             Check(root.GetNode<Control>("Menu").HasNode("Stage/PixelBackground"), "stage uses new pixel background");
             Check(root.GetNode<Control>("Menu").HasNode("Stage/HomePage/HomeLogo"), "main logo is on landing page");
             Check(root.GetNode<Button>(Home + "NewGame").Text == "JUGAR" &&
