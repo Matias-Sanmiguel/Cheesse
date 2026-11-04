@@ -91,6 +91,7 @@ public partial class MenuView : Control
         _appearance.ItemSelected +=
             _ => UpdateThemeFields();
 
+        PixelUiSkin.ApplyMenu(this);
         UpdateThemeFields();
     }
 
@@ -111,6 +112,7 @@ public partial class MenuView : Control
     private void UpdateThemeFields()
     {
         _themeDetails.Visible = _appearance.Selected == 1;
+        PixelUiSkin.SetModePreviewVisible(this, !_themeDetails.Visible);
     }
 
     public void SetContinueAvailable(bool available)

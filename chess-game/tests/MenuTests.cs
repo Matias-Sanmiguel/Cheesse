@@ -34,6 +34,22 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>(Options + "Continue").Disabled, "Continue disabled without save");
             Check(!root.GetNode<InputAdapter>("Input").IsProcessingUnhandledInput(), "input disabled in menu");
 
+            // Pixel art integration: resources and existing scene paths must coexist.
+            Check(ResourceLoader.Exists("res://assets/ui/brand/logo_cheesse.png"),
+                "pixel UI logo is packaged");
+            Check(ResourceLoader.Exists("res://assets/ui/brand/menu_background.png"),
+                "pixel UI background is packaged");
+            Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"),
+                "all four mode illustrations can be loaded");
+            Check(root.GetNode<MenuView>("Menu").HasNode("PixelBackground"),
+                "pixel background is behind the menu controls");
+            Check(root.GetNode<MenuView>("Menu").HasNode("Center/Panel/Margin/Options/ModePreview"),
+                "future modes are shown as informational previews");
+            Check(root.GetNode<Button>(Options + "Human").GetThemeStylebox("normal") is StyleBoxTexture,
+                "new game button uses the pixel art nine-slice");
+            Check(root.GetNode<SidePanelView>("SidePanel").GetThemeStylebox("panel") is StyleBoxTexture,
+                "HUD uses the parchment pixel panel");
+
             Press(root, Options + "Human");
             await Frames();
             var human = root.CurrentGame!;

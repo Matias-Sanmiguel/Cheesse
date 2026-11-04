@@ -44,6 +44,7 @@ public partial class SidePanelView : PanelContainer
         GetNode<Button>(content + "NewGame").Pressed += () => NewGameRequested?.Invoke();
         GetNode<Button>(content + "Menu").Pressed += () => MenuRequested?.Invoke();
         _random.Toggled += enabled => RandomChanged?.Invoke(enabled);
+        PixelUiSkin.ApplySidePanel(this);
     }
 
     public void Attach(ChessGame game, GameCaretaker caretaker, GodotEventBus bus,
