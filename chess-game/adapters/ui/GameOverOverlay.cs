@@ -34,7 +34,7 @@ public partial class GameOverOverlay : CanvasLayer
         _panel.CustomMinimumSize = Size(216, 194);
         _panel.Size = Size(216, 194);
         _content.Position = Vector2.Zero;
-        _content.Size = Size(216, 194);
+        // Content has full-rect anchors: its size follows the centered panel.
         _panel.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         _content.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
 
