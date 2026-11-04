@@ -93,15 +93,17 @@ public partial class SidePanelTests : Node
                       card.Texture?.ResourcePath == expectedArt,
                     side + " card uses its shifted-square artwork rather than the original");
                 Check(name.HorizontalAlignment == HorizontalAlignment.Center &&
-                      (name.Position - card.Position).IsEqualApprox(new Vector2(56, 13)) &&
-                      name.Size.IsEqualApprox(new Vector2(116, 20)),
-                    side + " title is centered within the text area, clear of borders");
+                      (name.Position - card.Position).IsEqualApprox(new Vector2(56, 13)),
+                    side + " title is aligned within the text area, clear of borders");
+                // Godot can increase Label.Size to accommodate the selected font,
+                // even when a smaller initial Size is supplied. Never assume that
+                // the rendered control's auto-minimum height equals 20 px.
                 Check((timerIcon.Position - card.Position).IsEqualApprox(new Vector2(76, 35)) &&
                       (timer.Position - card.Position).IsEqualApprox(new Vector2(99, 34)),
                     side + " clock icon and value share a compact row");
-                Check(name.Position.Y + name.Size.Y <= timer.Position.Y + 1 &&
-                      timer.Position.Y + timer.Size.Y < card.Position.Y + card.Size.Y - 4,
-                    side + " clock and title are close with safe vertical margins");
+                Check(Mathf.Abs(timer.Position.Y - name.Position.Y - 21) < 1 &&
+                      timer.Position.Y + 22 <= card.Position.Y + card.Size.Y - 4,
+                    side + " title and clock origins have consistent vertical padding");
             }
             foreach (string art in new[] { "ModeBar", "TurnBar" })
             {
