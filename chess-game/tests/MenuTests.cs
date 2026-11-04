@@ -188,18 +188,24 @@ public partial class MenuTests : Node
             Check(result.Visible &&
                   modalContent.GetNode<Label>("Reason").Text == "REY AL CENTRO" &&
                   modalContent.GetNode<Label>("Title").Text == "GANARON BLANCAS" &&
-                  modalContent.GetNode<Label>("StatValue2").Text == "PICADA",
-                "Picada wins show a correct dynamic winner, reason and mode");
+                  modalContent.GetNode<Label>("TimeLabel").Text == "TIEMPO" &&
+                  modalContent.GetNode<Label>("TimeValue").Text.Contains(':'),
+                "Picada wins show a dynamic winner, reason and elapsed time");
             Check(resultPanel.Size.IsEqualApprox(new Vector2(864, 776)) &&
                   resultBanner.Position.IsEqualApprox(new Vector2(48, 0)) &&
                   resultBanner.Size.IsEqualApprox(new Vector2(768, 256)) &&
                   modalContent.HasNode("ResultPanel") &&
                   modalContent.HasNode("WinnerRibbon") &&
                   modalContent.HasNode("StatsSeparator") &&
-                  modalContent.HasNode("StatFrame0") &&
-                  modalContent.HasNode("StatFrame1") &&
-                  modalContent.HasNode("StatFrame2"),
-                "result modal uses native V2 artwork components at exact x4 size");
+                  modalContent.HasNode("TimeIcon") &&
+                  modalContent.HasNode("TimeValue") &&
+                  !modalContent.HasNode("StatFrame0") &&
+                  !modalContent.HasNode("StatFrame1") &&
+                  !modalContent.HasNode("StatFrame2"),
+                "result modal keeps the original V2 artwork with a compact clock only");
+            Check(modalContent.GetNode<Button>("Rematch").Position.Y == 136 * 4 &&
+                  modalContent.GetNode<Button>("MainMenu").Position.Y == 158 * 4,
+                "result action buttons are raised below the compact time row");
             Check(Mathf.Abs(resultPanel.GlobalPosition.X - (1440 - 864) / 2f) < 1f &&
                   Mathf.Abs(resultPanel.GlobalPosition.Y - (900 - 776) / 2f) < 1f,
                 "result panel centers in the entire 1440x900 viewport, not board bounds");
