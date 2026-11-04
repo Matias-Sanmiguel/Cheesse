@@ -218,6 +218,12 @@ public partial class MenuTests : Node
                   modalContent.GetNode<Label>("TimeLabel").Text == "TIEMPO" &&
                   modalContent.GetNode<Label>("TimeValue").Text.Contains(':'),
                 "Picada wins show a dynamic winner, reason and elapsed time");
+            // The winner is drawn directly over the green ribbon; no inset badge.
+            var winnerRibbonImage = modalContent.GetNode<TextureRect>("WinnerRibbon").Texture!.GetImage();
+            var ribbonBehindIcon = winnerRibbonImage.GetPixel(15, 12);
+            Check(ribbonBehindIcon.G > ribbonBehindIcon.R &&
+                  ribbonBehindIcon.G > ribbonBehindIcon.B,
+                "winner ribbon shows uninterrupted green behind the original piece icon");
             var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
             Check(winnerIcon.Texture is not null &&
                   winnerIcon.Texture.ResourcePath.EndsWith("/white_12x12.png") &&
