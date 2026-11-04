@@ -20,9 +20,18 @@ La primera versión simplemente reemplazaba StyleBoxFlat por imágenes. Esta rev
 - Paneles y botones: **StyleBoxTexture 9-slice**, sin estiramiento incorrecto de bordes.
 - Interacción: los botones no reciben visual de hover al tener foco por teclado, y no se fuerza la selección inicial de ningún botón.
 
-## Tipografía Pixeboy
+## Tipografía Pixelify Sans (SIL OFL 1.1)
 
-La interfaz puede cargar automáticamente `assets/ui/fonts/Pixeboy-z8XGD.ttf` para títulos, botones y selectores, priorizando textos en mayúsculas sin tildes. Las frases largas usan la fuente legible de Godot. El archivo fuente que entregó el usuario incluye una nota de **uso personal / no comercial**; no se ha vuelto a publicar el binario en este repositorio público. Para usar la copia personal localmente, extraerla en `chess-game/assets/ui/fonts/Pixeboy-z8XGD.ttf` (ignorado por Git).
+La familia **Pixelify Sans** está incluida permanentemente en `assets/ui/fonts/`: las cuatro variantes TTF originales `Regular`, `Medium`, `SemiBold` y `Bold`. La licencia completa con el copyright oficial está en `assets/ui/fonts/OFL.txt`. No hay instalación manual ni dependencia de fuentes locales.
+
+Jerarquía aplicada de forma consistente en controles dinámicos de Godot:
+- **Bold:** títulos grandes de páginas y modales y botones principales del inicio.
+- **SemiBold:** botones secundarios, nombres de modos, pequeños encabezados del HUD y texto de cancelar promoción.
+- **Medium:** etiquetas de formularios, selectores y desplegables, estados y coordenadas del tablero.
+- **Regular:** explicaciones, descripciones, mensajes, instrucciones e historial de jugadas.
+
+El logo y el texto integrado en PNG de diseño son imágenes originales, no se cambian. Los símbolos Unicode de las piezas en la promoción usan la fuente de respaldo porque no están incluidos en Pixelify Sans.
+
 
 ## Conservar el contrato de gameplay
 

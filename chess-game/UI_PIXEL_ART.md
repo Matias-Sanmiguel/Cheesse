@@ -10,13 +10,21 @@ Este bloque importa los **91 PNG originales** de `CHEESSE_UI_V3_LIMPIO` en `ches
 - El menú conserva exactamente los nombres y rutas de nodos utilizados por `GameCompositionRoot` y tests. Los cuatro modos aparecen ilustrados, pero solo el ajedrez clásico tiene reglas activas: los otros tres previews son informativos, no botones jugables.
 - Se mantienen elección de queso/fiambre/tablero, Aleatorio, Continuar, guardado, deshacer, rehacer y las reglas de `Chess.Core`.
 
-## Fuente Pixeboy para uso personal
+## Fuente Pixelify Sans
 
-La fuente suministrada se llama `Pixeboy-z8XGD.ttf`. El ZIP de la fuente indica **Freeware, Non-Commercial** y **FOR PERSONAL USE ONLY**. Para respetar esa condición, el `.ttf` no se incluye en este repositorio público. `PixelUiSkin` lo detecta opcionalmente en:
+Las cuatro variantes estáticas originales de **Pixelify Sans** ya están versionadas en `chess-game/assets/ui/fonts/`. Godot las importa al abrir el proyecto sin que nadie tenga que instalar una fuente manualmente.
 
-`chess-game/assets/ui/fonts/Pixeboy-z8XGD.ttf`
+| Variante | Uso |
+| --- | --- |
+| `PixelifySans-Bold.ttf` | Títulos grandes, encabezados y JUGAR / MODOS / CONFIGURACION / SALIR |
+| `PixelifySans-SemiBold.ttf` | Botones secundarios, nombres de modos, subtítulos e historial (encabezados) |
+| `PixelifySans-Medium.ttf` | Etiquetas de formularios, selectores y listas desplegables, estados y coordenadas |
+| `PixelifySans-Regular.ttf` | Descripciones, ayudas, mensajes y líneas de historial |
 
-En tu copia local, descomprimí `pixeboy-font.zip` y copiá **solo ese archivo TTF** a dicha carpeta. Godot lo importará al abrir el proyecto y el menú lo utilizará automáticamente para títulos y botones. La ruta está en `.gitignore` para evitar subir accidentalmente el archivo. Si no está presente, Godot muestra su fuente de respaldo sin fallar al cargar la escena. Se usa en textos cortos sin acentos; los textos dinámicos y textos en castellano con tildes quedan en la fuente de respaldo.
+Licencia **SIL Open Font License 1.1** y copyright de 2021 de The Pixelify Sans Project Authors, incluidos en `assets/ui/fonts/OFL.txt`. Se verificó la licencia con la versión de Google Fonts. Las fuentes incluyen los caracteres acentuados, eñes y signos invertidos del español.
+
+Los símbolos Unicode de las piezas de ajedrez en `PromotionWheel` utilizan la fuente de respaldo de Godot por cobertura de glifos; el botón CANCELAR usa Pixelify Sans SemiBold. Los logos y cualquier lettering previamente dibujado en assets PNG permanecen intactos.
+
 
 ## Verificación pendiente en la máquina con Godot .NET
 
