@@ -62,7 +62,8 @@ public partial class MvpTests : Node
             Keypress(Key.Z, ctrl: true);
             Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible, "keyboard undo works through overlay");
             Press(root, Panel + "History/Redo");
-            Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/Rematch");
+            ClickAt(root.GetNode<Button>("GameOverOverlay/Overlay/Center/Panel/Content/Rematch")
+                .GetGlobalRect().GetCenter());
             Check(!overlay.Visible && FenSerializer.Write(root.CurrentGame.Board) == FenSerializer.InitialPosition, "rematch restores 32 initial pieces");
 
             LoadPosition(root, "7k/P7/8/8/8/8/8/7K w - - 0 1");
