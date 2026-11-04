@@ -168,7 +168,8 @@ public partial class MenuTests : Node
                   setupOptions.GetNode<Button>("PicadaStyle").Size.X == 292 &&
                   !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
                 "V4 preview frames, separator and style cards use exact integer scaling");
-            Check(setupOptions.GetNode<Label>("AppearanceLabel").Position.Y == 73 &&
+            Check(setupOptions.GetNode<Label>("Heading").Position.Y == 21 &&
+                  setupOptions.GetNode<Label>("AppearanceLabel").Position.Y == 73 &&
                   setupOptions.GetNode<Control>("ThemeFields").Position.Y == 230 &&
                   setupOptions.GetNode<OptionButton>("ThemeFields/White").Position.Y == 60 &&
                   setupOptions.GetNode<OptionButton>("ThemeFields/Black").Position.Y == 120 &&
@@ -194,6 +195,17 @@ public partial class MenuTests : Node
                       actionIcon.Size.IsEqualApprox(new Vector2(32, 32)) &&
                       actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
                     action + " icon fits inside its 48px button without blocking input");
+            }
+            foreach (var state in new[] { "idle", "hover", "pressed", "selected" })
+            {
+                var picture = GD.Load<Texture2D>(
+                    "res://assets/ui/setup_v4/cards/picada_" + state + "_73x28.png")!.GetImage();
+                Check(picture.GetWidth() == 73 && picture.GetHeight() == 28 &&
+                      picture.GetPixel(16, 21).R < 0.25f &&
+                      picture.GetPixel(16, 21).G < 0.2f &&
+                      picture.GetPixel(16, 21).B < 0.2f &&
+                      picture.GetPixel(16, 22) == picture.GetPixel(36, 10),
+                    "Picada " + state + " artwork stays within the intact inset border");
             }
             var classicCard = setupOptions.GetNode<Button>("ClassicStyle");
             var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
