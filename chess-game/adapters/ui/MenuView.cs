@@ -136,13 +136,13 @@ public partial class MenuView : Control
         const float width = 580f;
         const float height = 82f;
         navigation.AddChild(PixelUiSkin.Button("NewGame", "JUGAR",
-            new Vector2(left, 416), new Vector2(width, height),
+            new Vector2(left, 384), new Vector2(width, height),
             () => ShowPage(Page.Modes), fontSize: 44));
         navigation.AddChild(PixelUiSkin.Button("Settings", "CONFIGURACION",
-            new Vector2(left, 536), new Vector2(width, height),
+            new Vector2(left, 504), new Vector2(width, height),
             () => ShowPage(Page.Settings), fontSize: 43));
         navigation.AddChild(PixelUiSkin.Button("Exit", "SALIR",
-            new Vector2(left, 656), new Vector2(width, height),
+            new Vector2(left, 624), new Vector2(width, height),
             () => GetTree().Quit(), fontSize: 44));
 
         // Empty in the normal state; used only for recoverable loading errors.
