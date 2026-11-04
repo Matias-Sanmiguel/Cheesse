@@ -44,11 +44,11 @@ internal static class ModeSelectionPageBuilder
         page.AddChild(PixelUiSkin.Image("GameLogo", "logos/logo_cheese_compact.png",
             new Vector2(528, 75), new Vector2(384, 96), 3));
         page.AddChild(PixelUiSkin.Label("Heading", "ELEGIR MODO DE JUEGO",
-            new Vector2(320, 152), new Vector2(800, 50), 32,
+            new Vector2(320, 188), new Vector2(800, 50), 32,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.SemiBold));
         page.AddChild(PixelUiSkin.Label("Hint", "SELECCIONA TU DESAFIO",
-            new Vector2(320, 205), new Vector2(800, 42), 26,
+            new Vector2(320, 245), new Vector2(800, 42), 26,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Medium));
 
