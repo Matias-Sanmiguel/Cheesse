@@ -76,7 +76,8 @@ public partial class GameCompositionRoot : Node
     public override void _Process(double delta)
     {
         // Reviewing history must not immediately replay an undone random move.
-        if (_menu.Visible || _ai is null || _caretaker?.CanRedo == true ||
+        // Wait for the player's slide to finish before the AI answers.
+        if (_menu.Visible || _board.IsMoveAnimating || _ai is null || _caretaker?.CanRedo == true ||
             CurrentGame is not { Turn: PlayerColor.Black } game)
             return;
         if (game.Status is GameStatus.Ongoing or GameStatus.Check)
