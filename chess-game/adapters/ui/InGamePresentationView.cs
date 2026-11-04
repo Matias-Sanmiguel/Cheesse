@@ -16,6 +16,8 @@ public partial class InGamePresentationView : Control
     private SidePanelView? _sidebar;
     private MenuView? _menu;
     private Control _stage = null!;
+    private Control? _foreground;
+    private Control? _utilityStage;
     private TextureRect _backdrop = null!;
     private Label _whiteClock = null!;
     private Label _blackClock = null!;
@@ -36,7 +38,6 @@ public partial class InGamePresentationView : Control
         _stage = new Control { Name = "ArtworkStage", Size = new Vector2(960, 540), MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_stage);
         BuildArtwork();
-        BuildUtilities();
         GetViewport().SizeChanged += Refit;
         Refit();
     }
@@ -47,6 +48,34 @@ public partial class InGamePresentationView : Control
         _sidebar = sidebar;
         _menu = menu;
         Refit();
+    }
+
+    /// <summary>Put utility buttons and popups above the sidebar, but below the menu/modal.</summary>
+    public void InstallForeground(Node root, Node beforeMenu)
+    {
+        _foreground = new Control
+        {
+            Name = "InGameUtilities",
+            Visible = false,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        root.AddChild(_foreground);
+        root.MoveChild(_foreground, beforeMenu.GetIndex());
+        _utilityStage = new Control
+        {
+            Name = "UtilityStage",
+            Size = new Vector2(960, 540),
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        _foreground.AddChild(_utilityStage);
+        BuildUtilities();
+        Refit();
+    }
+
+    public void ShowUtilities(bool visible)
+    {
+        if (_foreground is not null)
+            _foreground.Visible = visible;
     }
 
     public void Attach(ChessGame game)
@@ -113,7 +142,7 @@ public partial class InGamePresentationView : Control
             button.AddThemeStyleboxOverride("pressed", new StyleBoxTexture { Texture = hover });
             button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
             button.Pressed += onClick;
-            _stage.AddChild(button);
+            _utilityStage!.AddChild(button);
             button.AddChild(InGameUiSkin.Sprite("Icon", "05_icons/" + icon + "_16.png",
                 new Vector2(8, 8), new Vector2(16, 16)));
             return button;
@@ -137,13 +166,11 @@ public partial class InGamePresentationView : Control
     {
         var panel = new Panel { Name = name, Position = position, Size = size, Visible = false,
             MouseFilter = MouseFilterEnum.Pass };
-        var style = new StyleBoxFlat { BgColor = new Color("f3dcac"),
-            BorderColor = new Color("64382a") };
-        style.SetBorderWidthAll(3);
-        panel.AddThemeStyleboxOverride("panel", style);
+        panel.AddThemeStyleboxOverride("panel",
+            PixelUiSkin.NineSlice("panels/parchment_9slice_32x32.png", sourceMargin: 8, scale: 1));
         panel.AddChild(InGameUiSkin.Text("Text", text, new Vector2(10, 8),
             size - new Vector2(20, 16), 12, InGameUiSkin.Ink, UiFontWeight.Regular));
-        _stage.AddChild(panel);
+        _utilityStage!.AddChild(panel);
         return panel;
     }
 
@@ -172,6 +199,12 @@ public partial class InGamePresentationView : Control
         Vector2 offset = (size - new Vector2(ReferenceWidth, ReferenceHeight) * scale) * 0.5f;
         _stage.Position = offset;
         _stage.Scale = Vector2.One * scale;
+        if (_foreground is not null && _utilityStage is not null)
+        {
+            _foreground.Size = size;
+            _utilityStage.Position = offset;
+            _utilityStage.Scale = Vector2.One * scale;
+        }
 
         // BoardView still draws each 96x96 square exactly as before. Scaling its node
         // by scale/2 maps its 768px grid onto the 384px frame opening at 960x540.

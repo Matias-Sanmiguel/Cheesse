@@ -52,9 +52,9 @@ public partial class SidePanelTests : Node
                 "sidebar uses independent parchment background");
             Check(panel.GetNode<Button>("Margin/Content/NewGame").GetThemeStylebox("normal") is StyleBoxTexture,
                 "real gameplay button has pixel-art nine-slice style");
-            Check(presentation.GetNode<Button>("ArtworkStage/HelpButton").Visible &&
-                  presentation.GetNode<Button>("ArtworkStage/SoundButton").Visible,
-                "top utility buttons are interactive");
+            Check(root.GetNode<Button>("InGameUtilities/UtilityStage/HelpButton").Visible &&
+                  root.GetNode<Button>("InGameUtilities/UtilityStage/SoundButton").Visible,
+                "top utility buttons are interactive and layered above the sidebar");
             Check(panelRect.Position.X >= 0 && panelRect.Position.Y >= 0 &&
                 panelRect.End.X <= 1440 && panelRect.End.Y <= 900, "panel fits 1440x900");
             foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Random", "Menu" })
