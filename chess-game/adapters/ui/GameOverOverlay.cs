@@ -30,9 +30,13 @@ public partial class GameOverOverlay : CanvasLayer
     {
         _panel = GetNode<Control>("Overlay/Center/Panel");
         _content = GetNode<Control>("Overlay/Center/Panel/Content");
+        // Fixed-size pixel-art composition, positioned by the CenterContainer.
         _panel.CustomMinimumSize = Size(216, 194);
+        _panel.Size = Size(216, 194);
+        _content.Position = Vector2.Zero;
         _content.Size = Size(216, 194);
         _panel.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+        _content.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
 
         BuildComponents();
         Hide();
@@ -119,7 +123,7 @@ public partial class GameOverOverlay : CanvasLayer
 
         AddSprite(button, name + "Icon", "04_icons/" + icon + "_12x12.png",
             5, 3, 12, 12);
-        AddText(button, name + "Label", text, 19, 0, 143, 18, 36,
+        AddText(button, name + "Label", text, 19, 0, 138, 18, 34,
             material == "primary" ? new Color("47281d") : new Color("fff0c8"),
             UiFontWeight.Bold);
         return button;
@@ -148,13 +152,14 @@ public partial class GameOverOverlay : CanvasLayer
         AddSprite(_content, "WinnerRibbon", "02_panel/winner_ribbon_180x24.png",
             18, 65, 180, 24);
         _winnerIcon = AddSprite(_content, "WinnerIcon", "04_icons/white_12x12.png",
-            30, 70, 12, 12);
-        _title = AddText(_content, "Title", "GANARON BLANCAS", 64, 70, 120, 13, 32,
+            29, 71, 12, 12);
+        // Reserve space for the icon, keeping the whole winner row balanced.
+        _title = AddText(_content, "Title", "GANARON BLANCAS", 45, 70, 142, 13, 32,
             new Color("fff0c8"), UiFontWeight.Bold);
 
         AddSprite(_content, "ReasonRibbon", "02_panel/result_reason_158x13.png",
             29, 93, 158, 13);
-        _reason = AddText(_content, "Reason", "JAQUE MATE", 56, 96, 104, 8, 27,
+        _reason = AddText(_content, "Reason", "JAQUE MATE", 34, 95, 148, 11, 26,
             new Color("49281f"), UiFontWeight.Bold);
 
         AddSprite(_content, "StatsSeparator", "02_panel/stats_separator_174x5.png",
@@ -179,6 +184,7 @@ public partial class GameOverOverlay : CanvasLayer
         bool winnerIsWhite = game.Turn == PlayerColor.Black;
 
         _title.Text = decisive ? "GANARON " + (winnerIsWhite ? "BLANCAS" : "NEGRAS") : "PARTIDA EN TABLAS";
+        _title.AddThemeFontSizeOverride("font_size", decisive ? 32 : 29);
         _winnerIcon.Texture = Texture("04_icons/" +
             (!decisive ? "trophy" : winnerIsWhite ? "white" : "black") + "_12x12.png");
         _reason.Text = game.Status switch
@@ -198,7 +204,8 @@ public partial class GameOverOverlay : CanvasLayer
         _banner.Size = decisive ? Size(192, 64) : Size(192, 48);
         int seconds = Math.Max(0, elapsedSeconds);
         _timeValue.Text = $"{seconds / 60:00}:{seconds % 60:00}";
-        _movesValue.Text = game.History.Count.ToString();
+        // Show full moves rather than individual half-moves.
+        _movesValue.Text = ((game.History.Count + 1) / 2).ToString();
         _modeValue.Text = game.Mode == GameMode.ReyDeLaPicada ? "PICADA" : "CLASICO";
 
         _introTween?.Kill();
