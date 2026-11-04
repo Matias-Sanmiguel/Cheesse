@@ -134,10 +134,13 @@ internal static class InGameUiSkin
             content.MoveChild(art, 1);
         }
 
+        // The upper three bars, divider and icons stay at their native PNG dimensions.
+        // Resizing 270x28 to 294x40 was stretching pixels and blurring the edges.
         Decor("HeaderRibbon", "03_sidebar/header_ribbon_210x34.png", 65, 6, 210, 34);
-        Decor("ModeBar", "03_sidebar/status_cream_270x28.png", 23, 80, 294, 40);
-        Decor("TurnBar", "03_sidebar/status_turn_270x28.png", 23, 132, 294, 40);
-        Decor("ActionsDivider", "03_sidebar/divider_270x12.png", 24, 222, 292, 12);
+        Decor("ModeBar", "03_sidebar/status_cream_270x28.png", 35, 76, 270, 28);
+        Decor("TurnBar", "03_sidebar/status_turn_270x28.png", 35, 117, 270, 28);
+        Decor("StatusBar", "03_sidebar/status_cream_270x28.png", 35, 158, 270, 28);
+        Decor("ActionsDivider", "03_sidebar/divider_270x12.png", 35, 228, 270, 12);
 
         // History artwork also uses nine-slice: only its center expands.
         var historyPanel = new Panel
@@ -156,9 +159,9 @@ internal static class InGameUiSkin
         content.AddChild(historyPanel);
         content.MoveChild(historyPanel, 1);
 
-        Decor("CrownBadge", "05_icons/crown_24.png", 32, 88, 27, 27);
-        Decor("TurnBadge", "05_icons/cheese_24.png", 32, 140, 27, 27);
-        Decor("StatusDot", "05_icons/status_dot_16.png", 28, 189, 16, 16);
+        Decor("CrownBadge", "05_icons/crown_24.png", 42, 78, 24, 24);
+        Decor("TurnBadge", "05_icons/cheese_24.png", 42, 119, 24, 24);
+        Decor("StatusDot", "05_icons/status_dot_16.png", 46, 164, 16, 16);
 
         // Reflow EXISTING controls. Paths/signals in SidePanelView stay unchanged.
         void Place(string path, float x, float y, float w, float h)
@@ -169,11 +172,11 @@ internal static class InGameUiSkin
         }
 
         Place("Title", 65, 8, 210, 32);
-        Place("Mode", 69, 84, 224, 33);
-        Place("Turn", 69, 136, 224, 33);
-        Place("Random", 287, 136, 30, 30);
-        Place("Status", 35, 185, 260, 26);
-        Place("ActionsHeading", 103, 223, 134, 23);
+        Place("Mode", 75, 77, 194, 26);
+        Place("Turn", 75, 118, 190, 26);
+        Place("Random", 274, 119, 24, 24);
+        Place("Status", 70, 159, 226, 26);
+        Place("ActionsHeading", 103, 199, 134, 25);
 
         Place("History", 24, 256, 292, 48);
         Place("History/Undo", 0, 0, 140, 44);
@@ -194,9 +197,9 @@ internal static class InGameUiSkin
             PixelUiSkin.StyleLabel(panel.GetNode<Label>("Margin/Content/" + path), size, color, weight: weight);
         }
         Style("Title", 22, Ivory, UiFontWeight.Bold);
-        Style("Mode", 19, Ink, UiFontWeight.SemiBold);
-        Style("Turn", 19, Ink, UiFontWeight.SemiBold);
-        Style("Status", 15, Ink, UiFontWeight.Medium);
+        Style("Mode", 18, Ink, UiFontWeight.SemiBold);
+        Style("Turn", 18, Ink, UiFontWeight.SemiBold);
+        Style("Status", 16, Ink, UiFontWeight.Medium);
         Style("ActionsHeading", 17, Ink, UiFontWeight.SemiBold);
         Style("MovesHeading", 17, Ink, UiFontWeight.SemiBold);
         Style("MovesScroll/MovesText", 18, Ivory, UiFontWeight.Regular);
@@ -230,9 +233,26 @@ internal static class InGameUiSkin
 
         var random = panel.GetNode<CheckButton>(contentRoot + "Random");
         random.TooltipText = "Activar o desactivar negras aleatorias";
+        random.Text = string.Empty;
         random.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        random.AddThemeIconOverride("checked", Texture("05_icons/random_16.png"));
-        random.AddThemeIconOverride("unchecked", Texture("05_icons/switch_16.png"));
+        // CheckButton uses 'on'/'off' icons (not CheckBox's 'checked'/'unchecked').
+        // Using the wrong names made Godot draw the default switch outside the bar.
+        var on = Texture("05_icons/random_16.png");
+        var off = Texture("05_icons/switch_16.png");
+        if (on is not null)
+        {
+            random.AddThemeIconOverride("on", on);
+            random.AddThemeIconOverride("on_disabled", on);
+        }
+        if (off is not null)
+        {
+            random.AddThemeIconOverride("off", off);
+            random.AddThemeIconOverride("off_disabled", off);
+        }
+        random.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        random.AddThemeStyleboxOverride("hover", new StyleBoxEmpty());
+        random.AddThemeStyleboxOverride("pressed", new StyleBoxEmpty());
         random.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        random.AddThemeConstantOverride("h_separation", 0);
     }
 }
