@@ -282,6 +282,9 @@ public partial class MenuTests : Node
             Check(random.History.Count == 1, "white can move against the AI");
             Move(root, "e7", "e5");
             Check(random.History.Count == 1, "human cannot move the AI pieces");
+            Check(root.GetNode<BoardView>("Board").IsMoveAnimating && random.History.Count == 1,
+                "AI waits for the white piece to finish sliding");
+            await ToSignal(GetTree().CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
             await Frames();
             Check(random.History.Count == 2 && random.Turn == PlayerColor.White, "AI replies with a legal move");
             Press(root, "SidePanel/Margin/Content/Files/Save");
