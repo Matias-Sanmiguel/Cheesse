@@ -12,7 +12,7 @@ public partial class GameOverOverlay : CanvasLayer
     [Signal] public delegate void RematchRequestedEventHandler();
     [Signal] public delegate void MainMenuRequestedEventHandler();
 
-    private const int Scale = 4;
+    private const int PixelScale = 4;
     private const string Assets = "res://assets/ui/victory_result/";
 
     private Control _panel = null!;
@@ -40,7 +40,7 @@ public partial class GameOverOverlay : CanvasLayer
         Hide();
     }
 
-    private static Vector2 Size(float x, float y) => new(x * Scale, y * Scale);
+    private static Vector2 Size(float x, float y) => new(x * PixelScale, y * PixelScale);
 
     private static Texture2D? Texture(string relative)
     {
@@ -190,8 +190,8 @@ public partial class GameOverOverlay : CanvasLayer
 
         bool picada = game.Status == GameStatus.PicadaVictory;
         bool checkmate = game.Status == GameStatus.Checkmate;
-        bool decisive = picada || checkmate;
-        bool winnerIsWhite = game.Turn == PlayerColor.Black;
+        bool decisive = game.Winner is not null;
+        bool winnerIsWhite = game.Winner == PlayerColor.White;
 
         _title.Text = decisive ? "GANARON " + (winnerIsWhite ? "BLANCAS" : "NEGRAS") : "PARTIDA EN TABLAS";
         _title.AddThemeFontSizeOverride("font_size", decisive ? 32 : 29);
@@ -205,7 +205,7 @@ public partial class GameOverOverlay : CanvasLayer
             GameStatus.DrawByFiftyMove => "50 MOVIMIENTOS",
             GameStatus.DrawByRepetition => "TRIPLE REPETICION",
             GameStatus.DrawByInsufficientMaterial => "MATERIAL INSUFICIENTE",
-            _ => "FIN DE PARTIDA"
+            _ => SidePanelView.StatusText(game.Status).ToUpperInvariant()
         };
 
         _banner.Texture = decisive ? Texture("01_banner/victory_banner_192x64.png")

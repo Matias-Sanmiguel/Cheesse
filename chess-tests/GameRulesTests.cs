@@ -85,13 +85,15 @@ public class GameRulesTests
     }
 
     [Test]
-    public void Hundred_halfmoves_close_draw_and_undo_restores_the_previous_state()
+    public void Hundred_halfmoves_allow_claim_and_undo_restores_the_previous_state()
     {
         var game = Create("7k/8/8/8/8/8/8/R6K w - - 99 50");
         Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
         Play(game, "a1a2");
 
         Assert.That(game.Board.HalfmoveClock, Is.EqualTo(100));
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.DrawByFiftyMove));
         Assert.That(game.TryMove(Move("h8", "g8")), Is.False);
         Assert.That(game.LegalMoves(), Is.Empty);
@@ -130,6 +132,7 @@ public class GameRulesTests
         Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
         Play(game, "g1f3", "g8f6", "f3g1", "f6g8");
 
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(game.Board.HalfmoveClock, Is.EqualTo(8));
         Assert.That(game.Status, Is.EqualTo(GameStatus.DrawByRepetition));
         Assert.That(game.TryMove(Move("e2", "e4")), Is.False);
@@ -161,6 +164,7 @@ public class GameRulesTests
         for (var cycle = 0; cycle < 2; cycle++)
             Play(game, "g1f3", "g8f6", "f3g1", "f6g8");
 
+        if (game.CanClaimDraw) Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(game.Status, Is.EqualTo(expected));
     }
 }

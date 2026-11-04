@@ -1,5 +1,6 @@
 using Chess.Core.Model;
 using Chess.Core.Services;
+using Chess.Core.Ports;
 using NUnit.Framework;
 using static Chess.Tests.GameTestSupport;
 
@@ -72,6 +73,33 @@ public class PicadaModeTests
         var classic = Create("7k/8/8/8/8/4K3/8/8 w - - 0 1");
         Assert.That(classic.Status, Is.EqualTo(GameStatus.DrawByInsufficientMaterial));
         Assert.That(classic.Mode, Is.EqualTo(GameMode.Classic));
+    }
+
+    [Test]
+    public void A_bare_king_can_win_Picada_by_resignation()
+    {
+        var game = Picada("7k/8/8/8/8/4K3/8/8 w - - 0 1");
+        Assert.That(game.Resign(PlayerColor.White), Is.True);
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Resigned));
+        Assert.That(game.Winner, Is.EqualTo(PlayerColor.Black));
+    }
+
+    [Test]
+    public void A_bare_king_can_win_Picada_when_the_opponent_runs_out_of_time()
+    {
+        var ports = Picada("7k/8/8/8/8/4K3/8/8 w - - 0 1");
+        var clock = new AdvancingClock();
+        var game = new ChessGame(ports.Events, ports.Repository, clock, ports.Board);
+        game.ConfigureClock(new TimeControl(1, 0));
+        clock.ElapsedSeconds = 2;
+        game.Tick();
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Timeout));
+        Assert.That(game.Winner, Is.EqualTo(PlayerColor.Black));
+    }
+
+    private sealed class AdvancingClock : IClock
+    {
+        public double ElapsedSeconds { get; set; }
     }
 
     [Test]

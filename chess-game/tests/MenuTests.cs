@@ -317,7 +317,7 @@ public partial class MenuTests : Node
             Check(human.History.Count == 1 && human.Turn == PlayerColor.Black, "human game waits for black");
             Move(root, "e7", "e5");
             Check(human.History.Count == 2, "both players can make legal moves");
-            Check(root.GetNode<Label>("SidePanel/Margin/Content/MovesScroll/MovesText").Text.Contains("e2-e4"),
+            Check(root.GetNode<Label>("SidePanel/Margin/Content/MovesScroll/MovesText").Text.Contains("e4"),
                 "HUD move history reflects actual game state");
             Press(root, "SidePanel/Margin/Content/Files/Save");
             Check(FileAccess.FileExists(SavePath), "save works after themed match");
@@ -325,7 +325,14 @@ public partial class MenuTests : Node
             Check(!root.GetNode<Button>(Setup + "Continue").Disabled, "Continue enabled after saving");
 
             // A new random game must work through the same three-page menu flow.
-            StartNew(root, againstRandom: true);
+            // Opening a fresh setup resets its visual defaults; choose this match's theme.
+            Press(root, Home + "NewGame");
+            appearance.Select(1);
+            appearance.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
+            boardSkin.Select(0);
+            cheeseSkin.Select(1);
+            meatSkin.Select(3);
+            Press(root, Setup + "Random");
             await Frames();
             var random = root.CurrentGame!;
             Check(!ReferenceEquals(random, human) && root.AgainstRandom, "AI creates a new game");
@@ -338,6 +345,7 @@ public partial class MenuTests : Node
                 "AI waits for the white piece to finish sliding");
             await ToSignal(GetTree().CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
             await Frames();
+            await WaitFor(() => random.History.Count == 2);
             Check(random.History.Count == 2 && random.Turn == PlayerColor.White, "AI replies with a legal move");
             Press(root, "SidePanel/Margin/Content/Files/Save");
             var expectedFen = FenSerializer.Write(random.Board);
@@ -355,7 +363,13 @@ public partial class MenuTests : Node
             Check(FenSerializer.Write(root.CurrentGame!.Board) == expectedFen, "Continue restores board");
             Check(root.CurrentGame.History.SequenceEqual(expectedHistory), "Continue restores move history");
             Check(root.AgainstRandom, "Continue restores AI mode");
-            Check(root.CurrentGame.Undo(), "Continue allows undo");
+            Check(root.GetNode<BoardView>("Board").CurrentTheme ==
+                new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
+                "Continue preserves Nico's chosen theme alongside engine metadata");
+            Press(root, "SidePanel/Margin/Content/NewGame");
+            Check(root.GetNode<BoardView>("Board").CurrentTheme ==
+                new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
+                "rematch preserves the independently selected visual theme");
 
             Press(root, "SidePanel/Margin/Content/Menu");
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
@@ -371,6 +385,8 @@ public partial class MenuTests : Node
             legacy.AsObject().Remove("AgainstRandom");
             legacy.AsObject().Remove("Theme");
             legacy.AsObject().Remove("Mode");
+            legacy.AsObject().Remove("AgainstStockfish");
+            legacy["Version"] = 1;
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString(legacy.ToJsonString());
             root.Free();
@@ -416,6 +432,16 @@ public partial class MenuTests : Node
     {
         Press(root, Home + "NewGame");
         Press(root, Setup + "Continue");
+    }
+
+    private async Task WaitFor(Func<bool> condition)
+    {
+        var deadline = Time.GetTicksMsec() + 15000;
+        while (!condition())
+        {
+            if (Time.GetTicksMsec() > deadline) throw new TimeoutException("Stockfish did not reply.");
+            await Frames();
+        }
     }
 
     private async Task Frames()

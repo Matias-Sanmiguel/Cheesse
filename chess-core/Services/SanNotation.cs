@@ -60,7 +60,9 @@ public static class SanNotation
         }
 
         var next = board.WithMove(move);
-        if (CheckDetector.IsInCheck(next, next.Turn))
+        if (next.Mode == GameMode.Fondue && GameRules.Evaluate(next, next.Turn) == GameStatus.KingMelted)
+            text.Append('#');
+        else if (CheckDetector.IsInCheck(next, next.Turn))
             text.Append(MoveGenerator.Legal(next, next.Turn).Count == 0 ? '#' : '+');
 
         return text.ToString();
@@ -72,17 +74,21 @@ public static class SanNotation
     public static string ToPgn(ChessGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
-        return ToPgn(game.History, game.InitialBoard, game.Mode);
+        return WritePgn(game.History, game.InitialBoard, game.Winner is PlayerColor winner
+            ? winner == PlayerColor.White ? "1-0" : "0-1"
+            : game.State.AcceptsMoves ? "*" : "1/2-1/2");
     }
 
-    public static string ToPgn(IReadOnlyList<Move> history, Board initialBoard,
-        GameMode mode = GameMode.Classic)
+    public static string ToPgn(IReadOnlyList<Move> history, Board initialBoard)
+        => WritePgn(history, initialBoard, null);
+
+    private static string WritePgn(IReadOnlyList<Move> history, Board initialBoard, string? outcome)
     {
         ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(initialBoard);
         var board = initialBoard;
         var positions = new List<Board> { board };
-        var status = GameRules.Evaluate(board, board.Turn, positions, mode);
+        var status = GameRules.Evaluate(board, board.Turn, positions);
         var tokens = new List<string>();
 
         foreach (var move in history)
@@ -98,17 +104,17 @@ public static class SanNotation
             tokens.Add(ToSan(board, move));
             board = board.WithMove(move);
             positions.Add(board);
-            status = GameRules.Evaluate(board, board.Turn, positions, mode);
+            status = GameRules.Evaluate(board, board.Turn, positions);
         }
 
-        var result = Result(status, board.Turn);
+        var result = outcome ?? Result(status, board);
         tokens.Add(result);
         var pgn = new StringBuilder();
         pgn.Append("[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n");
         pgn.Append("[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n");
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
-        if (mode == GameMode.ReyDeLaPicada)
-            pgn.Append("[Variant \"Rey de la Picada\"]\n");
+        if (initialBoard.Mode == GameMode.Fondue) pgn.Append("[Variant \"Fondue\"]\n");
+        if (initialBoard.Mode == GameMode.ReyDeLaPicada) pgn.Append("[Variant \"Rey de la Picada\"]\n");
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -143,8 +149,17 @@ public static class SanNotation
     }
 
     // Imports the main line. Comments, annotations and variations are not history moves.
-    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard,
-        GameMode mode = GameMode.Classic)
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard) =>
+        FromPgn(pgn, out initialBoard, out _);
+
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard, GameMode mode)
+    {
+        var moves = FromPgn(pgn, out initialBoard);
+        if (initialBoard.Mode != mode) throw new FormatException("PGN variant does not match the game mode.");
+        return moves;
+    }
+
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard, out string result)
     {
         ArgumentNullException.ThrowIfNull(pgn);
         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -158,16 +173,20 @@ public static class SanNotation
             remaining = remaining[tag.Length..];
         }
 
-        if (tags.TryGetValue("Variant", out var variant) &&
-            (mode != GameMode.ReyDeLaPicada || variant != "Rey de la Picada"))
-            throw new FormatException("PGN variant does not match the game mode.");
-
         if (tags.TryGetValue("SetUp", out var setup) && setup is not ("0" or "1"))
             throw new FormatException("Invalid PGN SetUp tag.");
         if (tags.ContainsKey("FEN") != (setup == "1"))
             throw new FormatException("A custom PGN position requires both SetUp and FEN tags.");
 
         initialBoard = FenSerializer.Load(setup == "1" ? tags["FEN"] : FenSerializer.InitialPosition);
+        if (tags.TryGetValue("Variant", out var variant))
+            initialBoard = initialBoard.WithMode(variant switch
+            {
+                "Fondue" => GameMode.Fondue,
+                "Rey de la Picada" => GameMode.ReyDeLaPicada,
+                "Standard" => GameMode.Standard,
+                _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
+            });
         var board = initialBoard;
         var history = new List<Move>();
         var positions = new List<Board> { board };
@@ -190,7 +209,7 @@ public static class SanNotation
                 continue;
             }
 
-            if (GameRules.Evaluate(board, board.Turn, positions, mode) is not (GameStatus.Ongoing or GameStatus.Check))
+            if (GameRules.Evaluate(board, board.Turn, positions) is not (GameStatus.Ongoing or GameStatus.Check))
                 throw new FormatException("PGN continues after the game has ended.");
 
             var legalMoves = MoveGenerator.Legal(board, board.Turn);
@@ -208,6 +227,10 @@ public static class SanNotation
             (tags.TryGetValue("Result", out var declaredResult) && declaredResult != termination))
             throw new FormatException("Missing or inconsistent PGN result.");
 
+        var naturalResult = Result(GameRules.Evaluate(board, board.Turn, positions), board);
+        if (naturalResult != "*" && termination != naturalResult)
+            throw new FormatException("PGN result conflicts with the final position.");
+        result = termination;
         return history.AsReadOnly();
     }
 
@@ -266,12 +289,14 @@ public static class SanNotation
         return mainLine.ToString();
     }
 
-    private static string Result(GameStatus status, PlayerColor turn) => status switch
+    private static string Result(GameStatus status, Board board) => status switch
     {
-        GameStatus.Checkmate or GameStatus.PicadaVictory =>
-            turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.Checkmate or GameStatus.PicadaVictory => board.Turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.KingMelted => FondueRules.HasKing(board, PlayerColor.White) ? "1-0" : "0-1",
         GameStatus.Stalemate or GameStatus.DrawByFiftyMove or
-            GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial => "1/2-1/2",
+            GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial or
+            GameStatus.DrawByFivefoldRepetition or GameStatus.DrawBySeventyFiveMove or
+            GameStatus.DrawByAgreement or GameStatus.DrawByTimeout or GameStatus.DrawByResignation => "1/2-1/2",
         _ => "*",
     };
 }

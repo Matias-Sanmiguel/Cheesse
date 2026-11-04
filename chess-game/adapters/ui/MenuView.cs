@@ -1,6 +1,6 @@
 using Cheesse.Game.Adapters.Appearance;
-using Chess.Core.Model;
 using Godot;
+using Chess.Core.Model;
 
 namespace Cheesse.Game.Adapters.Ui;
 
@@ -13,6 +13,13 @@ public partial class MenuView : Control
     public event Action? HumanRequested;
     public event Action? RandomRequested;
     public event Action? ContinueRequested;
+
+    public static readonly TimeControl[] Controls = [TimeControl.Unlimited, new(180, 2), new(300, 3), new(600, 0), new(900, 10)];
+    public static readonly int[] EngineElos = [1400, 1800, 2200, 0];
+    public static readonly string[] EngineLabels = ["Inicial · 1400", "Intermedio · 1800", "Avanzado · 2200", "Máximo"];
+    private OptionButton _time = null!, _difficulty = null!;
+    public TimeControl SelectedTimeControl => Controls[Math.Clamp(_time.Selected, 0, Controls.Length - 1)];
+    public int SelectedEngineElo => EngineElos[Math.Clamp(_difficulty.Selected, 0, EngineElos.Length - 1)];
 
     private enum Page { Home, Modes, Setup, Settings }
     private Page _current;
@@ -362,7 +369,7 @@ public partial class MenuView : Control
         // explicit 32x32 child images align them within the button at x2.
         form.AddChild(MakeSetupActionButton("Human", "CONTRA HUMANO", "play",
             new Vector2(43, 474), () => HumanRequested?.Invoke()));
-        form.AddChild(MakeSetupActionButton("Random", "CONTRA LA IA ALEATORIA", "dice",
+        form.AddChild(MakeSetupActionButton("Random", "CONTRA STOCKFISH", "dice",
             new Vector2(43, 530), () => RandomRequested?.Invoke()));
         _continue = MakeSetupActionButton("Continue", "CONTINUAR PARTIDA", "load",
             new Vector2(43, 586), () => ContinueRequested?.Invoke());
@@ -439,6 +446,9 @@ public partial class MenuView : Control
     private void UpdatePreview()
     {
         bool themed = _appearance.Selected == 1;
+        var engineButton = _setup.GetNode<Button>("Options/Random");
+        engineButton.Disabled = SelectedMode != GameMode.Standard;
+        engineButton.TooltipText = engineButton.Disabled ? "Stockfish solo admite ajedrez clasico." : "Jugar contra Stockfish";
         _themeFields.Visible = themed;
         _classicStyleDescription.Visible = !themed;
         SetStyleCardSelected(_classicStyleCard, !themed);
@@ -480,7 +490,7 @@ public partial class MenuView : Control
         _settings = MakePage("SettingsPage");
         _settings.AddChild(PixelUiSkin.Button("Back", "VOLVER", new Vector2(83, 184),
             new Vector2(205, 55), () => ShowPage(Page.Home), "back", 24, "small"));
-        var panel = PixelUiSkin.MakePanel("SettingsPanel", "parchment", new Vector2(304, 230), new Vector2(831, 590));
+        var panel = PixelUiSkin.MakePanel("SettingsPanel", "parchment", new Vector2(304, 230), new Vector2(831, 640));
         _settings.AddChild(panel);
         panel.AddChild(PixelUiSkin.Label("Heading", "OPCIONES", new Vector2(51, 30),
             new Vector2(720, 60), 40, pixel: true));
@@ -490,14 +500,25 @@ public partial class MenuView : Control
             new Vector2(720, 65), ToggleSound, "sound_on", 24);
         panel.AddChild(_soundButton);
         UpdateSoundButton();
-        panel.AddChild(PixelUiSkin.Label("PixelTitle", "ESTILO DE PANTALLA", new Vector2(55, 277),
+        panel.AddChild(PixelUiSkin.Label("TimeLabel", "RELOJ PARA NUEVAS PARTIDAS",
+            new Vector2(55, 257), new Vector2(720, 30), 22, pixel: true));
+        _time = MakeOption("TimeControl", new Vector2(55, 291), new Vector2(720, 44));
+        foreach (var label in new[] { "Sin reloj", "3 min + 2 s", "5 min + 3 s", "10 min", "15 min + 10 s" }) _time.AddItem(label);
+        panel.AddChild(_time);
+        panel.AddChild(PixelUiSkin.Label("DifficultyLabel", "NIVEL DE STOCKFISH",
+            new Vector2(55, 345), new Vector2(720, 30), 22, pixel: true));
+        _difficulty = MakeOption("Difficulty", new Vector2(55, 379), new Vector2(720, 44));
+        foreach (var label in EngineLabels) _difficulty.AddItem(label);
+        _difficulty.Select(1);
+        panel.AddChild(_difficulty);
+        panel.AddChild(PixelUiSkin.Label("PixelTitle", "ESTILO DE PANTALLA", new Vector2(55, 435),
             new Vector2(720, 46), 27, pixel: true));
         panel.AddChild(PixelUiSkin.Label("PixelDetail", "PIXEL ART  |  ESCALADO NEAREST  |  1440 X 900",
-            new Vector2(55, 329), new Vector2(720, 40), 21));
-        panel.AddChild(PixelUiSkin.Label("ControlsTitle", "CONTROLES", new Vector2(55, 406),
+            new Vector2(55, 477), new Vector2(720, 40), 21));
+        panel.AddChild(PixelUiSkin.Label("ControlsTitle", "CONTROLES", new Vector2(55, 530),
             new Vector2(720, 42), 27, pixel: true));
         panel.AddChild(PixelUiSkin.Label("ControlsDetail", "CLICK: ELEGIR PIEZA Y DESTINO   /   CTRL+Z: DESHACER   /   ESC: VOLVER",
-            new Vector2(55, 450), new Vector2(720, 76), 18));
+            new Vector2(55, 570), new Vector2(720, 40), 18));
     }
 
     private void ToggleSound()

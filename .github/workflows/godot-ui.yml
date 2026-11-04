@@ -29,9 +29,18 @@ jobs:
           test -n "$GODOT_EXE"
           chmod +x "$GODOT_EXE"
           echo "GODOT_BIN=$GODOT_EXE" >> "$GITHUB_ENV"
+      - name: Prepare bundled Stockfish
+        run: python scripts/release.py --engines-only
       - name: Menu integration
         run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene MenuTests
       - name: In-game sidebar integration
         run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene SidePanelTests
       - name: Gameplay and input integration
         run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene MvpTests
+      - name: Timed games and Stockfish integration
+        run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene ReleaseTests
+      - name: Persistence across processes
+        run: |
+          dotnet build chess-game-tests/Chess.Game.PersistenceTests.csproj --nologo
+          "$GODOT_BIN" --headless --path chess-game-tests -- --save
+          "$GODOT_BIN" --headless --path chess-game-tests -- --load

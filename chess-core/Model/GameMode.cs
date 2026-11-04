@@ -1,8 +1,10 @@
 namespace Chess.Core.Model;
 
-/// <summary>Reglas seleccionadas para una partida; independientes del rival y de la apariencia.</summary>
 public enum GameMode
 {
-    Classic = 0,
-    ReyDeLaPicada = 1
+    Standard = 0,
+    Classic = Standard,
+    // Preserve the numeric mode in Nico's existing v1 Picada saves.
+    ReyDeLaPicada = 1,
+    Fondue = 2,
 }

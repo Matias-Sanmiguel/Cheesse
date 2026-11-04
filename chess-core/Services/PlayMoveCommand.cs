@@ -6,12 +6,12 @@ public sealed class PlayMoveCommand : ICommand
 {
     private readonly ChessGame _game;
     private readonly GameMemento _before;
-    private Board? _after;
+    private GameMemento? _after;
 
     public PlayMoveCommand(ChessGame game, Move move)
         : this(game, move, game?.CreateMemento() ?? throw new ArgumentNullException(nameof(game))) { }
 
-    internal PlayMoveCommand(ChessGame game, Move move, GameMemento before, Board? after = null)
+    internal PlayMoveCommand(ChessGame game, Move move, GameMemento before, GameMemento? after = null)
     {
         _game = game;
         Move = move;
@@ -28,7 +28,8 @@ public sealed class PlayMoveCommand : ICommand
         if (!ReferenceEquals(_game.InitialBoard, _before.InitialBoard) || !_game.History.SequenceEqual(_before.History) ||
             !_game.ApplyMove(Move))
             return false;
-        _after = _game.Board;
+        if (_after is not null) _game.RestorePosition(_after);
+        else _after = _game.CreateMemento();
         return true;
     }
 
@@ -39,8 +40,8 @@ public sealed class PlayMoveCommand : ICommand
         if (_after is null || !ReferenceEquals(_game.InitialBoard, _before.InitialBoard) ||
             !_game.History.SequenceEqual(_before.History.Append(Move)))
             return false;
+        _after = _game.CreateMemento();
         _game.RestorePosition(_before);
-        _after = null;
         return true;
     }
 }

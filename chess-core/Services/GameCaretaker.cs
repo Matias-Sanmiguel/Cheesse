@@ -55,12 +55,19 @@ public sealed class GameCaretaker
         _redo.Clear();
         for (var ply = 0; ply < memento.History.Count; ply++)
         {
-            var board = memento.Positions[ply];
-            var positions = memento.Positions.Take(ply + 1).ToArray();
-            var before = new GameMemento(memento.InitialBoard, board,
-                GameRules.Evaluate(board, board.Turn, positions, memento.Mode),
-                memento.History.Take(ply), positions, memento.Mode);
-            _undo.Push(new PlayMoveCommand(_game, memento.History[ply], before, memento.Positions[ply + 1]));
+            var before = SnapshotAt(memento, ply);
+            var after = ply + 1 == memento.History.Count ? memento : SnapshotAt(memento, ply + 1);
+            _undo.Push(new PlayMoveCommand(_game, memento.History[ply], before, after));
         }
+    }
+
+    private static GameMemento SnapshotAt(GameMemento memento, int ply)
+    {
+        var board = memento.Positions[ply];
+        var positions = memento.Positions.Take(ply + 1).ToArray();
+        var status = GameRules.Evaluate(board, board.Turn, positions);
+        return new GameMemento(memento.InitialBoard, board, status, memento.History.Take(ply), positions,
+            memento.TimeControl, memento.ClockHistory[ply], memento.ClockHistory.Take(ply + 1),
+            status == GameStatus.Checkmate ? board.Turn == PlayerColor.White ? PlayerColor.Black : PlayerColor.White : null);
     }
 }

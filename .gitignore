@@ -14,3 +14,7 @@ mono_crash.*.json
 
 superpowers/
 .superpowers/
+
+/dist/
+/.release-cache/
+/chess-game/engines/

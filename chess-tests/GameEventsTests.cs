@@ -71,6 +71,7 @@ public class GameEventsTests
         var events = new Recorder();
         var game = WithEvents(events, "7k/8/8/8/8/8/8/R6K w - - 99 50");
         Assert.That(game.TryMove(Move("a1", "a2")), Is.True);
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(events.Items.Skip(1), Is.EqualTo(new object[] { new GameEnded(GameStatus.DrawByFiftyMove), new FiftyMoveDraw() }));
         events.Items.Clear();
         Assert.That(game.TryMove(Move("h8", "g8")), Is.False);
@@ -85,6 +86,7 @@ public class GameEventsTests
         Play(game, "g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1");
         events.Items.Clear();
         Play(game, "f6g8");
+        Assert.That(game.ClaimDraw(game.Turn), Is.True);
         Assert.That(events.Items.Skip(1), Is.EqualTo(new object[] {
             new GameEnded(GameStatus.DrawByRepetition),
             new DrawByRepetition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -") }));
