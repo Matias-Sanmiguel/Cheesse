@@ -179,8 +179,8 @@ internal static class PixelUiSkin
         oldTitle.Visible = false;
         if (!content.HasNode("BrandLogo"))
         {
-            var brand = Image("BrandLogo", "brand/logo_cheesse_small.png", Vector2.Zero, new Vector2(300, 70), 2);
-            brand.CustomMinimumSize = new Vector2(300, 70);
+            var brand = Image("BrandLogo", "logos/logo_cheese_compact.png", Vector2.Zero, new Vector2(256, 64), 2);
+            brand.CustomMinimumSize = new Vector2(256, 64);
             content.AddChild(brand);
             content.MoveChild(brand, 0);
         }

@@ -36,13 +36,20 @@ public partial class MenuTests : Node
             Check(!root.GetNode<BoardView>("Board").Visible, "startup hides board");
             Check(!root.GetNode<SidePanelView>("SidePanel").Visible, "startup hides HUD");
             Check(root.CurrentGame is null, "no game before choosing");
-            Check(root.GetNode<Button>(Home + "Continue").Disabled, "Continue disabled without a save");
+            Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled without a save");
             Check(!root.GetNode<InputAdapter>("Input").IsProcessingUnhandledInput(), "no chess input in menu");
 
-            Check(ResourceLoader.Exists("res://assets/ui/brand/logo_cheesse.png"), "logo in imported pack");
-            Check(ResourceLoader.Exists("res://assets/ui/brand/menu_background.png"), "menu background in imported pack");
+            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese.png"), "new 192x64 logo imported");
+            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png"), "new 128x32 compact logo imported");
+            Check(ResourceLoader.Exists("res://assets/backgrounds/menu_background.png"), "new 360x225 tavern background imported");
             Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"), "four mode illustrations imported");
-            Check(root.GetNode<Control>("Menu").HasNode("PixelBackground"), "full-screen pixel background exists");
+            Check(root.GetNode<Control>("Menu").HasNode("Stage/PixelBackground"), "stage uses new pixel background");
+            Check(root.GetNode<Control>("Menu").HasNode("Stage/HomePage/HomeLogo"), "main logo is on landing page");
+            Check(root.GetNode<Button>(Home + "NewGame").Text == "JUGAR" &&
+                  root.GetNode<Button>(Home + "Modes").Text == "MODOS" &&
+                  root.GetNode<Button>(Home + "Settings").Text == "CONFIGURACION" &&
+                  root.GetNode<Button>(Home + "Exit").Text == "SALIR",
+                "landing page matches four-button menu layout");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("normal") is StyleBoxTexture,
                 "start button uses original pixel-art texture");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("focus") is StyleBoxEmpty,
@@ -51,7 +58,11 @@ public partial class MenuTests : Node
                 "HUD is styled with the pixel art parchment");
 
             Press(root, Home + "NewGame");
-            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "start navigates to mode selection");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "Jugar opens setup directly");
+            Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible, "back returns to correct page");
+            Press(root, Home + "Modes");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "Modes navigates to mode selection");
             Check(root.GetNode<Button>(Modes + "Mode1").Disabled &&
                   root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
@@ -101,7 +112,7 @@ public partial class MenuTests : Node
             Press(root, "SidePanel/Margin/Content/Files/Save");
             Check(FileAccess.FileExists(SavePath), "save works after themed match");
             Press(root, "SidePanel/Margin/Content/Menu");
-            Check(root.GetNode<Button>(Home + "Continue").Disabled == false, "Continue enabled after saving");
+            Check(!root.GetNode<Button>(Setup + "Continue").Disabled, "Continue enabled after saving");
 
             // A new random game must work through the same three-page menu flow.
             StartNew(root, againstRandom: true);
@@ -125,7 +136,7 @@ public partial class MenuTests : Node
             Press(root, "SidePanel/Margin/Content/Menu");
             await Frames();
             Check(random.History.Count == 2, "AI is paused while menu is open");
-            Press(root, Home + "Continue");
+            ContinueSaved(root);
             Check(root.CurrentGame is not null && !ReferenceEquals(root.CurrentGame, random),
                 "Continue constructs a new game from saved state");
             Check(FenSerializer.Write(root.CurrentGame!.Board) == expectedFen, "Continue restores board");
@@ -137,7 +148,7 @@ public partial class MenuTests : Node
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString("{");
             var before = root.CurrentGame;
-            Press(root, Home + "Continue");
+            ContinueSaved(root);
             Check(root.GetNode<Control>("Menu").Visible, "invalid save keeps menu open");
             Check(ReferenceEquals(before, root.CurrentGame), "invalid save preserves current game");
             Check(root.GetNode<Label>(Home + "Message").Text.Length > 0,
@@ -154,9 +165,9 @@ public partial class MenuTests : Node
             await Frames();
             Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible,
                 "restart with a save still starts at home");
-            Check(!root.GetNode<Button>(Home + "Continue").Disabled,
+            Check(!root.GetNode<Button>(Setup + "Continue").Disabled,
                 "restart recognizes an old save");
-            Press(root, Home + "Continue");
+            ContinueSaved(root);
             Check(!root.AgainstRandom, "old save defaults to human opponent");
             Check(FenSerializer.Write(root.CurrentGame!.Board) == expectedFen, "old save preserves board");
             Check(root.GetNode<BoardView>("Board").CurrentTheme == VisualTheme.Classic,
@@ -165,7 +176,7 @@ public partial class MenuTests : Node
             Press(root, "SidePanel/Margin/Content/Menu");
             RemoveSave();
             root.ShowMenu();
-            Check(root.GetNode<Button>(Home + "Continue").Disabled, "Continue disabled after save is removed");
+            Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled after save is removed");
             StartNew(root, againstRandom: false);
             Check(root.CurrentGame!.History.Count == 0, "new game clears saved history");
             Check(FenSerializer.Write(root.CurrentGame.Board) == FenSerializer.InitialPosition,
@@ -184,8 +195,13 @@ public partial class MenuTests : Node
     private static void StartNew(Node root, bool againstRandom)
     {
         Press(root, Home + "NewGame");
-        Press(root, Modes + "Mode0");
         Press(root, Setup + (againstRandom ? "Random" : "Human"));
+    }
+
+    private static void ContinueSaved(Node root)
+    {
+        Press(root, Home + "NewGame");
+        Press(root, Setup + "Continue");
     }
 
     private async Task Frames()

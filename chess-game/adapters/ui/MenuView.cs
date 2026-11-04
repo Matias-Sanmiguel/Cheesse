@@ -34,13 +34,15 @@ public partial class MenuView : Control
     private TextureRect[] _tiles = [];
     private Label _note = null!;
     private Button _soundButton = null!;
+    private TextureRect _subpageLogo = null!;
+    private Page _setupReturnPage = Page.Home;
 
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        BuildBackground();
         _stage = new Control { Name = "Stage", Size = new Vector2(1440, 900) };
         AddChild(_stage);
+        BuildBackground();
         BuildHeader();
         BuildHome();
         BuildModes();
@@ -63,7 +65,7 @@ public partial class MenuView : Control
         {
             ShowPage(_current switch
             {
-                Page.Setup => Page.Modes,
+                Page.Setup => _setupReturnPage,
                 _ => Page.Home
             });
             GetViewport().SetInputAsHandled();
@@ -72,10 +74,12 @@ public partial class MenuView : Control
 
     private void BuildBackground()
     {
-        var background = PixelUiSkin.Image("PixelBackground", "brand/menu_background.png", Vector2.Zero, Vector2.Zero);
-        background.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        background.StretchMode = TextureRect.StretchModeEnum.Scale;
-        AddChild(background);
+        // Native 360x225 pixel art background, rendered at exact x4 in 1440x900.
+        // It belongs to Stage so all menu pages scale together without distortion.
+        var background = PixelUiSkin.Image("PixelBackground",
+            "res://assets/backgrounds/menu_background.png", Vector2.Zero,
+            new Vector2(1440, 900), 4);
+        _stage.AddChild(background);
     }
 
     private void FitStage()
@@ -90,72 +94,58 @@ public partial class MenuView : Control
 
     private void BuildHeader()
     {
-        _stage.AddChild(PixelUiSkin.Image("Logo", "brand/logo_cheesse.png", new Vector2(92, 42), new Vector2(384, 128), 2));
-        _stage.AddChild(PixelUiSkin.Label("Tagline", "AJEDREZ. QUESOS. PICADA.",
-            new Vector2(504, 100), new Vector2(700, 58), 30, pixel: true, light: true));
-        _stage.AddChild(PixelUiSkin.Label("Version", "EDICION PIXEL ART  |  PROTOTIPO",
-            new Vector2(1030, 48), new Vector2(328, 35), 17, light: true, alignment: HorizontalAlignment.Right));
+        // Secondary pages use the compact new logo; the home page gets the full-size one.
+        _subpageLogo = PixelUiSkin.Image("CompactLogo", "logos/logo_cheese_compact.png",
+            new Vector2(528, 75), new Vector2(384, 96), 3);
+        _stage.AddChild(_subpageLogo);
     }
 
     private void BuildHome()
     {
         _home = MakePage("HomePage");
-        var navigation = PixelUiSkin.MakePanel("Navigation", "parchment", new Vector2(65, 226), new Vector2(468, 608));
-        _home.AddChild(navigation);
-        navigation.AddChild(PixelUiSkin.Label("Heading", "TU PROXIMA PARTIDA", new Vector2(34, 42), new Vector2(400, 58), 31, pixel: true));
-        navigation.AddChild(PixelUiSkin.Label("Subheading", "Arma una partida a tu medida.",
-            new Vector2(38, 108), new Vector2(380, 52), 22));
-        navigation.AddChild(PixelUiSkin.Image("Separator", "hud/separator_horizontal_160x8.png",
-            new Vector2(38, 169), new Vector2(388, 15), 2));
-        navigation.AddChild(PixelUiSkin.Button("NewGame", "NUEVA PARTIDA", new Vector2(39, 204),
-            new Vector2(388, 68), () => ShowPage(Page.Modes), "play", 29));
-        _continue = PixelUiSkin.Button("Continue", "CONTINUAR PARTIDA", new Vector2(39, 289),
-            new Vector2(388, 66), () => ContinueRequested?.Invoke(), "load", 27);
-        _continue.Disabled = true;
-        navigation.AddChild(_continue);
-        navigation.AddChild(PixelUiSkin.Button("Settings", "OPCIONES", new Vector2(39, 378),
-            new Vector2(388, 62), () => ShowPage(Page.Settings), "settings", 26));
-        navigation.AddChild(PixelUiSkin.Button("Exit", "SALIR", new Vector2(39, 454),
-            new Vector2(388, 62), () => GetTree().Quit(), "close", 25));
-        _message = PixelUiSkin.Label("Message", "", new Vector2(34, 538), new Vector2(400, 48), 18,
-            alignment: HorizontalAlignment.Center);
-        navigation.AddChild(_message);
 
-        var showcase = PixelUiSkin.MakePanel("Showcase", "wood", new Vector2(558, 226), new Vector2(818, 608));
-        _home.AddChild(showcase);
-        showcase.AddChild(PixelUiSkin.Label("Heading", "CUATRO FORMAS DE JUGAR", new Vector2(38, 30),
-            new Vector2(744, 58), 33, pixel: true, light: true));
-        showcase.AddChild(PixelUiSkin.Label("Status", "Un clasico disponible. Nuevas reglas en desarrollo.",
-            new Vector2(42, 87), new Vector2(740, 42), 20, light: true));
-        var cards = new[]
+        // Full-size 192x64 native logo at x4; do not trim or interpolate it.
+        _home.AddChild(PixelUiSkin.Image("HomeLogo", "logos/logo_cheese.png",
+            new Vector2(336, 56), new Vector2(768, 256), 4));
+
+        // Keep only the four primary actions from the supplied visual reference.
+        // The existing save continues to be available from the setup screen.
+        var navigation = new Control
         {
-            ("CLASICO", "Ajedrez de siempre", "mode_classic_icon.png", "DISPONIBLE"),
-            ("REY DE LA PICADA", "Conquista el centro", "mode_picada_king_icon.png", "PROXIMAMENTE"),
-            ("QUESO SUIZO", "Casillas bloqueadas", "mode_swiss_cheese_icon.png", "PROXIMAMENTE"),
-            ("FONDUE", "Capturas en cadena", "mode_fondue_icon.png", "PROXIMAMENTE"),
+            Name = "Navigation",
+            Position = Vector2.Zero,
+            Size = new Vector2(1440, 900),
+            MouseFilter = Control.MouseFilterEnum.Pass
         };
-        for (int i = 0; i < cards.Length; i++)
-        {
-            var x = 35 + (i % 2) * 381;
-            var y = 151 + (i / 2) * 212;
-            AddCompactCard(showcase, cards[i].Item1, cards[i].Item2, cards[i].Item3,
-                cards[i].Item4, new Vector2(x, y), i == 0);
-        }
+        _home.AddChild(navigation);
+
+        const float left = 430f;
+        const float width = 580f;
+        const float height = 82f;
+        navigation.AddChild(PixelUiSkin.Button("NewGame", "JUGAR",
+            new Vector2(left, 372), new Vector2(width, height),
+            () => OpenSetup(Page.Home), fontSize: 44));
+        navigation.AddChild(PixelUiSkin.Button("Modes", "MODOS",
+            new Vector2(left, 476), new Vector2(width, height),
+            () => ShowPage(Page.Modes), fontSize: 44));
+        navigation.AddChild(PixelUiSkin.Button("Settings", "CONFIGURACION",
+            new Vector2(left, 580), new Vector2(width, height),
+            () => ShowPage(Page.Settings), fontSize: 43));
+        navigation.AddChild(PixelUiSkin.Button("Exit", "SALIR",
+            new Vector2(left, 684), new Vector2(width, height),
+            () => GetTree().Quit(), fontSize: 44));
+
+        // Empty in the normal state; used only for recoverable loading errors.
+        _message = PixelUiSkin.Label("Message", "",
+            new Vector2(300, 796), new Vector2(840, 56), 24,
+            pixel: true, light: true, alignment: HorizontalAlignment.Center);
+        navigation.AddChild(_message);
     }
 
-    private void AddCompactCard(Control parent, string title, string caption, string image, string status,
-        Vector2 position, bool available)
+    private void OpenSetup(Page fromPage)
     {
-        var frame = PixelUiSkin.MakePanel(title.Replace(" ", "") + "Card", "dark", position, new Vector2(352, 194));
-        parent.AddChild(frame);
-        frame.AddChild(PixelUiSkin.Image("Illustration", "modes/" + image, new Vector2(18, 29),
-            new Vector2(130, 130), 2));
-        frame.AddChild(PixelUiSkin.Label("Title", title, new Vector2(154, 28), new Vector2(187, 65), 25,
-            pixel: true, light: true));
-        frame.AddChild(PixelUiSkin.Label("Description", caption, new Vector2(157, 91),
-            new Vector2(175, 43), 17, light: true));
-        frame.AddChild(PixelUiSkin.Label("Availability", status, new Vector2(155, 147),
-            new Vector2(181, 28), 17, pixel: true, light: available));
+        _setupReturnPage = fromPage;
+        ShowPage(Page.Setup);
     }
 
     private void BuildModes()
@@ -178,7 +168,7 @@ public partial class MenuView : Control
         {
             int x = 80 + i * 323;
             var card = PixelUiSkin.Button("Mode" + i, "", new Vector2(x, 320), new Vector2(292, 437),
-                modes[i].Item4 ? () => ShowPage(Page.Setup) : null, fontSize: 20);
+                modes[i].Item4 ? () => OpenSetup(Page.Modes) : null, fontSize: 20);
             var frame = PixelUiSkin.NineSlice(modes[i].Item4
                 ? "cards/card_selected_96x112.png" : "cards/card_frame_96x112.png", 12);
             card.AddThemeStyleboxOverride("normal", frame);
@@ -204,8 +194,8 @@ public partial class MenuView : Control
     private void BuildSetup()
     {
         _setup = MakePage("SetupPage");
-        _setup.AddChild(PixelUiSkin.Button("Back", "MODOS", new Vector2(84, 166),
-            new Vector2(200, 56), () => ShowPage(Page.Modes), "back", 24, "small"));
+        _setup.AddChild(PixelUiSkin.Button("Back", "VOLVER", new Vector2(84, 166),
+            new Vector2(200, 56), () => ShowPage(_setupReturnPage), "back", 24, "small"));
         _setup.AddChild(PixelUiSkin.Label("Heading", "PREPARA TU PARTIDA", new Vector2(333, 165),
             new Vector2(800, 60), 39, pixel: true, light: true));
 
@@ -280,12 +270,16 @@ public partial class MenuView : Control
         foreach (var skin in VisualThemeCatalog.Charcuterie) _blackSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_blackSkin);
         _note = PixelUiSkin.Label("Note", "EL MODO DE JUEGO MANTIENE LAS REGLAS CLASICAS.",
-            new Vector2(42, 428), new Vector2(590, 44), 16, light: true);
+            new Vector2(42, 422), new Vector2(590, 28), 16, light: true);
         form.AddChild(_note);
-        form.AddChild(PixelUiSkin.Button("Human", "CONTRA HUMANO", new Vector2(43, 488),
-            new Vector2(590, 53), () => HumanRequested?.Invoke(), "play", 26));
-        form.AddChild(PixelUiSkin.Button("Random", "CONTRA LA IA ALEATORIA", new Vector2(43, 549),
-            new Vector2(590, 53), () => RandomRequested?.Invoke(), "dice", 26));
+        form.AddChild(PixelUiSkin.Button("Human", "CONTRA HUMANO", new Vector2(43, 454),
+            new Vector2(590, 48), () => HumanRequested?.Invoke(), "play", 26));
+        form.AddChild(PixelUiSkin.Button("Random", "CONTRA LA IA ALEATORIA", new Vector2(43, 509),
+            new Vector2(590, 48), () => RandomRequested?.Invoke(), "dice", 26));
+        _continue = PixelUiSkin.Button("Continue", "CONTINUAR PARTIDA", new Vector2(43, 564),
+            new Vector2(590, 48), () => ContinueRequested?.Invoke(), "load", 26);
+        _continue.Disabled = true;
+        form.AddChild(_continue);
 
         _appearance.Select(0);
         _boardSkin.Select(0);
@@ -395,6 +389,7 @@ public partial class MenuView : Control
         _modes.Visible = page == Page.Modes;
         _setup.Visible = page == Page.Setup;
         _settings.Visible = page == Page.Settings;
+        _subpageLogo.Visible = page != Page.Home;
         GetViewport().GuiReleaseFocus();
     }
 
@@ -418,7 +413,10 @@ public partial class MenuView : Control
 
     public void SetMessage(string message)
     {
-        if (_message is not null) _message.Text = message;
+        if (_message is null) return;
+        _message.Text = message;
+        // Errors from Continue must be visible instead of hiding behind the setup page.
+        if (!string.IsNullOrEmpty(message)) ShowPage(Page.Home);
     }
 
     public void FocusFirstOption() => ShowPage(Page.Home);

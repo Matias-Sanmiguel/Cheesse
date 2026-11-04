@@ -50,3 +50,9 @@ Si no hay `python` o el comando exacto cambia, usar el runner explicado en `ches
 Verificar visualmente en Godot 1440x900 y 1280x720: menús completos, botones sin foco falso, apertura de listas, vista previa de skins, modo bloqueado, movimiento de piezas, captura/jaque, historial, guardar/continuar, audio, y overlays de fin de partida.
 
 **PR en borrador:** no integrar en `main` hasta ejecutar tests y revisar las capturas en Godot.
+## 4 de noviembre - menu principal con logo y fondo nuevos
+- El home usa exclusivamente los PNG entregados: `assets/ui/logos/logo_cheese.png` (192x64), `assets/ui/logos/logo_cheese_compact.png` (128x32) y `assets/backgrounds/menu_background.png` (360x225).
+- Composicion: fondo 360x225 a escala x4, logo principal x4 y cuatro botones centrados **JUGAR / MODOS / CONFIGURACION / SALIR**. No hay fondo ni textos horneados en el logo o en los botones.
+- JUGAR abre la preparacion de partida con reglas clasicas; MODOS abre las cuatro tarjetas (tres especiales aun no jugables). CONTINUAR queda disponible en la preparacion, si hay una partida guardada.
+- El logo compacto aparece en otras pantallas y en el HUD. Se preservan 8 tableros, equipos independientes, IA aleatoria y guardado.
+- La composicion se escala uniformemente desde 1440x900 usando Nearest y mantiene la relacion de aspecto en otras resoluciones. No se importaron los previews del ZIP ni se reescalaron los PNG originales.
