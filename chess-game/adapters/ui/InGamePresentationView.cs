@@ -285,8 +285,14 @@ public partial class InGamePresentationView : Control
         _backdrop.Texture = InGameUiSkin.Texture(wide
             ? "01_background/ingame_picada_960x540.png"
             : "01_background/ingame_picada_1440x900.png");
-        _backdrop.Position = Vector2.Zero;
-        _backdrop.Size = viewport;
+        if (_backdrop.Texture is { } texture)
+        {
+            // Uniform cover (never independent X/Y stretching of background art).
+            Vector2 source = texture.GetSize();
+            float cover = Mathf.Max(viewport.X / source.X, viewport.Y / source.Y);
+            _backdrop.Size = source * cover;
+            _backdrop.Position = (viewport - _backdrop.Size) / 2f;
+        }
 
         // Native desktop coordinates. Larger windows center the whole layout.
         // Smaller windows can crop the surroundings, but MUST NOT shrink chess.
