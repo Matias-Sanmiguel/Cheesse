@@ -157,7 +157,24 @@ public partial class MenuTests : Node
                   root.GetNode<BoardView>("Board").ShowsPicadaGoals &&
                   root.GetNode<Control>("InGamePresentation/ArtworkStage/PicadaBadge").Visible,
                 "Picada reaches gameplay with four highlighted goals and a HUD badge");
-            Press(root, "SidePanel/Margin/Content/Menu");
+
+            // Real input path: walk the king to d4 without exposing it to check.
+            Move(root, "f2", "f4");
+            Move(root, "a7", "a6");
+            Move(root, "e1", "f2");
+            Move(root, "a6", "a5");
+            Move(root, "f2", "e3");
+            Move(root, "a5", "a4");
+            Move(root, "e3", "d4");
+            Check(root.CurrentGame.Status == GameStatus.PicadaVictory &&
+                  root.CurrentGame.History.Count == 7,
+                "Picada victory is triggered by a legal center move through UI input");
+            await ToSignal(GetTree().CreateTimer(0.95), SceneTreeTimer.SignalName.Timeout);
+            Check(root.GetNode<GameOverOverlay>("GameOverOverlay").Visible &&
+                  root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Reason").Text.Contains("REY AL CENTRO") &&
+                  root.GetNode<TextureRect>("GameOverOverlay/Overlay/Center/Panel/Content/ResultBanner/PicadaCrown").Visible,
+                "Picada wins show a delayed custom victory dialog with the crown icon");
+            Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/MainMenu");
             Press(root, Home + "Modes");
             Press(root, Modes + "Mode0");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
