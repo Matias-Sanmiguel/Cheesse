@@ -42,7 +42,7 @@ internal static class ModeSelectionPageBuilder
 
         // Compact 128x32 logo at exact x2, centered above the mode heading.
         page.AddChild(PixelUiSkin.Image("GameLogo", "logos/logo_cheese_compact.png",
-            new Vector2(592, 82), new Vector2(256, 64), 2));
+            new Vector2(528, 75), new Vector2(384, 96), 3));
         page.AddChild(PixelUiSkin.Label("Heading", "ELEGIR MODO DE JUEGO",
             new Vector2(320, 152), new Vector2(800, 50), 32,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
