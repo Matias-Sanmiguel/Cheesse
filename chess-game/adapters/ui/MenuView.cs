@@ -138,7 +138,7 @@ public partial class MenuView : Control
         // Empty in the normal state; used only for recoverable loading errors.
         _message = PixelUiSkin.Label("Message", "",
             new Vector2(300, 796), new Vector2(840, 56), 24,
-            pixel: true, light: true, alignment: HorizontalAlignment.Center);
+            pixel: true, light: true, alignment: HorizontalAlignment.Center, weight: UiFontWeight.Regular);
         navigation.AddChild(_message);
     }
 
@@ -244,7 +244,7 @@ public partial class MenuView : Control
         form.AddChild(PixelUiSkin.Label("Heading", "PERSONALIZACION", new Vector2(37, 25),
             new Vector2(580, 49), 32, pixel: true, light: true));
         form.AddChild(PixelUiSkin.Label("AppearanceLabel", "ESTILO VISUAL", new Vector2(41, 83),
-            new Vector2(585, 32), 22, pixel: true, light: true));
+            new Vector2(585, 32), 22, pixel: true, light: true, weight: UiFontWeight.Medium));
         _appearance = MakeOption("Appearance", new Vector2(42, 118), new Vector2(592, 50));
         _appearance.AddItem("CLASICO");
         _appearance.AddItem("PICADA PERSONALIZADA");
@@ -253,18 +253,18 @@ public partial class MenuView : Control
         _themeFields = new Control { Name = "ThemeFields", Position = new Vector2(0, 174), Size = new Vector2(684, 252), MouseFilter = Control.MouseFilterEnum.Pass };
         form.AddChild(_themeFields);
         _themeFields.AddChild(PixelUiSkin.Label("BoardLabel", "TABLERO", new Vector2(42, 5),
-            new Vector2(560, 25), 21, pixel: true, light: true));
+            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
         _boardSkin = MakeOption("Board", new Vector2(42, 31), new Vector2(592, 48));
         foreach (var skin in VisualThemeCatalog.Boards) _boardSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_boardSkin);
         _themeFields.AddChild(PixelUiSkin.Label("WhiteLabel", "BLANCAS: ELEGIR QUESO", new Vector2(42, 86),
-            new Vector2(560, 25), 21, pixel: true, light: true));
+            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
         _whiteSkin = MakeOption("White", new Vector2(42, 113), new Vector2(592, 48));
         _whiteSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Cheeses) _whiteSkin.AddItem(Ascii(skin.Label));
         _themeFields.AddChild(_whiteSkin);
         _themeFields.AddChild(PixelUiSkin.Label("BlackLabel", "NEGRAS: ELEGIR FIAMBRE", new Vector2(42, 169),
-            new Vector2(560, 25), 21, pixel: true, light: true));
+            new Vector2(560, 25), 21, pixel: true, light: true, weight: UiFontWeight.Medium));
         _blackSkin = MakeOption("Black", new Vector2(42, 197), new Vector2(592, 48));
         _blackSkin.AddItem("ALEATORIO");
         foreach (var skin in VisualThemeCatalog.Charcuterie) _blackSkin.AddItem(Ascii(skin.Label));
