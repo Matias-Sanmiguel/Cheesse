@@ -2,17 +2,18 @@
 using Chess.Core.Model;
 using Cheesse.Game.Adapters.Infra;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 
 namespace Cheesse.Game.Adapters.Ui;
 
 public partial class BoardView : Node2D
 {
-    // Mantenemos 80 temporalmente.
-    // Pasaremos a 96 despues de completar el merge.
     private const int SquareSize = 96;
 
-    private static readonly Color LightSquare = new("eeeed2");
-    private static readonly Color DarkSquare = new("769656");
+    // Paleta queso del modo clasico: casillas lisas, sin PNGs ni texturas.
+    // Los temas personalizados siguen usando sus propios light_tile/dark_tile.
+    internal static readonly Color LightSquare = new("e9deb7");
+    internal static readonly Color DarkSquare = new("c9aa63");
 
     private ChessGame? _game;
     private GodotEventBus? _bus;
@@ -26,11 +27,33 @@ public partial class BoardView : Node2D
 
     private Texture2D? _lightTile;
     private Texture2D? _darkTile;
+    private Texture2D? _selectedOverlay;
+    private Texture2D? _lastFromOverlay;
+    private Texture2D? _lastToOverlay;
+    private Texture2D? _legalMoveOverlay;
+    private Texture2D? _captureOverlay;
+    private Texture2D? _checkOverlay;
+    private VisualTheme _visualTheme = VisualTheme.Classic;
+
+    public VisualTheme CurrentTheme => _visualTheme;
+    internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         LoadTextures();
+        LoadUiOverlays();
+    }
+
+    private void LoadUiOverlays()
+    {
+        const string root = "res://assets/ui/overlays/";
+        _selectedOverlay = LoadTextureIfExists(root + "selected_square.png");
+        _lastFromOverlay = LoadTextureIfExists(root + "last_move_from.png");
+        _lastToOverlay = LoadTextureIfExists(root + "last_move_to.png");
+        _legalMoveOverlay = LoadTextureIfExists(root + "legal_move_dot.png");
+        _captureOverlay = LoadTextureIfExists(root + "capture_marker.png");
+        _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
     }
 
     public void Attach(ChessGame game, GodotEventBus bus)
@@ -47,6 +70,15 @@ public partial class BoardView : Node2D
         RefreshFromGame();
     }
 
+    public void SetVisualTheme(VisualTheme theme)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        _visualTheme = VisualThemeCatalog.Normalize(theme);
+
+        LoadTextures();
+        QueueRedraw();
+    }
     public override void _ExitTree()
     {
         if (_bus is not null)
@@ -131,6 +163,7 @@ public partial class BoardView : Node2D
     {
         DrawBoard();
         DrawLastMove();
+        DrawCheckOverlay();
         DrawPieces();
         DrawSelectionIndicators();
         DrawCoordinates();
@@ -162,13 +195,36 @@ public partial class BoardView : Node2D
 
     private void DrawLastMove()
     {
-        if (_lastMove is not Move move)
+        if (_lastMove is not Move move) return;
+        DrawOverlay(move.From, _lastFromOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
+        DrawOverlay(move.To, _lastToOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
+    }
+
+    private void DrawCheckOverlay()
+    {
+        if (_game is null || _game.Status is not (GameStatus.Check or GameStatus.Checkmate))
             return;
 
-        Color color = new(0.78f, 0.58f, 0.25f, 0.35f);
+        // The king in check is always the king of the side whose turn it is.
+        for (int rank = 0; rank < 8; rank++)
+        for (int file = 0; file < 8; file++)
+        {
+            var square = new Square(file, rank);
+            if (_game.Board.At(square) is Piece piece &&
+                piece.Type == PieceType.King && piece.Color == _game.Turn)
+            {
+                DrawOverlay(square, _checkOverlay, new Color(0.9f, 0.1f, 0.2f, 0.4f));
+                return;
+            }
+        }
+    }
 
-        DrawSquareHighlight(move.From, color);
-        DrawSquareHighlight(move.To, color);
+    private void DrawOverlay(Square square, Texture2D? texture, Color fallback)
+    {
+        if (texture is not null)
+            DrawTextureRect(texture, new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize)), false);
+        else
+            DrawSquareHighlight(square, fallback);
     }
 
     private void DrawPieces()
@@ -208,52 +264,42 @@ public partial class BoardView : Node2D
 
     private void DrawSelectionIndicators()
     {
-        // Seleccion: borde bordo.
         if (_selectedSquare is Square selected)
         {
-            var rect = new Rect2(
-                GetSquarePosition(selected),
-                new Vector2(SquareSize, SquareSize)
-            );
-
-            DrawRect(rect, new Color("78142C"), false, 4f);
+            if (_selectedOverlay is not null)
+                DrawTextureRect(_selectedOverlay,
+                    new Rect2(GetSquarePosition(selected), new Vector2(SquareSize, SquareSize)), false);
+            else
+                DrawRect(new Rect2(GetSquarePosition(selected), new Vector2(SquareSize, SquareSize)),
+                    new Color("78142C"), false, 4f);
         }
 
-        // Destinos legales.
         foreach (Square destination in _legalDestinations)
         {
-            Vector2 center = GetSquarePosition(destination)
-                + new Vector2(SquareSize / 2f, SquareSize / 2f);
-
+            Vector2 center = GetSquarePosition(destination) + new Vector2(SquareSize / 2f, SquareSize / 2f);
             if (_game?.Board.At(destination) is Piece)
             {
-                // Anillo de captura.
-                DrawArc(
-                    center,
-                    SquareSize * 0.42f,
-                    0f,
-                    Mathf.Tau,
-                    48,
-                    new Color("78142C"),
-                    5f,
-                    true
-                );
+                if (_captureOverlay is not null)
+                    DrawTextureRect(_captureOverlay,
+                        new Rect2(GetSquarePosition(destination), new Vector2(SquareSize, SquareSize)), false);
+                else
+                    DrawArc(center, SquareSize * 0.42f, 0f, Mathf.Tau, 48,
+                        new Color("78142C"), 5f, true);
+            }
+            else if (_legalMoveOverlay is not null)
+            {
+                Vector2 size = new(_legalMoveOverlay.GetWidth() * 2, _legalMoveOverlay.GetHeight() * 2);
+                DrawTextureRect(_legalMoveOverlay, new Rect2(center - size / 2f, size), false);
             }
             else
-            {
-                // Punto para casilla vacia.
-                DrawCircle(
-                    center,
-                    SquareSize * 0.12f,
-                    new Color(0.04f, 0.25f, 0.23f, 0.60f)
-                );
-            }
+                DrawCircle(center, SquareSize * 0.12f,
+                    new Color(0.04f, 0.25f, 0.23f, 0.60f));
         }
     }
 
     private void DrawCoordinates()
     {
-        Font font = ThemeDB.FallbackFont;
+        Font font = PixelUiSkin.FontFor(UiFontWeight.Medium) ?? ThemeDB.FallbackFont;
         const int fontSize = 16;
 
         Color color = new("E9E3D6");
@@ -378,36 +424,65 @@ public partial class BoardView : Node2D
         );
     }
 
+    
     private void LoadTextures()
     {
-        _lightTile = LoadTextureIfExists(
-            "res://assets/board/light_tile.png");
+        // En modo clasico ambos campos son null: DrawBoard dibuja los colores
+        // lisos definidos arriba. No cargar PNGs de respaldo para este modo.
+        // Los tableros de apariencia personalizada mantienen sus texturas.
+        string? boardRoot = _visualTheme.BoardSkin is null
+            ? null
+            : "res://assets/skins/boards/" + _visualTheme.BoardSkin;
 
-        _darkTile = LoadTextureIfExists(
-            "res://assets/board/dark_tile.png");
+        _lightTile = boardRoot is null
+            ? null
+            : LoadTextureIfExists(boardRoot + "/light_tile.png");
 
+        _darkTile = boardRoot is null
+            ? null
+            : LoadTextureIfExists(boardRoot + "/dark_tile.png");
+
+        // PIEZAS
         _pieceTextures.Clear();
 
         foreach (PieceType type in Enum.GetValues<PieceType>())
         {
             foreach (PlayerColor color in Enum.GetValues<PlayerColor>())
             {
-                string colorName =
-                    color.ToString().ToLowerInvariant();
-
                 string pieceName =
                     type.ToString().ToLowerInvariant();
 
-                string path =
-                    $"res://assets/pieces/{colorName}/{pieceName}.png";
+                // En los packs las carpetas se llaman White y Black.
+                string skinColor = color.ToString();
 
-                Texture2D? texture = LoadTextureIfExists(path);
+                string? pack = color == PlayerColor.White
+                    ? _visualTheme.WhitePack
+                    : _visualTheme.BlackPack;
+
+                Texture2D? texture = null;
+
+                if (pack is not null)
+                {
+                    string path =
+                        $"res://assets/skins/pieces/{pack}/" +
+                        $"{skinColor}/{pieceName}.png";
+
+                    texture = LoadTextureIfExists(path);
+                }
+
+                // Si no existe el sprite temático, usar el clásico.
+                texture ??= LoadTextureIfExists(
+                    $"res://assets/pieces/" +
+                    $"{skinColor.ToLowerInvariant()}/{pieceName}.png");
 
                 if (texture is not null)
+                {
                     _pieceTextures[(type, color)] = texture;
+                }
             }
         }
     }
+
 
     private static Texture2D? LoadTextureIfExists(string path)
     {

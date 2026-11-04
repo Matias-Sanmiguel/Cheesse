@@ -10,6 +10,7 @@ namespace Cheesse.Game.Tests;
 public partial class ReleaseTests : Node
 {
     private int _checks;
+    private const string Settings = "InGameUtilities/UtilityStage/SettingsPopup/";
     private const string Content = "SidePanel/Margin/Content/";
 
     public override async void _Ready()
@@ -21,15 +22,33 @@ public partial class ReleaseTests : Node
             AddChild(root);
             await Frames();
             await Capture("menu");
-            root.GetNode<OptionButton>("Menu/Center/Panel/Margin/Options/TimeControl").Select(2);
+            root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(2);
             root.StartHumanGame();
             Check(root.CurrentGame!.TimeControl == new TimeControl(300, 3), "menu selects 5+3 clock");
-            Check(root.GetNode<Label>(Content + "Clocks/White").Text.Contains("05:00"), "white clock visible");
+            Check(root.GetNode<Label>("InGamePresentation/ArtworkStage/WhiteClock").Text.Contains("05:00"), "white clock visible");
             await WaitUntil(() => root.CurrentGame!.ClockState.WhiteSeconds < 299.9);
             Check(root.CurrentGame.ClockState.WhiteSeconds < 299.9, "live frames consume thinking time");
             Play(root, "e2e4", "e7e5");
-            Check(root.GetNode<RichTextLabel>(Content + "Moves").Text.Contains("e4") && root.GetNode<RichTextLabel>(Content + "Moves").Text.Contains("e5"), "SAN history rendered");
+            Check(root.GetNode<Label>(Content + "MovesScroll/MovesText").Text.Contains("e4") && root.GetNode<Label>(Content + "MovesScroll/MovesText").Text.Contains("e5"), "SAN history rendered");
             await Capture("panel");
+            ClickControl(root, "InGameUtilities/UtilityStage/SettingsButton");
+            await Frames();
+            var popup = root.GetNode<Control>(Settings.TrimEnd('/'));
+            Check(popup.Visible, "settings opens with a real mouse click");
+            foreach (var path in new[] { "Difficulty", "TextFiles/Import", "TextFiles/Export", "EndActions/Resign", "EndActions/Draw", "Claim" })
+            {
+                var rect = root.GetNode<Control>(Settings + path).GetGlobalRect();
+                Check(popup.GetGlobalRect().Encloses(rect), path + " remains inside settings panel: " + rect + " within " + popup.GetGlobalRect());
+            }
+            await Capture("settings");
+            ClickControl(root, Settings + "TextFiles/Import");
+            Check(root.GetNode<FileDialog>("ImportDialog").Visible, "reparented Import button opens file picker by mouse");
+            root.GetNode<FileDialog>("ImportDialog").Hide();
+            ClickControl(root, Settings + "TextFiles/Export");
+            Check(root.GetNode<FileDialog>("ExportDialog").Visible, "reparented Export button opens file picker by mouse");
+            root.GetNode<FileDialog>("ExportDialog").Hide();
+            ClickControl(root, "InGameUtilities/UtilityStage/SettingsButton");
+            await Frames();
             var before = root.CurrentGame;
             Check(!root.ImportGameText("invalid", ".fen") && ReferenceEquals(before, root.CurrentGame), "bad import preserves live game");
             Check(root.ImportGameText("[Result \"1-0\"]\n\n1. e4 e5 1-0", ".pgn"), "PGN imported through game flow");
@@ -49,13 +68,13 @@ public partial class ReleaseTests : Node
             confirmation.EmitSignal(ConfirmationDialog.SignalName.Confirmed);
             Check(root.CurrentGame!.Status == GameStatus.Resigned && root.CurrentGame.Winner == PlayerColor.Black, "resignation ends game");
 
-            root.GetNode<OptionButton>("Menu/Center/Panel/Margin/Options/TimeControl").Select(0);
+            root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(0);
             root.StartHumanGame();
             root.CurrentGame!.ConfigureClock(new TimeControl(600, 5));
             Press(root, "NewGame");
             Check(root.CurrentGame.TimeControl == new TimeControl(600, 5), "new game preserves active time control");
             root.StartStockfishGame();
-            var difficulty = root.GetNode<OptionButton>(Content + "Difficulty");
+            var difficulty = root.GetNode<OptionButton>(Settings + "Difficulty");
             difficulty.Select(2);
             difficulty.EmitSignal(OptionButton.SignalName.ItemSelected, 2L);
             Press(root, "NewGame");
@@ -79,7 +98,7 @@ public partial class ReleaseTests : Node
             await WaitUntil(() => root.CurrentGame.Status == GameStatus.Timeout);
             Check(root.CurrentGame.Winner == PlayerColor.Black && root.GetNode<GameOverOverlay>("GameOverOverlay").Visible, "real countdown expires and displays winner");
             Check(root.ImportGameText("[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/8/8/8/8/8/8/K2R4 b - - 0 1\"]\n[Result \"*\"]\n\n*", ".pgn"), "Fondue analysis imports");
-            root.GetNode<CheckButton>(Content + "Random").ButtonPressed = true;
+            root.GetNode<CheckButton>(Settings + "Random").ButtonPressed = true;
             await Frames();
             Check(!root.IsThinking && !root.AgainstStockfish, "unsupported Fondue engine fails safely");
             Check(root.CurrentGame!.Board.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
@@ -120,7 +139,16 @@ public partial class ReleaseTests : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
     }
 
-    private static void Press(Node root, string name) => root.GetNode<Button>(Content + name).EmitSignal(BaseButton.SignalName.Pressed);
+    private void ClickControl(Node root, string path)
+    {
+        var position = root.GetNode<Control>(path).GetGlobalRect().GetCenter();
+        GetViewport().PushInput(new InputEventMouseButton { Position = position, GlobalPosition = position,
+            ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+        GetViewport().PushInput(new InputEventMouseButton { Position = position, GlobalPosition = position,
+            ButtonIndex = MouseButton.Left, Pressed = false }, true);
+    }
+
+    private static void Press(Node root, string name) => root.GetNode<Button>((name.StartsWith("EndActions/") ? Settings : Content) + name).EmitSignal(BaseButton.SignalName.Pressed);
     private static Square Square(string name) => new(name[0] - 'a', name[1] - '1');
     private void Play(Node root, params string[] moves)
     {

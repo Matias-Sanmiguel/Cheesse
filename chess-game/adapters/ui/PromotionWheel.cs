@@ -97,12 +97,15 @@ public partial class PromotionWheel : Control
 
 			DrawCircle(center, InnerRadius - 2f, new Color("#19171488"));
 
-			var text = "CANCEL";
-			var fontSize = 12;
-			var textWidth = font.GetStringSize(text, HorizontalAlignment.Left, -1, fontSize).X;
-			var textBaseline = (font.GetAscent(fontSize) - font.GetDescent(fontSize)) / 2f;
+			// Chess symbols still need Godot's fallback font: Pixelify Sans has no chess glyphs.
+			var cancelFont = PixelUiSkin.FontFor(UiFontWeight.SemiBold) ?? font;
+			var text = "CANCELAR";
+			var fontSize = 16;
+			var textWidth = cancelFont.GetStringSize(text, HorizontalAlignment.Left, -1, fontSize).X;
+			var textBaseline = (cancelFont.GetAscent(fontSize) - cancelFont.GetDescent(fontSize)) / 2f;
 
-			DrawString(font, center + new Vector2(-textWidth / 2f, textBaseline), text, HorizontalAlignment.Left, -1, fontSize, Ivory);
+			DrawString(cancelFont, center + new Vector2(-textWidth / 2f, textBaseline),
+                text, HorizontalAlignment.Left, -1, fontSize, Ivory);
 	}
 
 

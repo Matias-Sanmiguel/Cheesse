@@ -7,6 +7,7 @@ using Cheesse.Game.Adapters.Input;
 using Cheesse.Game.Adapters.Persist;
 using Cheesse.Game.Adapters.Ui;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 
 namespace Cheesse.Game.Adapters.Infra;
 
@@ -18,6 +19,7 @@ public partial class GameCompositionRoot : Node
     private MenuView _menu = null!;
     private BoardView _board = null!;
     private SidePanelView _panel = null!;
+    private InGamePresentationView _ingame = null!;
     private InputAdapter _input = null!;
     private PromotionDialog _promotionDialog = null!;
     private GameOverOverlay _gameOver = null!;
@@ -43,6 +45,20 @@ public partial class GameCompositionRoot : Node
         _menu = GetNode<MenuView>("Menu");
         _board = GetNode<BoardView>("Board");
         _panel = GetNode<SidePanelView>("SidePanel");
+
+        // Background, frame, player cards and utilities live behind BoardView.
+        // BoardView itself and all chess rules remain unchanged.
+        _ingame = new InGamePresentationView
+        {
+            Name = "InGamePresentation",
+            Visible = false
+        };
+        AddChild(_ingame);
+        MoveChild(_ingame, 0);
+        _ingame.Configure(_board, _panel, _menu);
+        // Utility popups are above the sidebar but below the main menu/game-over.
+        _ingame.InstallForeground(this, _menu);
+
         _input = GetNode<InputAdapter>("Input");
         _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
         _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
@@ -76,12 +92,12 @@ public partial class GameCompositionRoot : Node
         if (_menu.Visible || HasModal || game.Caretaker.CanRedo || _engineFailed)
         {
             game.PauseClock();
-            _panel.RefreshClock();
+            _ingame.RefreshClocks();
             return;
         }
         game.ResumeClock();
         game.Tick();
-        _panel.RefreshClock();
+        _ingame.RefreshClocks();
         if (!game.State.AcceptsMoves)
         {
             if (IsThinking) CancelSearch();
@@ -109,12 +125,14 @@ public partial class GameCompositionRoot : Node
 
     private void StartNewGame(bool againstStockfish, bool fromMenu = false)
     {
+        if (fromMenu || CurrentGame is null) _repository.Theme = _menu.CreateVisualTheme();
         var game = new ChessGame(_bus, _repository, _clock);
         game.ConfigureClock(fromMenu || CurrentGame is null ? _menu.SelectedTimeControl : CurrentGame.TimeControl);
         _repository.AgainstStockfish = againstStockfish;
         if (fromMenu || CurrentGame is null) _repository.EngineElo = _menu.SelectedEngineElo;
         EnterGame(game);
     }
+
 
     private void ContinueGame()
     {
@@ -136,11 +154,15 @@ public partial class GameCompositionRoot : Node
         _engineEnabled = _repository.AgainstStockfish;
         _engineFailed = false;
         _board.Attach(game, _bus);
+        _board.SetVisualTheme(_repository.Theme);
+        _ingame.Attach(game);
         _panel.Attach(game, game.Caretaker, _bus, AgainstStockfish, () => _repository.HasSave);
         _panel.SetDifficulty(_repository.EngineElo);
         _input.Attach(game, _board, _promotionDialog, ApplyMove,
             () => game.State.AcceptsMoves && !HasModal && !IsThinking && (!AgainstStockfish || game.Turn == PlayerColor.White));
         _menu.Hide();
+        _ingame.Show();
+        _ingame.ShowUtilities(true);
         _board.Show();
         _panel.Show();
         game.ResumeClock();
@@ -280,6 +302,8 @@ public partial class GameCompositionRoot : Node
         _input.ClearSelection();
         _board.Hide();
         _panel.Hide();
+        _ingame.Hide();
+        _ingame.ShowUtilities(false);
         _menu.SetMessage("");
         _menu.SetContinueAvailable(_repository.HasSave);
         _menu.Show();

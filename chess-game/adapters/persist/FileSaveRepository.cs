@@ -4,6 +4,7 @@ using Chess.Core.Model;
 using Chess.Core.Ports;
 using Chess.Core.Services;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 using FileAccess = Godot.FileAccess;
 
 namespace Cheesse.Game.Adapters.Persist;
@@ -23,6 +24,7 @@ public sealed class FileSaveRepository : IGameRepository
     public bool HasSave => FileAccess.FileExists(SavePath);
 
     // UI mode belongs to the adapter; the chess domain remains independent.
+    public VisualTheme Theme { get; set; } = VisualTheme.Classic;
     public bool AgainstStockfish { get; set; }
     public int EngineElo { get; set; } = 1800;
     public bool AgainstRandom { get => AgainstStockfish; set => AgainstStockfish = value; }
@@ -33,7 +35,7 @@ public sealed class FileSaveRepository : IGameRepository
         game.Tick();
         var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game),
             AgainstStockfish, AgainstStockfish, EngineElo, game.TimeControl, game.ClockState,
-            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray());
+            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray(), Theme);
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -120,6 +122,7 @@ public sealed class FileSaveRepository : IGameRepository
             game.RestoreFrom(restored);
             AgainstStockfish = data.AgainstStockfish ?? data.AgainstRandom;
             EngineElo = data.Version == 1 ? 1800 : data.EngineElo;
+            Theme = VisualThemeCatalog.Normalize(data.Theme);
             return true;
         }
         catch (Exception error) when (error is JsonException or FormatException or
@@ -133,5 +136,5 @@ public sealed class FileSaveRepository : IGameRepository
     private sealed record SaveData(int Version, string? Fen, string? Pgn, bool AgainstRandom = false,
         bool? AgainstStockfish = null, int EngineElo = 1800, TimeControl? TimeControl = null,
         ClockSnapshot? Clock = null, GameStatus? Status = null, PlayerColor? Winner = null,
-        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null);
+        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null, VisualTheme? Theme = null);
 }

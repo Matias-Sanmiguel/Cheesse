@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using Chess.Core.Model;
 using Chess.Core.Services;
@@ -28,11 +27,12 @@ public partial class SidePanelView : PanelContainer
     private GameCaretaker? _caretaker;
     private GodotEventBus? _bus;
     private Func<bool>? _hasSave;
-    private Label _turn = null!, _status = null!, _message = null!, _whiteClock = null!, _blackClock = null!;
+    private Label _turn = null!, _status = null!, _message = null!;
     private Button _undo = null!, _redo = null!, _load = null!, _resign = null!, _draw = null!, _decline = null!, _claim = null!;
     private CheckButton _random = null!;
     private OptionButton _difficulty = null!;
-    private RichTextLabel _moves = null!;
+    private Label _moves = null!, _help = null!;
+    private TextureRect _statusDot = null!;
     private int _renderedCount = -1;
     private bool _againstStockfish, _thinking;
 
@@ -42,14 +42,12 @@ public partial class SidePanelView : PanelContainer
         _turn = GetNode<Label>(content + "Turn");
         _status = GetNode<Label>(content + "Status");
         _message = GetNode<Label>(content + "Message");
-        _whiteClock = GetNode<Label>(content + "Clocks/White");
-        _blackClock = GetNode<Label>(content + "Clocks/Black");
+        _help = GetNode<Label>(content + "Help");
         _undo = GetNode<Button>(content + "History/Undo");
         _redo = GetNode<Button>(content + "History/Redo");
         _load = GetNode<Button>(content + "Files/Load");
         _random = GetNode<CheckButton>(content + "Random");
         _difficulty = GetNode<OptionButton>(content + "Difficulty");
-        _moves = GetNode<RichTextLabel>(content + "Moves");
         _resign = GetNode<Button>(content + "EndActions/Resign");
         _draw = GetNode<Button>(content + "EndActions/Draw");
         _decline = GetNode<Button>(content + "EndActions/Decline");
@@ -69,6 +67,9 @@ public partial class SidePanelView : PanelContainer
         _random.Toggled += enabled => RandomChanged?.Invoke(enabled);
         foreach (var label in MenuView.EngineLabels) _difficulty.AddItem(label);
         _difficulty.ItemSelected += index => DifficultyChanged?.Invoke(MenuView.EngineElos[(int)index]);
+        InGameUiSkin.SkinSidebar(this);
+        _statusDot = GetNode<TextureRect>(content + "StatusDot");
+        _moves = GetNode<Label>(content + "MovesScroll/MovesText");
     }
 
     public void Attach(ChessGame game, GameCaretaker caretaker, GodotEventBus bus,
@@ -82,7 +83,7 @@ public partial class SidePanelView : PanelContainer
         _bus.StateChanged += Refresh;
         _renderedCount = -1;
         SetRandomOpponent(againstRandom);
-        _message.Text = "";
+        SetMessage("");
         Refresh();
     }
     public override void _ExitTree() { if (_bus is not null) _bus.StateChanged -= Refresh; }
@@ -90,35 +91,32 @@ public partial class SidePanelView : PanelContainer
     {
         _againstStockfish = enabled;
         _random.SetPressedNoSignal(enabled);
+        _random.Modulate = enabled ? Colors.White : new Color("a89b83");
         _difficulty.Disabled = !enabled;
         Refresh();
     }
     public void SetDifficulty(int elo) => _difficulty.Select(Math.Max(0, Array.IndexOf(MenuView.EngineElos, elo)));
     public void SetThinking(bool thinking) { _thinking = thinking; Refresh(); }
-    public void SetMessage(string message) => _message.Text = message;
-
-    public void RefreshClock()
+    public void SetMessage(string message)
     {
-        if (_game is null) return;
-        var state = _game.ClockState;
-        _whiteClock.Text = "Blancas  " + FormatTime(_game.TimeControl, state.WhiteSeconds);
-        _blackClock.Text = "Negras  " + FormatTime(_game.TimeControl, state.BlackSeconds);
-        _whiteClock.Modulate = _game.Turn == PlayerColor.White ? Colors.White : new Color(0.72f, 0.8f, 0.76f);
-        _blackClock.Modulate = _game.Turn == PlayerColor.Black ? Colors.White : new Color(0.72f, 0.8f, 0.76f);
-    }
-
-    private static string FormatTime(TimeControl control, double seconds)
-    {
-        if (control.InitialSeconds == 0) return "Sin reloj";
-        var whole = Math.Max(0, (int)Math.Ceiling(seconds));
-        return (whole / 60).ToString("00", CultureInfo.InvariantCulture) + ":" + (whole % 60).ToString("00", CultureInfo.InvariantCulture);
+        _message.Text = message;
+        _message.TooltipText = message;
+        _message.ClipText = true;
+        _help.Visible = string.IsNullOrWhiteSpace(message);
+        _message.Visible = !_help.Visible;
     }
 
     private void Refresh()
     {
         if (_game is null || _caretaker is null) return;
-        _turn.Text = _game.Turn == PlayerColor.White ? "Turno: blancas" : "Turno: negras";
-        _status.Text = _thinking ? "Stockfish está pensando…" : StatusText(_game.Status);
+        _turn.Text = _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
+        _status.Text = _thinking ? "STOCKFISH PENSANDO…" : StatusText(_game.Status).ToUpperInvariant();
+        _statusDot.Modulate = _game.Status switch
+        {
+            GameStatus.Ongoing => new Color("5abf69"),
+            GameStatus.Check => new Color("e6af47"),
+            _ => new Color("c95859")
+        };
         _undo.Disabled = !_caretaker.CanUndo;
         _redo.Disabled = !_caretaker.CanRedo;
         _load.Disabled = _hasSave?.Invoke() != true;
@@ -132,7 +130,6 @@ public partial class SidePanelView : PanelContainer
             (_game.CanClaimDraw || _game.ClaimableDrawMoves().Count > 0);
         _claim.Disabled = !canClaim;
         _claim.TooltipText = "Triple repetición o 50 movimientos sin capturas ni movimientos de peón.";
-        RefreshClock();
         if (_renderedCount != _game.History.Count)
         {
             _renderedCount = _game.History.Count;

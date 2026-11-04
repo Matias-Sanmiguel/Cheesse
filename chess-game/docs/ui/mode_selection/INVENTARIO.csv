@@ -1,0 +1,20 @@
+archivo,ancho,alto,uso
+assets/ui/mode_selection/components/card_base_96x112.png,96,112,Tarjeta base sin ilustracion ni texto
+assets/ui/mode_selection/components/title_plaque_78x18.png,78,18,Plaqueta para titular desde Godot
+assets/ui/mode_selection/components/cta_available_76x10.png,76,10,Boton de estado de tarjeta (texto por Godot)
+assets/ui/mode_selection/components/cta_locked_76x10.png,76,10,Boton de estado de tarjeta (texto por Godot)
+assets/ui/mode_selection/components/cta_hover_76x10.png,76,10,Boton de estado de tarjeta (texto por Godot)
+assets/ui/mode_selection/components/cta_pressed_76x10.png,76,10,Boton de estado de tarjeta (texto por Godot)
+assets/ui/mode_selection/components/focus_hover_96x112.png,96,112,Borde transparente para hover
+assets/ui/mode_selection/components/focus_selected_96x112.png,96,112,Borde transparente para seleccion
+assets/ui/mode_selection/components/lock_icon_16x16.png,16,16,Candado para modos bloqueados
+assets/ui/mode_selection/components/classic_compact_64x80.png,64,80,"Tarjeta de modo clasico pequena, sin redimensionar"
+assets/ui/mode_selection/illustrations/classic_64x64.png,64,64,Ilustracion de modo a 64x64 reales
+assets/ui/mode_selection/illustrations/picada_64x64.png,64,64,Ilustracion de modo a 64x64 reales
+assets/ui/mode_selection/illustrations/swiss_64x64.png,64,64,Ilustracion de modo a 64x64 reales
+assets/ui/mode_selection/illustrations/fondue_64x64.png,64,64,Ilustracion de modo a 64x64 reales
+assets/ui/mode_selection/cards/classic_96x112.png,96,112,Tarjeta terminada para mostrar sin montaje
+assets/ui/mode_selection/cards/picada_96x112.png,96,112,Tarjeta terminada para mostrar sin montaje
+assets/ui/mode_selection/cards/swiss_96x112.png,96,112,Tarjeta terminada para mostrar sin montaje
+assets/ui/mode_selection/cards/fondue_96x112.png,96,112,Tarjeta terminada para mostrar sin montaje
+assets/ui/mode_selection/components/description_tooltip_160x40.png,160,40,Panel sin texto; descripcion dinamica de modo

@@ -5,6 +5,7 @@ using Chess.Core.Ports;
 using Chess.Core.Services;
 using Cheesse.Game.Adapters.Persist;
 using Godot;
+using Cheesse.Game.Adapters.Appearance;
 using FileAccess = Godot.FileAccess;
 
 namespace Cheesse.Game.Tests;
@@ -65,6 +66,7 @@ public partial class PersistenceTests : Node
 
     private void RunCases(FileSaveRepository repository)
     {
+        Legacy_themed_save_keeps_appearance_without_v2_metadata();
         Fondue_mode_and_melted_king_survive_save_load(repository);
         Claimed_draw_results_roundtrip(repository);
         Invalid_positions_in_edited_saves_are_rejected(repository);
@@ -94,6 +96,29 @@ public partial class PersistenceTests : Node
         SaveFailureKeepsPreviousFile(repository);
         Check(!DirAccess.GetFilesAt("user://").Any(name =>
             name.StartsWith("cheesse-save.txt.") && name.EndsWith(".tmp")), "temporary files cleaned");
+    }
+
+    private void Legacy_themed_save_keeps_appearance_without_v2_metadata()
+    {
+        var oldSave = new
+        {
+            Version = 1,
+            Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            Pgn = "1. e4 *",
+            AgainstRandom = true,
+            Theme = new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni")
+        };
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+            file.StoreString(JsonSerializer.Serialize(oldSave));
+        var repository = new FileSaveRepository();
+        var game = Create(repository);
+        Check(repository.Load(game), "Nico's v1 themed save loads without v2 clock metadata");
+        Check(FenSerializer.Write(game.Board) == oldSave.Fen && game.History.Count == 1,
+            "legacy themed save preserves the actual position and history");
+        Check(repository.Theme == oldSave.Theme, "legacy save preserves independent visual teams");
+        Check(game.TimeControl == TimeControl.Unlimited && repository.AgainstStockfish,
+            "legacy AI save defaults to unlimited time and migrated opponent");
+        Check(game.Undo(), "legacy themed save retains Undo after upgrade");
     }
 
     private void Fondue_mode_and_melted_king_survive_save_load(FileSaveRepository repository)
@@ -152,6 +177,7 @@ public partial class PersistenceTests : Node
     private void Clock_and_outcome_survive_save_and_restart(FileSaveRepository repository)
     {
         var clock = new MutableClock();
+        repository.Theme = new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni");
         var source = new ChessGame(new Events(), repository, clock);
         source.ConfigureClock(new TimeControl(300, 3));
         clock.Seconds = 10;
@@ -163,7 +189,10 @@ public partial class PersistenceTests : Node
         repository.EngineElo = 2200;
         repository.Save(source);
         var target = new ChessGame(new Events(), repository, new MutableClock { Seconds = 10000 });
+        repository.Theme = VisualTheme.Classic;
         Check(repository.Load(target), "timed game loads");
+        Check(repository.Theme == new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
+            "visual theme survives alongside real clocks and Stockfish settings");
         Check(target.TimeControl == new TimeControl(300, 3), "time control restored");
         Check(Math.Abs(target.ClockState.WhiteSeconds - 293) < 0.01 && Math.Abs(target.ClockState.BlackSeconds - 295) < 0.01, "remaining clocks restored without offline time");
         Check(repository.AgainstStockfish && repository.EngineElo == 2200, "Stockfish settings restored");
@@ -175,6 +204,7 @@ public partial class PersistenceTests : Node
         Check(!source.ClockState.Running, "finished clock stays paused");
         repository.AgainstStockfish = false;
         repository.EngineElo = 1800;
+        repository.Theme = VisualTheme.Classic;
     }
 
     private void Text_import_and_export_preserve_results(FileSaveRepository repository)
