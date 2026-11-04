@@ -33,7 +33,7 @@ public partial class BoardView : Node2D
     private readonly HashSet<Square> _slidingDestinations = new();
     private int _slideSpriteSerial;
 
-    public bool IsMoveAnimating => _pieceSlideTween?.IsRunning() == true;
+    public bool IsMoveAnimating => _slidingSprites.Count > 0;
 
     private readonly Dictionary<(PieceType, PlayerColor), Texture2D>
         _pieceTextures = new();
