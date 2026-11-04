@@ -226,10 +226,10 @@ public partial class MenuView : Control
             var backing = new ColorRect
             {
                 Name = "Square" + i,
-                // Classic: the original green/ivory board, not the yellow
-                // picnic board used by Picada when a themed skin is selected.
+                // Use the actual classic board palette, not the previous
+                // green placeholder. Keeping the same source prevents drift.
                 Color = (x + y) % 2 == 0
-                    ? new Color("eeeed2") : new Color("769656"),
+                    ? BoardView.LightSquare : BoardView.DarkSquare,
                 Position = new Vector2(76 + x * 64, 139 + y * 64),
                 Size = new Vector2(64, 64),
                 MouseFilter = Control.MouseFilterEnum.Ignore
@@ -300,10 +300,10 @@ public partial class MenuView : Control
         form.AddChild(_appearance);
 
         _classicStyleCard = MakeStyleCard("ClassicStyle", "CLASICO", "classic", 0,
-            new Vector2(33, 112), () => { _appearance.Select(0); UpdatePreview(); });
+            new Vector2(41, 112), () => { _appearance.Select(0); UpdatePreview(); });
         form.AddChild(_classicStyleCard);
         _picadaStyleCard = MakeStyleCard("PicadaStyle", "PICADA\nPERSONALIZADA", "picada", 1,
-            new Vector2(355, 112), () => { _appearance.Select(1); UpdatePreview(); });
+            new Vector2(347, 112), () => { _appearance.Select(1); UpdatePreview(); });
         form.AddChild(_picadaStyleCard);
 
         _themeFields = new Control
@@ -393,10 +393,13 @@ public partial class MenuView : Control
             SetupAssets + "cards/" + design + "_idle_73x28.png",
             Vector2.Zero, new Vector2(292, 112), 4);
         button.AddChild(cardArt);
+        // The art contains its own illustration on the left. Keep both
+        // captions entirely inside the text area and truly centered vertically.
         var caption = PixelUiSkin.Label("Caption", label,
-            new Vector2(91, 5), new Vector2(188, 100),
-            index == 0 ? 24 : 21, pixel: true,
+            new Vector2(112, 0), new Vector2(164, 112),
+            index == 0 ? 24 : 20, pixel: true,
             alignment: HorizontalAlignment.Center, weight: UiFontWeight.SemiBold);
+        caption.AutowrapMode = TextServer.AutowrapMode.Off;
         button.AddChild(caption);
 
         void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
