@@ -75,8 +75,12 @@ public partial class MenuTests : Node
                 "start button uses original pixel-art texture");
             Check(root.GetNode<Button>(Home + "NewGame").GetThemeStylebox("focus") is StyleBoxEmpty,
                 "keyboard focus does not look pressed");
-            Check(root.GetNode<SidePanelView>("SidePanel").GetThemeStylebox("panel") is StyleBoxTexture,
-                "HUD is styled with the pixel art parchment");
+            Check(root.GetNode<SidePanelView>("SidePanel").HasNode("Margin/Content/Parchment"),
+                "in-game HUD uses the supplied independent parchment artwork");
+            Check(ResourceLoader.Exists("res://assets/ingame/02_board_ui/frame_board_422x422.png"),
+                "original wooden board frame is available");
+            Check(ResourceLoader.Exists("res://assets/ingame/03_sidebar/history_box_270x92.png"),
+                "original history panel artwork is available");
 
             Press(root, Home + "NewGame");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "Jugar opens setup directly");

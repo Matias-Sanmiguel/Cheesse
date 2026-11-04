@@ -51,7 +51,7 @@ public partial class MvpTests : Node
             Move(root, "d8", "h4");
             var overlay = root.GetNode<GameOverOverlay>("GameOverOverlay");
             Check(root.CurrentGame!.Status == GameStatus.Checkmate && overlay.Visible, "mouse checkmate opens overlay");
-            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "BLACK WINS", "overlay identifies winner");
+            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANAN NEGRAS", "overlay identifies winner");
             Move(root, "a2", "a3");
             Check(root.CurrentGame.History.Count == 4, "overlay blocks board input");
             await Frames();

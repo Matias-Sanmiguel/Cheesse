@@ -29,10 +29,32 @@ public partial class SidePanelTests : Node
 
             var board = root.GetNode<BoardView>("Board");
             var panel = root.GetNode<SidePanelView>("SidePanel");
-            var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768));
+            var viewport = GetViewportRect().Size;
+            float scale = Mathf.Min(viewport.X / 960f, viewport.Y / 540f);
+            Vector2 offset = (viewport - new Vector2(960, 540) * scale) / 2f;
+            var boardRect = new Rect2(board.GlobalPosition, new Vector2(768, 768) * board.Scale.X);
             var panelRect = panel.GetGlobalRect();
             Check(boardRect.End.X < panelRect.Position.X, "board stays to the left of the panel");
-            Check(boardRect.Position == new Vector2(64, 40), "board centered in left area");
+            Check(board.GlobalPosition.DistanceTo(offset + new Vector2(189, 94) * scale) < 1.5f,
+                "board placed precisely in supplied frame opening");
+            Check(Mathf.Abs(boardRect.Size.X - 384f * scale) < 1.5f,
+                "original chess board scales as one node to the 384px artwork opening");
+            var presentation = root.GetNode<InGamePresentationView>("InGamePresentation");
+            Check(presentation.Visible && presentation.HasNode("ArtworkStage/BoardFrame"),
+                "in-game presentation and wooden frame are rendered");
+            Check(ResourceLoader.Exists("res://assets/ingame/01_background/ingame_picada_1440x900.png"),
+                "16:10 background is imported");
+            Check(ResourceLoader.Exists("res://assets/ingame/01_background/ingame_picada_960x540.png"),
+                "16:9 background is imported");
+            Check(ResourceLoader.Exists("res://assets/ingame/04_buttons/cheese_hover_9slice_48x32.png"),
+                "pixel button hover state is imported");
+            Check(panel.HasNode("Margin/Content/Parchment"),
+                "sidebar uses independent parchment background");
+            Check(panel.GetNode<Button>("Margin/Content/NewGame").GetThemeStylebox("normal") is StyleBoxTexture,
+                "real gameplay button has pixel-art nine-slice style");
+            Check(presentation.GetNode<Button>("ArtworkStage/HelpButton").Visible &&
+                  presentation.GetNode<Button>("ArtworkStage/SoundButton").Visible,
+                "top utility buttons are interactive");
             Check(panelRect.Position.X >= 0 && panelRect.Position.Y >= 0 &&
                 panelRect.End.X <= 1440 && panelRect.End.Y <= 900, "panel fits 1440x900");
             foreach (var name in new[] { "History/Undo", "History/Redo", "Files/Save", "Files/Load", "NewGame", "Random", "Menu" })
@@ -53,8 +75,8 @@ public partial class SidePanelTests : Node
                 image.SavePng("user://pieces-preview.png");
             }
 
-            Check(Text(root, "Turn") == "Turno: blancas", "initial turn text");
-            Check(Text(root, "Status") == "En juego", "initial status text");
+            Check(Text(root, "Turn") == "TURNO: BLANCAS", "initial turn text");
+            Check(Text(root, "Status") == "EN JUEGO", "initial status text");
             Check(Disabled(root, "History/Undo") && Disabled(root, "History/Redo"), "empty history disables both buttons");
             Check(Disabled(root, "Files/Load"), "missing save disables Load");
 
@@ -63,16 +85,16 @@ public partial class SidePanelTests : Node
             bus.StateChanged += () => notifications++;
             Move(root, "e2", "e4");
             Check(notifications > 0, "move notifies the bus");
-            Check(Text(root, "Turn") == "Turno: negras", "turn changes through bus");
+            Check(Text(root, "Turn") == "TURNO: NEGRAS", "turn changes through bus");
             Check(!Disabled(root, "History/Undo") && Disabled(root, "History/Redo"), "move updates history buttons");
             PressPanel(root, "History/Undo");
             Check(root.CurrentGame!.Board.At(Square("e2"))?.Type == PieceType.Pawn &&
                 root.CurrentGame.Board.At(Square("e4")) is null, "Undo button moves pawn back");
-            Check(Text(root, "Turn") == "Turno: blancas", "Undo updates turn");
+            Check(Text(root, "Turn") == "TURNO: BLANCAS", "Undo updates turn");
             Check(Disabled(root, "History/Undo") && !Disabled(root, "History/Redo"), "Undo enables Redo");
             PressPanel(root, "History/Redo");
             Check(root.CurrentGame.Board.At(Square("e4"))?.Type == PieceType.Pawn, "Redo button moves pawn forward");
-            Check(Text(root, "Turn") == "Turno: negras", "Redo updates turn");
+            Check(Text(root, "Turn") == "TURNO: NEGRAS", "Redo updates turn");
             PressPanel(root, "History/Undo");
             Move(root, "d2", "d4");
             Check(Disabled(root, "History/Redo"), "new branch clears Redo");
@@ -85,7 +107,7 @@ public partial class SidePanelTests : Node
             PressPanel(root, "Files/Load");
             Check(ReferenceEquals(root.CurrentGame, openGame), "Load keeps open game instance");
             Check(FenSerializer.Write(root.CurrentGame.Board) == savedFen, "Load button restores saved position");
-            Check(Text(root, "Turn") == "Turno: negras", "Load updates turn");
+            Check(Text(root, "Turn") == "TURNO: NEGRAS", "Load updates turn");
             Check(!Disabled(root, "History/Undo") && Disabled(root, "History/Redo"), "loaded history can Undo with clean Redo");
             PressPanel(root, "NewGame");
             Check(FenSerializer.Write(root.CurrentGame!.Board) == FenSerializer.InitialPosition, "New game resets position");
@@ -93,18 +115,18 @@ public partial class SidePanelTests : Node
 
             SavePosition(root, "k2r4/8/8/8/8/8/8/4K3 b - - 0 1");
             PressPanel(root, "Files/Load");
-            Check(Text(root, "Status") == "En juego" && Text(root, "Turn") == "Turno: negras", "loaded position updates both labels");
+            Check(Text(root, "Status") == "EN JUEGO" && Text(root, "Turn") == "TURNO: NEGRAS", "loaded position updates both labels");
             Move(root, "d8", "e8");
-            Check(Text(root, "Status") == "Jaque" && Text(root, "Turn") == "Turno: blancas", "giving check updates both labels");
+            Check(Text(root, "Status") == "JAQUE" && Text(root, "Turn") == "TURNO: BLANCAS", "giving check updates both labels");
             root.GetNode<Label>(Content + "Status").Text = "pending event";
             bus.Publish(new Chess.Core.Events.CheckRaised(PlayerColor.White));
-            Check(Text(root, "Status") == "Jaque", "domain check event refreshes panel through bus");
+            Check(Text(root, "Status") == "JAQUE", "domain check event refreshes panel through bus");
             Move(root, "e1", "d1");
-            Check(Text(root, "Status") == "En juego" && Text(root, "Turn") == "Turno: negras", "escaping check updates both labels");
+            Check(Text(root, "Status") == "EN JUEGO" && Text(root, "Turn") == "TURNO: NEGRAS", "escaping check updates both labels");
             PressPanel(root, "History/Undo");
-            Check(Text(root, "Status") == "Jaque" && Text(root, "Turn") == "Turno: blancas", "Undo restores check text");
+            Check(Text(root, "Status") == "JAQUE" && Text(root, "Turn") == "TURNO: BLANCAS", "Undo restores check text");
             PressPanel(root, "History/Redo");
-            Check(Text(root, "Status") == "En juego", "Redo clears check text");
+            Check(Text(root, "Status") == "EN JUEGO", "Redo clears check text");
 
             PressPanel(root, "NewGame");
             var toggle = root.GetNode<CheckButton>(Content + "Random");
@@ -138,11 +160,11 @@ public partial class SidePanelTests : Node
 
             SavePosition(root, FenSerializer.InitialPosition, "f2f3", "e7e5", "g2g4", "d8h4");
             PressPanel(root, "Files/Load");
-            Check(Text(root, "Status") == "Jaque mate", "mate appears on panel");
+            Check(Text(root, "Status") == "JAQUE MATE", "mate appears on panel");
             PressPanel(root, "History/Undo");
             Check(root.CurrentGame!.Status == GameStatus.Ongoing, "Undo reopens finished game");
             PressPanel(root, "History/Redo");
-            Check(root.CurrentGame.Status == GameStatus.Checkmate && Text(root, "Status") == "Jaque mate", "Redo restores mate");
+            Check(root.CurrentGame.Status == GameStatus.Checkmate && Text(root, "Status") == "JAQUE MATE", "Redo restores mate");
             PressPanel(root, "History/Undo");
             var beforeFailedLoad = FenSerializer.Write(root.CurrentGame.Board);
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write)) file.StoreString("{");
