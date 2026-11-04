@@ -181,10 +181,28 @@ public partial class MenuTests : Node
                   !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
                 "Picada particles remain on the board long enough to be noticeable");
             await ToSignal(GetTree().CreateTimer(1.25), SceneTreeTimer.SignalName.Timeout);
-            Check(root.GetNode<GameOverOverlay>("GameOverOverlay").Visible &&
-                  root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Reason").Text.Contains("REY AL CENTRO") &&
-                  root.GetNode<TextureRect>("GameOverOverlay/Overlay/Center/Panel/Content/ResultBanner/PicadaCrown").Visible,
-                "Picada wins show a delayed custom victory dialog with the crown icon");
+            var result = root.GetNode<GameOverOverlay>("GameOverOverlay");
+            var resultPanel = root.GetNode<Control>("GameOverOverlay/Overlay/Center/Panel");
+            var modalContent = root.GetNode<Control>("GameOverOverlay/Overlay/Center/Panel/Content");
+            var resultBanner = modalContent.GetNode<TextureRect>("ResultBanner");
+            Check(result.Visible &&
+                  modalContent.GetNode<Label>("Reason").Text == "REY AL CENTRO" &&
+                  modalContent.GetNode<Label>("Title").Text == "GANARON BLANCAS" &&
+                  modalContent.GetNode<Label>("StatValue2").Text == "PICADA",
+                "Picada wins show a correct dynamic winner, reason and mode");
+            Check(resultPanel.Size.IsEqualApprox(new Vector2(864, 776)) &&
+                  resultBanner.Position.IsEqualApprox(new Vector2(48, 0)) &&
+                  resultBanner.Size.IsEqualApprox(new Vector2(768, 256)) &&
+                  modalContent.HasNode("ResultPanel") &&
+                  modalContent.HasNode("WinnerRibbon") &&
+                  modalContent.HasNode("StatsSeparator") &&
+                  modalContent.HasNode("StatFrame0") &&
+                  modalContent.HasNode("StatFrame1") &&
+                  modalContent.HasNode("StatFrame2"),
+                "result modal uses native V2 artwork components at exact x4 size");
+            Check(Mathf.Abs(resultPanel.GlobalPosition.X - (1440 - 864) / 2f) < 1f &&
+                  Mathf.Abs(resultPanel.GlobalPosition.Y - (900 - 776) / 2f) < 1f,
+                "result panel centers in the entire 1440x900 viewport, not board bounds");
             Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/MainMenu");
             Press(root, Home + "Modes");
             Press(root, Modes + "Mode0");
