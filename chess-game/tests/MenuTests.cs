@@ -100,8 +100,15 @@ public partial class MenuTests : Node
                 "unfinished modes are visibly unavailable");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
-                  modePage.HasNode("GameTitle"),
-                "mode selection has its own pixel-art backdrop and navigation");
+                  modePage.HasNode("GameLogo"),
+                "mode selection has its own pixel-art backdrop, compact logo and navigation");
+            var modeLogo = modePage.GetNode<TextureRect>("GameLogo");
+            Check(modeLogo.Position.IsEqualApprox(new Vector2(528, 75)) &&
+                  modeLogo.Size.IsEqualApprox(new Vector2(384, 96)),
+                "mode logo uses the compact 128x32 artwork at x3 scale");
+            Check(modePage.GetNode<Button>("Back").Position.IsEqualApprox(new Vector2(66, 86)) &&
+                  modePage.GetNode<Label>("Heading").Position.Y >= 188,
+                "back button stays in the header and heading is separated from the logo");
             for (int i = 0; i < 4; i++)
             {
                 var card = root.GetNode<Button>(Modes + "Mode" + i);
