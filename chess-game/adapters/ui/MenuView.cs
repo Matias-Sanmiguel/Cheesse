@@ -121,8 +121,8 @@ public partial class MenuView : Control
         _home.AddChild(PixelUiSkin.Image("HomeLogo", "logos/logo_cheese.png",
             new Vector2(336, 56), new Vector2(768, 256), 4));
 
-        // Keep only the four primary actions from the supplied visual reference.
-        // The existing save continues to be available from the setup screen.
+        // Single entry point for a new game: Home -> Modes -> Setup.
+        // Saves are still resumed from the setup screen.
         var navigation = new Control
         {
             Name = "Navigation",
@@ -136,16 +136,13 @@ public partial class MenuView : Control
         const float width = 580f;
         const float height = 82f;
         navigation.AddChild(PixelUiSkin.Button("NewGame", "JUGAR",
-            new Vector2(left, 372), new Vector2(width, height),
-            () => OpenSetup(Page.Home), fontSize: 44));
-        navigation.AddChild(PixelUiSkin.Button("Modes", "MODOS",
-            new Vector2(left, 476), new Vector2(width, height),
+            new Vector2(left, 416), new Vector2(width, height),
             () => ShowPage(Page.Modes), fontSize: 44));
         navigation.AddChild(PixelUiSkin.Button("Settings", "CONFIGURACION",
-            new Vector2(left, 580), new Vector2(width, height),
+            new Vector2(left, 536), new Vector2(width, height),
             () => ShowPage(Page.Settings), fontSize: 43));
         navigation.AddChild(PixelUiSkin.Button("Exit", "SALIR",
-            new Vector2(left, 684), new Vector2(width, height),
+            new Vector2(left, 656), new Vector2(width, height),
             () => GetTree().Quit(), fontSize: 44));
 
         // Empty in the normal state; used only for recoverable loading errors.
