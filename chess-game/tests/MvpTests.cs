@@ -37,10 +37,20 @@ public partial class MvpTests : Node
             Move(root, "e2", "e5");
             Check(root.CurrentGame!.History.Count == 0, "illegal mouse move preserves position");
             Move(root, "e2", "e4");
+            var animatedBoard = root.GetNode<BoardView>("Board");
+            var slidingPawn = animatedBoard.GetChildren().OfType<Sprite2D>()
+                .FirstOrDefault(piece => piece.Name.ToString().StartsWith("SlidingPiece"));
+            Check(animatedBoard.IsMoveAnimating && slidingPawn is not null &&
+                  slidingPawn.Position.IsEqualApprox(new Vector2(4 * 96 + 48, 6 * 96 + 48)),
+                "a legal move starts an animated pawn at its original square");
             Move(root, "e7", "e5");
             Check(root.CurrentGame.History.Count == 2, "mouse plays both sides through commands");
             Keypress(Key.Z, ctrl: true);
             Check(root.CurrentGame.History.Count == 1, "Ctrl+Z undoes a move");
+            Check(animatedBoard.IsMoveAnimating &&
+                  animatedBoard.GetChildren().OfType<Sprite2D>()
+                      .Any(piece => piece.Name.ToString().StartsWith("SlidingPiece") && piece.Visible),
+                "undo animates the piece sliding back without changing the chess rules");
             Press(root, Panel + "History/Redo");
             Check(root.CurrentGame.History.Count == 2, "panel redoes keyboard undo");
 
