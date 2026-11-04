@@ -5,6 +5,10 @@ using Godot;
 
 namespace Cheesse.Game.Adapters.Ui;
 
+/// <summary>
+/// Interactive sidebar that uses the original in-game pixel art resources.
+/// Existing event contracts are unchanged: game actions still go through the composition root.
+/// </summary>
 public partial class SidePanelView : PanelContainer
 {
     public event Action? UndoRequested;
@@ -21,7 +25,10 @@ public partial class SidePanelView : PanelContainer
     private Func<bool>? _hasSave;
     private Label _turn = null!;
     private Label _status = null!;
+    private TextureRect _statusDot = null!;
     private Label _message = null!;
+    private Label _help = null!;
+    private Label _moves = null!;
     private Button _undo = null!;
     private Button _redo = null!;
     private Button _load = null!;
@@ -33,6 +40,7 @@ public partial class SidePanelView : PanelContainer
         _turn = GetNode<Label>(content + "Turn");
         _status = GetNode<Label>(content + "Status");
         _message = GetNode<Label>(content + "Message");
+        _help = GetNode<Label>(content + "Help");
         _undo = GetNode<Button>(content + "History/Undo");
         _redo = GetNode<Button>(content + "History/Redo");
         _load = GetNode<Button>(content + "Files/Load");
@@ -44,6 +52,10 @@ public partial class SidePanelView : PanelContainer
         GetNode<Button>(content + "NewGame").Pressed += () => NewGameRequested?.Invoke();
         GetNode<Button>(content + "Menu").Pressed += () => MenuRequested?.Invoke();
         _random.Toggled += enabled => RandomChanged?.Invoke(enabled);
+
+        InGameUiSkin.SkinSidebar(this);
+        _statusDot = GetNode<TextureRect>(content + "StatusDot");
+        _moves = GetNode<Label>(content + "MovesScroll/MovesText");
     }
 
     public void Attach(ChessGame game, GameCaretaker caretaker, GodotEventBus bus,
@@ -56,7 +68,7 @@ public partial class SidePanelView : PanelContainer
         _hasSave = hasSave;
         _bus.StateChanged += Refresh;
         SetRandomOpponent(againstRandom);
-        _message.Text = "";
+        SetMessage("");
         Refresh();
     }
 
@@ -65,27 +77,62 @@ public partial class SidePanelView : PanelContainer
         if (_bus is not null) _bus.StateChanged -= Refresh;
     }
 
-    public void SetRandomOpponent(bool enabled) => _random.SetPressedNoSignal(enabled);
+    public void SetRandomOpponent(bool enabled)
+    {
+        _random.SetPressedNoSignal(enabled);
+        _random.Modulate = enabled ? Colors.White : new Color("a89b83");
+    }
 
-    public void SetMessage(string message) => _message.Text = message;
+    public void SetMessage(string message)
+    {
+        _message.Text = message;
+        _help.Visible = string.IsNullOrWhiteSpace(message);
+        _message.Visible = !_help.Visible;
+    }
 
     private void Refresh()
     {
         if (_game is null || _caretaker is null) return;
-        _turn.Text = _game.Turn == PlayerColor.White ? "Turno: blancas" : "Turno: negras";
+        _turn.Text = _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
         _status.Text = _game.Status switch
         {
-            GameStatus.Ongoing => "En juego",
-            GameStatus.Check => "Jaque",
-            GameStatus.Checkmate => "Jaque mate",
-            GameStatus.Stalemate => "Tablas por ahogado",
-            GameStatus.DrawByFiftyMove => "Tablas por 50 movimientos",
-            GameStatus.DrawByRepetition => "Tablas por repetici\u00f3n",
-            GameStatus.DrawByInsufficientMaterial => "Tablas por material insuficiente",
-            _ => _game.Status.ToString(),
+            GameStatus.Ongoing => "EN JUEGO",
+            GameStatus.Check => "JAQUE",
+            GameStatus.Checkmate => "JAQUE MATE",
+            GameStatus.Stalemate => "TABLAS POR AHOGADO",
+            GameStatus.DrawByFiftyMove => "TABLAS: 50 MOVIMIENTOS",
+            GameStatus.DrawByRepetition => "TABLAS: REPETICION",
+            GameStatus.DrawByInsufficientMaterial => "TABLAS: MATERIAL",
+            _ => _game.Status.ToString().ToUpperInvariant(),
         };
+
+        _statusDot.Modulate = _game.Status switch
+        {
+            GameStatus.Ongoing => new Color("5abf69"),
+            GameStatus.Check => new Color("e6af47"),
+            _ => new Color("c95859")
+        };
+
         _undo.Disabled = !_caretaker.CanUndo;
         _redo.Disabled = !_caretaker.CanRedo;
         _load.Disabled = _hasSave?.Invoke() != true;
+        _moves.Text = MovesText(_game.History);
     }
+
+    private static string MovesText(IReadOnlyList<Move> history)
+    {
+        if (history.Count == 0) return "TODAVIA NO HAY JUGADAS";
+        var rows = new List<string>();
+        int first = Math.Max(0, history.Count - 16);
+        first -= first % 2;
+        for (int i = first; i < history.Count; i += 2)
+        {
+            string black = i + 1 < history.Count ? "     " + Print(history[i + 1]) : "";
+            rows.Add($"{i / 2 + 1}.  {Print(history[i])}{black}");
+        }
+        return string.Join("\n", rows);
+    }
+
+    private static string Print(Move move) =>
+        $"{(char)('a' + move.From.File)}{move.From.Rank + 1}-{(char)('a' + move.To.File)}{move.To.Rank + 1}";
 }

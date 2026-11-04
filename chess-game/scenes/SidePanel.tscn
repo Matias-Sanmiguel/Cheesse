@@ -2,118 +2,177 @@
 
 [ext_resource type="Script" path="res://adapters/ui/SidePanelView.cs" id="1_panel"]
 
-[sub_resource type="StyleBoxFlat" id="PanelStyle"]
-bg_color = Color(0.09, 0.13, 0.15, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.27, 0.35, 0.35, 1)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_left = 14
-corner_radius_bottom_right = 14
+[sub_resource type="StyleBoxEmpty" id="BlankPanel"]
 
 [node name="SidePanel" type="PanelContainer"]
-offset_left = 896.0
-offset_top = 40.0
-offset_right = 1376.0
-offset_bottom = 860.0
-theme_override_styles/panel = SubResource("PanelStyle")
+offset_left = 1080.0
+offset_top = 42.0
+offset_right = 1420.0
+offset_bottom = 850.0
 script = ExtResource("1_panel")
+theme_override_styles/panel = SubResource("BlankPanel")
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_bottom = 0
 
-[node name="Content" type="VBoxContainer" parent="Margin"]
+[node name="Content" type="Control" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+custom_minimum_size = Vector2(340, 808)
+mouse_filter = 1
 
 [node name="Title" type="Label" parent="Margin/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Cheesse"
+offset_left = 63.0
+offset_top = -4.0
+offset_right = 243.0
+offset_bottom = 21.0
+text = "CHEESSE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Mode" type="Label" parent="Margin/Content"]
+offset_left = 61.0
+offset_top = 55.0
+offset_right = 266.0
+offset_bottom = 81.0
+text = "MODO: CLASICO"
+vertical_alignment = 1
 
 [node name="Turn" type="Label" parent="Margin/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Turno: blancas"
+offset_left = 61.0
+offset_top = 92.0
+offset_right = 267.0
+offset_bottom = 117.0
+text = "TURNO: BLANCAS"
+vertical_alignment = 1
 
 [node name="Status" type="Label" parent="Margin/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "En juego"
-autowrap_mode = 2
+offset_left = 35.0
+offset_top = 122.0
+offset_right = 272.0
+offset_bottom = 139.0
+text = "EN JUEGO"
+vertical_alignment = 1
+
+[node name="ActionsHeading" type="Label" parent="Margin/Content"]
+offset_left = 95.0
+offset_top = 140.0
+offset_right = 211.0
+offset_bottom = 156.0
+text = "ACCIONES"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Separator" type="HSeparator" parent="Margin/Content"]
-layout_mode = 2
+offset_left = 18.0
+offset_top = 143.0
+offset_right = 288.0
+offset_bottom = 145.0
+visible = false
 
-[node name="History" type="HBoxContainer" parent="Margin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 12
+[node name="History" type="Control" parent="Margin/Content"]
+offset_left = 18.0
+offset_top = 157.0
+offset_right = 288.0
+offset_bottom = 188.0
 
 [node name="Undo" type="Button" parent="Margin/Content/History"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-size_flags_horizontal = 3
-disabled = true
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 130.0
+offset_bottom = 29.0
 text = "Deshacer"
+disabled = true
 
 [node name="Redo" type="Button" parent="Margin/Content/History"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-size_flags_horizontal = 3
-disabled = true
+offset_left = 140.0
+offset_top = 0.0
+offset_right = 270.0
+offset_bottom = 29.0
 text = "Rehacer"
+disabled = true
 
-[node name="Files" type="HBoxContainer" parent="Margin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 12
+[node name="Files" type="Control" parent="Margin/Content"]
+offset_left = 18.0
+offset_top = 191.0
+offset_right = 288.0
+offset_bottom = 222.0
 
 [node name="Save" type="Button" parent="Margin/Content/Files"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-size_flags_horizontal = 3
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 130.0
+offset_bottom = 29.0
 text = "Guardar"
 
 [node name="Load" type="Button" parent="Margin/Content/Files"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-size_flags_horizontal = 3
-disabled = true
+offset_left = 140.0
+offset_top = 0.0
+offset_right = 270.0
+offset_bottom = 29.0
 text = "Cargar"
+disabled = true
 
 [node name="NewGame" type="Button" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
+offset_left = 18.0
+offset_top = 228.0
+offset_right = 288.0
+offset_bottom = 261.0
 text = "Nueva partida"
 
 [node name="Random" type="CheckButton" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 36)
-layout_mode = 2
-text = "Negras aleatorias"
+offset_left = 262.0
+offset_top = 94.0
+offset_right = 286.0
+offset_bottom = 118.0
+text = ""
+tooltip_text = "Negras aleatorias"
+focus_mode = 2
 
-[node name="Spacer" type="Control" parent="Margin/Content"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
+[node name="MovesHeading" type="Label" parent="Margin/Content"]
+offset_left = 62.0
+offset_top = 265.0
+offset_right = 244.0
+offset_bottom = 285.0
+text = "HISTORIAL DE JUGADAS"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="Message" type="Label" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-autowrap_mode = 2
+[node name="MovesScroll" type="ScrollContainer" parent="Margin/Content"]
+offset_left = 30.0
+offset_top = 294.0
+offset_right = 278.0
+offset_bottom = 366.0
+horizontal_scroll_mode = 0
+
+[node name="MovesText" type="Label" parent="Margin/Content/MovesScroll"]
+custom_minimum_size = Vector2(209, 20)
+text = "TODAVIA NO HAY JUGADAS"
+autowrap_mode = 0
 
 [node name="Menu" type="Button" parent="Margin/Content"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-text = "Menú principal"
+offset_left = 18.0
+offset_top = 391.0
+offset_right = 288.0
+offset_bottom = 424.0
+text = "Menu principal"
+
+[node name="Message" type="Label" parent="Margin/Content"]
+offset_left = 18.0
+offset_top = 428.0
+offset_right = 288.0
+offset_bottom = 446.0
+text = ""
+visible = false
+vertical_alignment = 1
 
 [node name="Help" type="Label" parent="Margin/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Elegí una pieza y una casilla de destino.\nGuardá antes de salir al menú."
-autowrap_mode = 2
+offset_left = 18.0
+offset_top = 428.0
+offset_right = 288.0
+offset_bottom = 446.0
+text = "Elegi una pieza para mover."
+vertical_alignment = 1

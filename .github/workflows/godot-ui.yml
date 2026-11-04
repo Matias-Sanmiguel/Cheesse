@@ -1,0 +1,37 @@
+name: Godot .NET UI integration
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  godot-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Godot 4.7.2 .NET
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_x86_64.zip' \
+            -o /tmp/godot-mono.zip
+          unzip -q /tmp/godot-mono.zip -d /tmp/godot-mono
+          GODOT_EXE="$(find /tmp/godot-mono -type f -name 'Godot*linux*x86_64' | head -n 1)"
+          test -n "$GODOT_EXE"
+          chmod +x "$GODOT_EXE"
+          echo "GODOT_BIN=$GODOT_EXE" >> "$GITHUB_ENV"
+      - name: Menu integration
+        run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene MenuTests
+      - name: In-game sidebar integration
+        run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene SidePanelTests
+      - name: Gameplay and input integration
+        run: python chess-game-tests/RunUiTests.py --godot "$GODOT_BIN" --scene MvpTests
