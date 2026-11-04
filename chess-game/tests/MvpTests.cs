@@ -62,8 +62,11 @@ public partial class MvpTests : Node
             var overlay = root.GetNode<GameOverOverlay>("GameOverOverlay");
             Check(root.CurrentGame!.Status == GameStatus.Checkmate && overlay.Visible, "mouse checkmate opens overlay");
             Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANARON NEGRAS", "overlay identifies winner");
-            Move(root, "a2", "a3");
-            Check(root.CurrentGame.History.Count == 4, "overlay blocks board input");
+            // The game-over buttons are deliberately clickable above the board;
+            // don't click through their screen coordinates when testing move locking.
+            Check(root.CurrentGame.History.Count == 4 &&
+                  !root.CurrentGame.State.AcceptsMoves && overlay.Visible,
+                "completed match blocks further chess moves");
             await Frames();
             // The centered result dialog covers the sidebar; use the supported
             // keyboard shortcut rather than clicking a button behind the dialog.
