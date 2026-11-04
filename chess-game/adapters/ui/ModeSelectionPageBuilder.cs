@@ -40,12 +40,9 @@ internal static class ModeSelectionPageBuilder
             MouseFilter = Control.MouseFilterEnum.Ignore,
         });
 
-        page.AddChild(PixelUiSkin.Label("GameTitle", "CHEESSE",
-            new Vector2(440, 96), new Vector2(560, 48), 30,
-            pixel: true, light: false, alignment: HorizontalAlignment.Center,
-            weight: UiFontWeight.Bold));
-        var gameTitle = page.GetNode<Label>("GameTitle");
-        gameTitle.AddThemeColorOverride("font_color", PixelUiSkin.Gold);
+        // Compact 128x32 logo at exact x2, centered above the mode heading.
+        page.AddChild(PixelUiSkin.Image("GameLogo", "logos/logo_cheese_compact.png",
+            new Vector2(592, 82), new Vector2(256, 64), 2));
         page.AddChild(PixelUiSkin.Label("Heading", "ELEGIR MODO DE JUEGO",
             new Vector2(320, 152), new Vector2(800, 50), 32,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,
@@ -69,8 +66,9 @@ internal static class ModeSelectionPageBuilder
                 weight: UiFontWeight.Regular));
         }
 
+        // Back button shares the top header row with the centered logo.
         page.AddChild(PixelUiSkin.Button("Back", "VOLVER",
-            new Vector2(66, 801), new Vector2(200, 57), onBack,
+            new Vector2(66, 86), new Vector2(200, 57), onBack,
             icon: "back", fontSize: 24, variant: "small"));
     }
 
