@@ -24,7 +24,7 @@ public partial class ReleaseTests : Node
             await Capture("menu");
             if (OS.GetCmdlineUserArgs().Contains("--screenshots"))
             {
-                ClickControl(root, "Menu/Stage/HomePage/Navigation/Modes");
+                ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
                 await Frames();
                 await Capture("mode-selection");
                 ClickControl(root, "Menu/Stage/ModesPage/Mode1");
