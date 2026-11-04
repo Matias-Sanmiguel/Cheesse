@@ -19,10 +19,10 @@ internal static class ModeSelectionPageBuilder
 
     private static readonly Mode[] Modes =
     [
-        new("CLASICO", "classic", "AJEDREZ TRADICIONAL", true, 25),
-        new("REY DE LA PICADA", "picada", "LLEVA AL REY AL CENTRO", false, 19),
-        new("QUESO SUIZO", "swiss", "EVITA LOS AGUJEROS", false, 22),
-        new("FONDUE", "fondue", "CAPTURAS QUE DERRITEN", false, 25)
+        new("CLASICO", "classic", "AJEDREZ TRADICIONAL", true, 30),
+        new("REY DE LA PICADA", "picada", "LLEVA AL REY AL CENTRO", false, 24),
+        new("QUESO SUIZO", "swiss", "EVITA LOS AGUJEROS", false, 28),
+        new("FONDUE", "fondue", "CAPTURAS QUE DERRITEN", false, 32)
     ];
 
     public static void Build(Control page, Action onClassic, Action onBack)
