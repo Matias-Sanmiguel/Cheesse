@@ -192,14 +192,17 @@ public partial class MenuTests : Node
                   modalContent.GetNode<Label>("TimeValue").Text.Contains(':'),
                 "Picada wins show a dynamic winner, reason and elapsed time");
             var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
-            Check(winnerIcon.Texture is ImageTexture &&
-                  winnerIcon.Texture.GetImage().GetPixel(0, 0).A < 0.01f &&
-                  winnerIcon.Position.IsEqualApprox(new Vector2(23 * 4, 65 * 4)) &&
-                  winnerIcon.Size.IsEqualApprox(new Vector2(24 * 4, 24 * 4)),
-                "winner ribbon shows the transparent chess king without the square backing");
-            Check(modalContent.GetNode<TextureRect>("Rematch/RematchIcon").Texture is ImageTexture &&
-                  modalContent.GetNode<TextureRect>("MainMenu/MainMenuIcon").Texture is ImageTexture,
-                "action icons are recolored from the original pixel art for proper contrast");
+            Check(winnerIcon.Texture is not null &&
+                  winnerIcon.Texture.ResourcePath.EndsWith("/white_12x12.png") &&
+                  winnerIcon.Position.IsEqualApprox(new Vector2(29 * 4, 71 * 4)) &&
+                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)),
+                "winner ribbon uses its original small white piece, centered without any extra box");
+            var rematch = modalContent.GetNode<Button>("Rematch");
+            var mainMenu = modalContent.GetNode<Button>("MainMenu");
+            Check(!rematch.HasNode("RematchIcon") && !mainMenu.HasNode("MainMenuIcon") &&
+                  rematch.GetNode<Label>("RematchLabel").Position.X == 0 &&
+                  mainMenu.GetNode<Label>("MainMenuLabel").Position.X == 0,
+                "rematch and main menu are clean text-only buttons with centered labels");
             Check(resultPanel.Size.IsEqualApprox(new Vector2(864, 776)) &&
                   resultBanner.Position.IsEqualApprox(new Vector2(48, 0)) &&
                   resultBanner.Size.IsEqualApprox(new Vector2(768, 256)) &&
