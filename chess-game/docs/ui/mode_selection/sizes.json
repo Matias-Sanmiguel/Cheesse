@@ -1,0 +1,23 @@
+{
+  "card_size": [
+    96,
+    112
+  ],
+  "illustration_size": [
+    64,
+    64
+  ],
+  "compact_size": [
+    64,
+    80
+  ],
+  "cta_size": [
+    76,
+    10
+  ],
+  "illustration_offset_in_card": [
+    16,
+    15
+  ],
+  "preview_only": "NEAREST x3 (not a game asset)"
+}

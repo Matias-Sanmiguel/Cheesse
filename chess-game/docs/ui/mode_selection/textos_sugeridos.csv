@@ -1,0 +1,5 @@
+modo,estado,descripcion
+Modo clasico,Disponible,Ajedrez tradicional con las reglas de siempre.
+Rey de la picada,Proximamente,Lleva tu rey hasta una de las casillas objetivo.
+Queso Suizo,Proximamente,Los agujeros bloquean casillas del tablero.
+Fondue,Proximamente,Las capturas derriten piezas alrededor.
