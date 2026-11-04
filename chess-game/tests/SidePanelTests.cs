@@ -105,6 +105,27 @@ public partial class SidePanelTests : Node
                 Check(image.Size.IsEqualApprox(new Vector2(44, 44)),
                     name + " is a square integer x2 sprite");
             }
+            // A single bad TextureRect dimension is enough to damage pixel art.
+            // Check all supplied sprites, not only the ones reported in screenshots.
+            void CheckIntegerSpriteScaling(Node parent)
+            {
+                foreach (Node child in parent.GetChildren())
+                {
+                    if (child is TextureRect image && image.Texture is { } source)
+                    {
+                        float scaleX = image.Size.X / source.GetWidth();
+                        float scaleY = image.Size.Y / source.GetHeight();
+                        Check(Mathf.Abs(scaleX - scaleY) < 0.001f &&
+                              Mathf.Abs(scaleX - Mathf.Round(scaleX)) < 0.001f,
+                            child.Name + " keeps square pixels at an integer scale");
+                    }
+                    CheckIntegerSpriteScaling(child);
+                }
+            }
+            CheckIntegerSpriteScaling(presentation.GetNode<Control>("ArtworkStage"));
+            CheckIntegerSpriteScaling(panel.GetNode<Control>("Margin/Content"));
+            CheckIntegerSpriteScaling(root.GetNode<Control>("InGameUtilities/UtilityStage"));
+
             var whiteClock = root.GetNode<Label>(stagePath + "WhiteClock");
             var blackClock = root.GetNode<Label>(stagePath + "BlackClock");
             Check(whiteClock.Text == "00:00" && blackClock.Text == "00:00",
