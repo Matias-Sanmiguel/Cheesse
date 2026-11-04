@@ -35,6 +35,8 @@ public partial class BoardView : Node2D
     private Texture2D? _captureOverlay;
     private Texture2D? _checkOverlay;
     private Texture2D? _goalOverlay;
+    private Texture2D? _picadaLightTile;
+    private Texture2D? _picadaDarkTile;
     private double _goalPulseTime;
     private double _goalRedrawClock;
     private Node2D? _picadaVictoryFx;
@@ -64,6 +66,10 @@ public partial class BoardView : Node2D
         _captureOverlay = LoadTextureIfExists(root + "capture_marker.png");
         _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
         _goalOverlay = LoadTextureIfExists(root + "goal_square.png");
+        // Dedicated 48x48 pixel-art goals; only used for the four center squares in Picada.
+        const string picadaTiles = "res://assets/ui/picada_goals/";
+        _picadaLightTile = LoadTextureIfExists(picadaTiles + "light_tile.png");
+        _picadaDarkTile = LoadTextureIfExists(picadaTiles + "dark_tile.png");
     }
 
     public void Attach(ChessGame game, GodotEventBus bus)
@@ -341,6 +347,8 @@ public partial class BoardView : Node2D
                 );
 
                 Texture2D? tile = dark ? _darkTile : _lightTile;
+                if (ShowsPicadaGoals && square.File is 3 or 4 && square.Rank is 3 or 4)
+                    tile = (dark ? _picadaDarkTile : _picadaLightTile) ?? tile;
 
                 if (tile is not null)
                     DrawTextureRect(tile, rect, false);
@@ -365,7 +373,11 @@ public partial class BoardView : Node2D
         foreach (Square square in PicadaModeRules.GoalSquares)
         {
             var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
-            if (_goalOverlay is not null)
+            // A thin breathing outline keeps the target visible without obscuring the tile art.
+            bool dark = (square.File + square.Rank) % 2 == 0;
+            if ((dark ? _picadaDarkTile : _picadaLightTile) is not null)
+                DrawRect(rect.Grow(-3f), new Color(1f, 0.76f, 0.38f, 0.14f + 0.20f * alpha), false, 2f);
+            else if (_goalOverlay is not null)
                 DrawTextureRect(_goalOverlay, rect, false, new Color(1, 1, 1, alpha));
             else
             {
