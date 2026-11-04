@@ -51,6 +51,7 @@ public partial class HudView : Control
             GameStatus.Ongoing => "En juego",
             GameStatus.Check => "Jaque",
             GameStatus.Checkmate => "Jaque mate",
+            GameStatus.PicadaVictory => "Rey al centro",
             GameStatus.Stalemate => "Tablas por ahogado",
             GameStatus.DrawByFiftyMove => "Tablas por 50 movimientos",
             GameStatus.DrawByRepetition => "Tablas por repetición",

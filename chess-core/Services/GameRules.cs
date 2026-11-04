@@ -24,6 +24,9 @@ public static class GameRules
                 throw new ArgumentException("Fondue requires at least one surviving king.", nameof(board));
             return GameStatus.KingMelted;
         }
+        var modeRules = GameModeRuleCatalog.For(board.Mode);
+        var lastMover = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+        if (modeRules.SpecialOutcome(board, lastMover) is { } victory) return victory;
         var inCheck = CheckDetector.IsInCheck(board, side);
         var legalMoves = MoveGenerator.Legal(board, side);
 
@@ -31,7 +34,7 @@ public static class GameRules
         if (legalMoves.Count == 0)
             return inCheck ? GameStatus.Checkmate : GameStatus.Stalemate;
 
-        if (HasInsufficientMaterial(board))
+        if (modeRules.InsufficientMaterialIsDraw && HasInsufficientMaterial(board))
             return GameStatus.DrawByInsufficientMaterial;
 
         // Claims use threefold / fifty moves; only fivefold / seventy-five are automatic.
@@ -60,6 +63,7 @@ public static class GameRules
     public static bool CanPossiblyMate(Board board, PlayerColor side)
     {
         ArgumentNullException.ThrowIfNull(board);
+        if (board.Mode == GameMode.ReyDeLaPicada) return true;
         var own = new List<Piece>();
         var opponents = new List<Piece>();
         var bishopColors = new HashSet<int>();

@@ -35,7 +35,7 @@ public sealed class FileSaveRepository : IGameRepository
         game.Tick();
         var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game),
             AgainstStockfish, AgainstStockfish, EngineElo, game.TimeControl, game.ClockState,
-            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray(), Theme);
+            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray(), Theme, game.Mode);
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -87,6 +87,7 @@ public sealed class FileSaveRepository : IGameRepository
                 return false;
 
             var history = SanNotation.FromPgn(data.Pgn, out var initialBoard, out var result);
+            if (data.Mode is GameMode mode && mode != initialBoard.Mode) return false;
             GameTextFiles.ValidatePosition(initialBoard);
             var restored = new ChessGame(new ReplayEvents(), game.Repository, game.Clock, initialBoard);
             foreach (var move in history)
@@ -136,5 +137,5 @@ public sealed class FileSaveRepository : IGameRepository
     private sealed record SaveData(int Version, string? Fen, string? Pgn, bool AgainstRandom = false,
         bool? AgainstStockfish = null, int EngineElo = 1800, TimeControl? TimeControl = null,
         ClockSnapshot? Clock = null, GameStatus? Status = null, PlayerColor? Winner = null,
-        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null, VisualTheme? Theme = null);
+        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null, VisualTheme? Theme = null, GameMode? Mode = null);
 }

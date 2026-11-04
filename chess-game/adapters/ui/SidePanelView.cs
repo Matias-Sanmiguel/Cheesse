@@ -109,7 +109,15 @@ public partial class SidePanelView : PanelContainer
     private void Refresh()
     {
         if (_game is null || _caretaker is null) return;
-        _turn.Text = _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
+        GetNode<Label>("Margin/Content/Mode").Text = _game.Mode switch
+        {
+            GameMode.ReyDeLaPicada => "MODO: PICADA",
+            GameMode.Fondue => "MODO: FONDUE",
+            _ => "MODO: CLASICO"
+        };
+        _turn.Text = _game.Status == GameStatus.PicadaVictory
+            ? (_game.Winner == PlayerColor.White ? "GANAN BLANCAS" : "GANAN NEGRAS")
+            : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
         _status.Text = _thinking ? "STOCKFISH PENSANDO…" : StatusText(_game.Status).ToUpperInvariant();
         _statusDot.Modulate = _game.Status switch
         {
@@ -153,6 +161,7 @@ public partial class SidePanelView : PanelContainer
 
     public static string StatusText(GameStatus status) => status switch
     {
+        GameStatus.PicadaVictory => "Rey al centro: victoria",
         GameStatus.Ongoing => "En juego", GameStatus.Check => "Jaque", GameStatus.Checkmate => "Jaque mate",
         GameStatus.Stalemate => "Tablas por ahogado", GameStatus.DrawByFiftyMove => "Tablas por 50 movimientos",
         GameStatus.DrawByRepetition => "Tablas por repetición", GameStatus.DrawByInsufficientMaterial => "Tablas por material insuficiente",

@@ -287,6 +287,10 @@ public partial class SidePanelTests : Node
             toggle.ButtonPressed = true;
             Check(root.AgainstRandom, "toggle enables RandomAI");
             Move(root, "e2", "e4");
+            Check(root.GetNode<BoardView>("Board").IsMoveAnimating,
+                "random opponent waits for the player's sliding animation");
+            await ToSignal(GetTree().CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
+            await Frames();
             await WaitFor(() => root.CurrentGame!.History.Count == 2);
             Check(root.CurrentGame!.History.Count == 2 && root.CurrentGame.Turn == PlayerColor.White, "random black replies");
             PressPanel(root, "History/Undo");
@@ -305,6 +309,8 @@ public partial class SidePanelTests : Node
             PressPanel(root, "NewGame");
             Move(root, "e2", "e4");
             toggle.ButtonPressed = true;
+            await ToSignal(GetTree().CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
+            await Frames();
             await WaitFor(() => root.CurrentGame!.History.Count == 2);
             Check(root.CurrentGame!.History.Count == 2, "enabling random on black turn makes a legal reply");
             PressPanel(root, "Files/Save");

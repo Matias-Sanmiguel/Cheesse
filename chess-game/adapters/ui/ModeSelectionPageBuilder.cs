@@ -20,12 +20,12 @@ internal static class ModeSelectionPageBuilder
     private static readonly Mode[] Modes =
     [
         new("CLASICO", "classic", "AJEDREZ TRADICIONAL", true, 30),
-        new("REY DE LA PICADA", "picada", "LLEVA AL REY AL CENTRO", false, 24),
+        new("REY DE LA PICADA", "picada", "LLEVA AL REY AL CENTRO", true, 24),
         new("QUESO SUIZO", "swiss", "EVITA LOS AGUJEROS", false, 28),
         new("FONDUE", "fondue", "CAPTURAS QUE DERRITEN", false, 32)
     ];
 
-    public static void Build(Control page, Action onClassic, Action onBack)
+    public static void Build(Control page, Action onClassic, Action onPicada, Action onBack)
     {
         page.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         page.AddChild(new TextureRect
@@ -59,7 +59,8 @@ internal static class ModeSelectionPageBuilder
             const int firstX = 81;
             const int stepX = 330;
             int x = firstX + i * stepX;
-            BuildCard(page, i, Modes[i], new Vector2(x, 329), onClassic);
+            Action? selected = i switch { 0 => onClassic, 1 => onPicada, _ => null };
+            BuildCard(page, i, Modes[i], new Vector2(x, 329), selected);
             page.AddChild(PixelUiSkin.Label("Description" + i, Modes[i].Summary,
                 new Vector2(x - 9, 697), new Vector2(CardSize.X + 18, 61), 19,
                 pixel: false, light: true, alignment: HorizontalAlignment.Center,
@@ -73,7 +74,7 @@ internal static class ModeSelectionPageBuilder
     }
 
     private static void BuildCard(Control page, int index, Mode mode,
-        Vector2 position, Action onClassic)
+        Vector2 position, Action? onSelect)
     {
         var button = new Button
         {
@@ -136,7 +137,7 @@ internal static class ModeSelectionPageBuilder
         hover.Visible = false;
         selected.Visible = false;
 
-        if (mode.Available)
+        if (mode.Available && onSelect is not null)
         {
             button.MouseEntered += () =>
             {
@@ -156,7 +157,7 @@ internal static class ModeSelectionPageBuilder
                 PixelUiSkin.Texture(Assets + "components/cta_pressed_76x10.png", PixelScale);
             button.ButtonUp += () => button.GetNode<TextureRect>("ActionPlate").Texture =
                 PixelUiSkin.Texture(Assets + "components/cta_hover_76x10.png", PixelScale);
-            button.Pressed += onClassic;
+            button.Pressed += onSelect;
         }
     }
 

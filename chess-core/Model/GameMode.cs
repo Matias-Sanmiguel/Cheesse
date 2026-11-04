@@ -2,6 +2,9 @@ namespace Chess.Core.Model;
 
 public enum GameMode
 {
-    Standard,
-    Fondue,
+    Standard = 0,
+    Classic = Standard,
+    // Preserve the numeric mode in Nico's existing v1 Picada saves.
+    ReyDeLaPicada = 1,
+    Fondue = 2,
 }

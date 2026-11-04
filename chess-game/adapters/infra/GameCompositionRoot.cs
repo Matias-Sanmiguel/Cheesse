@@ -27,6 +27,8 @@ public partial class GameCompositionRoot : Node
     private FileDialog _importDialog = null!, _exportDialog = null!;
     private CancellationTokenSource? _searchCancellation;
     private int _searchGeneration;
+    private int _gameOverRevision;
+    private Board? _picadaResultBoard;
     private bool _engineEnabled, _engineFailed;
     private Move? _announcedClaim;
     private PlayerColor _resigningSide;
@@ -104,7 +106,7 @@ public partial class GameCompositionRoot : Node
             UpdateGameOver();
             return;
         }
-        if (AgainstStockfish && !_engineFailed && !IsThinking && game.Turn == PlayerColor.Black)
+        if (AgainstStockfish && !_engineFailed && !IsThinking && !_board.IsMoveAnimating && game.Turn == PlayerColor.Black)
             RequestComputerMove();
     }
 
@@ -126,7 +128,9 @@ public partial class GameCompositionRoot : Node
     private void StartNewGame(bool againstStockfish, bool fromMenu = false)
     {
         if (fromMenu || CurrentGame is null) _repository.Theme = _menu.CreateVisualTheme();
-        var game = new ChessGame(_bus, _repository, _clock);
+        var mode = fromMenu || CurrentGame is null ? _menu.SelectedMode : CurrentGame.Mode;
+        var game = new ChessGame(_bus, _repository, _clock, mode);
+        againstStockfish &= mode == GameMode.Standard;
         game.ConfigureClock(fromMenu || CurrentGame is null ? _menu.SelectedTimeControl : CurrentGame.TimeControl);
         _repository.AgainstStockfish = againstStockfish;
         if (fromMenu || CurrentGame is null) _repository.EngineElo = _menu.SelectedEngineElo;
@@ -291,6 +295,8 @@ public partial class GameCompositionRoot : Node
 
     public void ShowMenu()
     {
+        _gameOverRevision++;
+        _picadaResultBoard = null;
         CancelSearch();
         CurrentGame?.PauseClock();
         _gameOver.Hide();
@@ -442,10 +448,35 @@ public partial class GameCompositionRoot : Node
     public string ExportGameText(string extension) => GameTextFiles.Export(CurrentGame ?? throw new InvalidOperationException("No hay una partida abierta."), extension);
 
     private sealed class SilentEvents : IEventPublisher { public void Publish<T>(T domainEvent) { } }
-    private void UpdateGameOver()
+    private async void UpdateGameOver()
     {
-        if (CurrentGame is null || CurrentGame.State.AcceptsMoves || _menu.Visible) { _gameOver.Hide(); return; }
-        _gameOver.ShowResult(CurrentGame);
+        var game = CurrentGame;
+        if (game is null || game.State.AcceptsMoves || _menu.Visible)
+        {
+            _gameOverRevision++;
+            _picadaResultBoard = null;
+            _gameOver.Hide();
+            return;
+        }
+        if (game.Status == GameStatus.PicadaVictory)
+        {
+            // Several domain events can describe the same finished move.
+            if (ReferenceEquals(_picadaResultBoard, game.Board)) return;
+            _picadaResultBoard = game.Board;
+            int revision = ++_gameOverRevision;
+            _gameOver.Hide();
+            if (game.History.Count > 0) _board.CelebratePicadaVictory(game.History[^1].To);
+            await ToSignal(GetTree().CreateTimer(BoardView.PicadaVictoryEffectDurationSeconds + 0.25), SceneTreeTimer.SignalName.Timeout);
+            if (!GodotObject.IsInstanceValid(this) || revision != _gameOverRevision ||
+                !ReferenceEquals(CurrentGame, game) || _menu.Visible ||
+                game.Status != GameStatus.PicadaVictory) return;
+        }
+        else
+        {
+            _gameOverRevision++;
+            _picadaResultBoard = null;
+        }
+        _gameOver.ShowResult(game, _ingame.TotalElapsedSeconds);
     }
-    public override void _ExitTree() { CancelSearch(); CurrentGame?.PauseClock(); }
+    public override void _ExitTree() { _gameOverRevision++; CancelSearch(); CurrentGame?.PauseClock(); }
 }

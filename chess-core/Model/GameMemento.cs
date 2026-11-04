@@ -21,6 +21,7 @@ public sealed class GameMemento
 
     public Board InitialBoard { get; }
     public Board Board { get; }
+    public GameMode Mode => Board.Mode;
     public GameStatus Status { get; }
     public IReadOnlyList<Move> History { get; }
     public TimeControl TimeControl { get; }

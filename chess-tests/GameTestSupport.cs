@@ -10,6 +10,9 @@ internal static class GameTestSupport
     internal static ChessGame Create(string fen = FenSerializer.InitialPosition) =>
         new(new Events(), new Repository(), new Clock(), FenSerializer.Load(fen));
 
+    internal static ChessGame Create(GameMode mode, string fen = FenSerializer.InitialPosition) =>
+        new(new Events(), new Repository(), new Clock(), FenSerializer.Load(fen), mode);
+
     internal static ChessGame Create(IEventPublisher events, string fen = FenSerializer.InitialPosition) =>
         new(events, new Repository(), new Clock(), FenSerializer.Load(fen));
 

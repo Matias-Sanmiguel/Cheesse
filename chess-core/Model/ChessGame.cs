@@ -17,6 +17,12 @@ public sealed class ChessGame
     public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock)
         : this(events, repository, clock, FenSerializer.Load(FenSerializer.InitialPosition)) { }
 
+    public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock, GameMode mode)
+        : this(events, repository, clock, FenSerializer.Load(FenSerializer.InitialPosition).WithMode(mode)) { }
+
+    public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock, Board initialBoard, GameMode mode)
+        : this(events, repository, clock, initialBoard.WithMode(mode)) { }
+
     public ChessGame(IEventPublisher events, IGameRepository repository, IClock clock, Board initialBoard)
     {
         ArgumentNullException.ThrowIfNull(events);
@@ -42,10 +48,11 @@ public sealed class ChessGame
     public Board InitialBoard { get; private set; }
     public Board Board { get; private set; }
     public PlayerColor Turn => Board.Turn;
+    public GameMode Mode => Board.Mode;
     public GameStatus Status { get; private set; }
     public PlayerColor? Winner => Status == GameStatus.KingMelted
         ? FondueRules.HasKing(Board, PlayerColor.White) ? PlayerColor.White : PlayerColor.Black
-        : Status == GameStatus.Checkmate ? Opponent(Turn) : _winner;
+        : Status is GameStatus.Checkmate or GameStatus.PicadaVictory ? Opponent(Turn) : _winner;
     public PlayerColor? DrawOfferedBy { get; private set; }
     public TimeControl TimeControl { get; private set; }
     public ClockSnapshot ClockState => _clockState;
@@ -312,7 +319,7 @@ public sealed class ChessGame
             throw new ArgumentException("Saved outcome conflicts with the position.");
         var expectedWinner = status == GameStatus.KingMelted
             ? FondueRules.HasKing(Board, PlayerColor.White) ? PlayerColor.White : PlayerColor.Black
-            : status == GameStatus.Checkmate ? Opponent(Turn) : (PlayerColor?)null;
+            : status is GameStatus.Checkmate or GameStatus.PicadaVictory ? Opponent(Turn) : (PlayerColor?)null;
         if (status is GameStatus.Resigned or GameStatus.Timeout)
         {
             if (winner is null) throw new ArgumentException("Winning outcome requires a winner.");

@@ -33,6 +33,7 @@ public partial class InGamePresentationView : Control
     private Panel _helpPanel = null!;
     private Panel _settingsPanel = null!;
     private ChessGame? _game;
+    private Control _picadaBadge = null!;
     private NinePatchRect _whiteCard = null!;
     private NinePatchRect _blackCard = null!;
     private double _whiteElapsed;
@@ -40,6 +41,9 @@ public partial class InGamePresentationView : Control
     private int _whiteDisplayed = -1;
     private int _blackDisplayed = -1;
     private bool _muted;
+
+    /// <summary>Seconds played in this session, across both sides; not a countdown.</summary>
+    public int TotalElapsedSeconds => Math.Max(0, (int)(_whiteElapsed + _blackElapsed));
 
     public override void _Ready()
     {
@@ -98,6 +102,7 @@ public partial class InGamePresentationView : Control
     public void Attach(ChessGame game)
     {
         _game = game;
+        _picadaBadge.Visible = game.Mode == GameMode.ReyDeLaPicada;
         _whiteElapsed = 0;
         _blackElapsed = 0;
         _whiteDisplayed = -1;
@@ -111,7 +116,8 @@ public partial class InGamePresentationView : Control
             _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
             return;
 
-        if (_game.TimeControl.InitialSeconds == 0 && !_game.Caretaker.CanRedo)
+        if (!_game.Caretaker.CanRedo &&
+            (_game.TimeControl.InitialSeconds == 0 || _game.ClockState.Running))
         {
             if (_game.Turn == PlayerColor.White) _whiteElapsed += delta;
             else _blackElapsed += delta;
@@ -265,6 +271,30 @@ public partial class InGamePresentationView : Control
         _blackClock.TooltipText = timerHint;
         _stage.AddChild(_whiteClock);
         _stage.AddChild(_blackClock);
+
+        // A mode-specific goal reminder in the free space below the logo.
+        // It does not alter the 768x768 board or the sidebar.
+        _picadaBadge = new Control
+        {
+            Name = "PicadaBadge",
+            Position = new Vector2(12, 93),
+            Size = new Vector2(188, 78),
+            Visible = false,
+            MouseFilter = MouseFilterEnum.Ignore,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        _stage.AddChild(_picadaBadge);
+        var badgePanel = PixelUiSkin.MakePanel("Frame", "dark", Vector2.Zero, new Vector2(188, 78));
+        badgePanel.MouseFilter = MouseFilterEnum.Ignore;
+        _picadaBadge.AddChild(badgePanel);
+        _picadaBadge.AddChild(InGameUiSkin.Sprite("Crown",
+            "res://assets/ui/icons/crown_16x16.png", new Vector2(12, 9), new Vector2(32, 32)));
+        _picadaBadge.AddChild(InGameUiSkin.Text("Title", "REY DE LA PICADA",
+            new Vector2(51, 11), new Vector2(132, 27), 15, PixelUiSkin.Gold,
+            UiFontWeight.SemiBold));
+        _picadaBadge.AddChild(InGameUiSkin.Text("Goal", "OBJETIVO: D4 E4 D5 E5",
+            new Vector2(13, 45), new Vector2(174, 23), 13, PixelUiSkin.Cream,
+            UiFontWeight.Medium));
     }
 
     private void BuildUtilities()

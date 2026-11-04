@@ -94,10 +94,10 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible, "back returns to correct page");
             Press(root, Home + "Modes");
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "Modes navigates to mode selection");
-            Check(root.GetNode<Button>(Modes + "Mode1").Disabled &&
+            Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
                   root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
-                "unfinished modes are visibly unavailable");
+                "Rey de la Picada is available, Swiss and Fondue remain locked");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
                   modePage.HasNode("GameLogo"),
@@ -134,23 +134,187 @@ public partial class MenuTests : Node
                       PixelUiSkin.FontFor(UiFontWeight.Regular),
                     "mode " + i + " has independent editable description below the card");
             }
-            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR",
-                "classic mode is playable with a dynamic JUGAR label");
-            foreach (var locked in new[] { "Mode1", "Mode2", "Mode3" })
+            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR",
+                "classic and Picada are playable with dynamic JUGAR labels");
+            foreach (var locked in new[] { "Mode2", "Mode3" })
             {
                 Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
                       root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
                     locked + " is visibly locked with dynamic copy, without navigation");
             }
 
+            Press(root, Modes + "Mode1");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
+                "Picada opens its own match setup");
+            var setupPage = root.GetNode<Control>("Menu/Stage/SetupPage");
+            var setupPreview = setupPage.GetNode<Control>("Preview");
+            var setupOptions = setupPage.GetNode<Control>("Options");
+            Check(!root.GetNode<TextureRect>("Menu/Stage/CompactLogo").Visible &&
+                  setupPage.GetNode<Label>("Heading").Text == "PREPARA TU PARTIDA" &&
+                  setupPreview.Position.IsEqualApprox(new Vector2(62, 182)) &&
+                  setupOptions.Position.IsEqualApprox(new Vector2(696, 182)) &&
+                  setupPreview.Size.IsEqualApprox(new Vector2(604, 660)) &&
+                  setupOptions.Size.IsEqualApprox(new Vector2(680, 660)) &&
+                  setupPreview.GetNode<TextureRect>("PanelArt").Texture?.GetWidth() == 604 &&
+                  setupOptions.GetNode<TextureRect>("PanelArt").Texture?.GetWidth() == 680,
+                "setup uses the supplied native V4 panels at exact x4 scale without an extra logo");
+            Check(setupPreview.GetNode<TextureRect>("BoardFrame").Texture?.GetWidth() == 328 &&
+                  setupPreview.GetNode<TextureRect>("WhiteFrame").Texture?.GetWidth() == 160 &&
+                  setupPreview.GetNode<TextureRect>("BlackFrame").Texture?.GetWidth() == 160 &&
+                  setupPreview.GetNode<TextureRect>("DetailsSeparator").Texture?.GetWidth() == 528 &&
+                  setupOptions.GetNode<Button>("ClassicStyle").Size.X == 292 &&
+                  setupOptions.GetNode<Button>("PicadaStyle").Size.X == 292 &&
+                  !root.GetNode<OptionButton>(Setup + "Appearance").Visible,
+                "V4 preview frames, separator and style cards use exact integer scaling");
+            Check(setupOptions.GetNode<Label>("Note").Position.Y == 429 &&
+                  setupOptions.GetNode<Button>("Human").Position.Y == 470 &&
+                  setupOptions.GetNode<Button>("Random").Position.Y == 526 &&
+                  setupOptions.GetNode<Button>("Continue").Position.Y == 582 &&
+                  setupOptions.Size.Y - (setupOptions.GetNode<Button>("Continue").Position.Y + 48) >= 28,
+                "setup note and action buttons have ample bottom padding");
+            foreach (var action in new[] { "Human", "Random", "Continue" })
+            {
+                var actionButton = setupOptions.GetNode<Button>(action);
+                var actionIcon = actionButton.GetNode<TextureRect>("ActionIcon");
+                Check(actionButton.Icon is null && actionIcon.Texture is not null &&
+                      actionIcon.Position.IsEqualApprox(new Vector2(18, 8)) &&
+                      actionIcon.Size.IsEqualApprox(new Vector2(32, 32)) &&
+                      actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
+                    action + " icon fits inside its 48px button without blocking input");
+            }
+            var classicCard = setupOptions.GetNode<Button>("ClassicStyle");
+            var picadaCard = setupOptions.GetNode<Button>("PicadaStyle");
+            var classicCaption = classicCard.GetNode<Label>("Caption");
+            var picadaCaption = picadaCard.GetNode<Label>("Caption");
+            Check(classicCard.Position == new Vector2(41, 112) &&
+                  picadaCard.Position == new Vector2(347, 112) &&
+                  picadaCard.Position.X - (classicCard.Position.X + classicCard.Size.X) == 14 &&
+                  classicCaption.Position == new Vector2(112, 0) &&
+                  picadaCaption.Position == new Vector2(112, 0) &&
+                  classicCaption.Size == new Vector2(164, 112) &&
+                  picadaCaption.Size == new Vector2(164, 112) &&
+                  picadaCaption.AutowrapMode == TextServer.AutowrapMode.Off,
+                "style cards are centered with even outer margins and aligned captions");
+            Press(root, Setup + "ClassicStyle");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/Board").Disabled &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
+                  setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
+                  setupPreview.GetNode<ColorRect>("Square0").Color == BoardView.LightSquare &&
+                  setupPreview.GetNode<ColorRect>("Square1").Color == BoardView.DarkSquare &&
+                  setupPreview.GetNode<TextureRect>("Tile0").Texture is null &&
+                  setupOptions.GetNode<Button>("ClassicStyle").GetNode<TextureRect>("CardArt").Texture ==
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/classic_selected_73x28.png", 4),
+                "classic style displays original green/ivory board and disabled theme controls");
+            Press(root, Setup + "PicadaStyle");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/Board").Disabled &&
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
+                  !setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
+                  setupOptions.GetNode<Button>("PicadaStyle").GetNode<TextureRect>("CardArt").Texture ==
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_selected_73x28.png", 4),
+                "Picada style selects V4 artwork and enables existing theme dropdowns");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),
+                "Picada defaults to themed pieces and explains the center objective");
+            Press(root, Setup + "Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada &&
+                  root.GetNode<BoardView>("Board").ShowsPicadaGoals &&
+                  root.GetNode<Control>("InGamePresentation/ArtworkStage/PicadaBadge").Visible,
+                "Picada reaches gameplay with four highlighted goals and a HUD badge");
+
+            Check(root.GetNode<Label>("SidePanel/Margin/Content/Mode").Text.Contains("PICADA"),
+                "sidebar identifies the active Picada rules rather than classic chess");
+
+            // Real input path: walk the king to d4 without exposing it to check.
+            Move(root, "f2", "f4");
+            Move(root, "a7", "a6");
+            Move(root, "e1", "f2");
+            Move(root, "a6", "a5");
+            Move(root, "f2", "e3");
+            Move(root, "a5", "a4");
+            Move(root, "e3", "d4");
+            Check(root.CurrentGame.Status == GameStatus.PicadaVictory &&
+                  root.CurrentGame.History.Count == 7,
+                "Picada victory is triggered by a legal center move through UI input");
+            var victoryFx = root.GetNodeOrNull<Node2D>("Board/PicadaVictoryFx");
+            Check(victoryFx is not null && victoryFx.Visible &&
+                  victoryFx.HasNode("WinningCrown") &&
+                  victoryFx.HasNode("VictoryPlaque/VictoryCaption") &&
+                  victoryFx.GetChildren().OfType<Sprite2D>().Count() >= 24 &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Picada starts a visible crown, caption and 24 particle celebration before the result");
+            await ToSignal(GetTree().CreateTimer(0.95), SceneTreeTimer.SignalName.Timeout);
+            Check(root.GetNodeOrNull<Node2D>("Board/PicadaVictoryFx") is { Visible: true } &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Picada particles remain on the board long enough to be noticeable");
+            await ToSignal(GetTree().CreateTimer(1.25), SceneTreeTimer.SignalName.Timeout);
+            var result = root.GetNode<GameOverOverlay>("GameOverOverlay");
+            var resultPanel = root.GetNode<Control>("GameOverOverlay/Overlay/Center/Panel");
+            var modalContent = root.GetNode<Control>("GameOverOverlay/Overlay/Center/Panel/Content");
+            var resultBanner = modalContent.GetNode<TextureRect>("ResultBanner");
+            Check(result.Visible &&
+                  modalContent.GetNode<Label>("Reason").Text == "REY AL CENTRO" &&
+                  modalContent.GetNode<Label>("Title").Text == "GANARON BLANCAS" &&
+                  modalContent.GetNode<Label>("TimeLabel").Text == "TIEMPO" &&
+                  modalContent.GetNode<Label>("TimeValue").Text.Contains(':'),
+                "Picada wins show a dynamic winner, reason and elapsed time");
+            // The winner is drawn directly over the green ribbon; no inset badge.
+            var winnerRibbonImage = modalContent.GetNode<TextureRect>("WinnerRibbon").Texture!.GetImage();
+            var ribbonBehindIcon = winnerRibbonImage.GetPixel(15, 12);
+            Check(ribbonBehindIcon.G > ribbonBehindIcon.R &&
+                  ribbonBehindIcon.G > ribbonBehindIcon.B,
+                "winner ribbon shows uninterrupted green behind the original piece icon");
+            var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
+            Check(winnerIcon.Texture is not null &&
+                  winnerIcon.Texture.ResourcePath.EndsWith("/white_12x12.png") &&
+                  winnerIcon.Position.IsEqualApprox(new Vector2(29 * 4, 71 * 4)) &&
+                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)),
+                "winner ribbon uses its original small white piece, centered without any extra box");
+            var rematch = modalContent.GetNode<Button>("Rematch");
+            var mainMenu = modalContent.GetNode<Button>("MainMenu");
+            Check(!rematch.HasNode("RematchIcon") && !mainMenu.HasNode("MainMenuIcon") &&
+                  rematch.GetNode<Label>("RematchLabel").Position.X == 0 &&
+                  mainMenu.GetNode<Label>("MainMenuLabel").Position.X == 0,
+                "rematch and main menu are clean text-only buttons with centered labels");
+            Check(resultPanel.Size.IsEqualApprox(new Vector2(864, 776)) &&
+                  resultBanner.Position.IsEqualApprox(new Vector2(48, 0)) &&
+                  resultBanner.Size.IsEqualApprox(new Vector2(768, 256)) &&
+                  modalContent.HasNode("ResultPanel") &&
+                  modalContent.HasNode("WinnerRibbon") &&
+                  modalContent.HasNode("StatsSeparator") &&
+                  modalContent.HasNode("TimeIcon") &&
+                  modalContent.HasNode("TimeValue") &&
+                  !modalContent.HasNode("StatFrame0") &&
+                  !modalContent.HasNode("StatFrame1") &&
+                  !modalContent.HasNode("StatFrame2"),
+                "result modal keeps the original V2 artwork with a compact clock only");
+            Check(modalContent.GetNode<Button>("Rematch").Position.Y == 136 * 4 &&
+                  modalContent.GetNode<Button>("MainMenu").Position.Y == 158 * 4,
+                "result action buttons are raised below the compact time row");
+            Check(Mathf.Abs(resultPanel.GlobalPosition.X - (1440 - 864) / 2f) < 1f &&
+                  Mathf.Abs(resultPanel.GlobalPosition.Y - (900 - 776) / 2f) < 1f,
+                "result panel centers in the entire 1440x900 viewport, not board bounds");
+            Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/MainMenu");
+            Press(root, Home + "Modes");
             Press(root, Modes + "Mode0");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic &&
+                  root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0,
+                "switching back to classic resets the default theme and selected rules");
             var appearance = root.GetNode<OptionButton>(Setup + "Appearance");
             var boardSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/Board");
             var cheeseSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/White");
             var meatSkin = root.GetNode<OptionButton>(Setup + "ThemeFields/Black");
-            Check(appearance.Selected == 0 && !root.GetNode<Control>(Setup + "ThemeFields").Visible,
-                "classic theme is default");
+            Check(appearance.Selected == 0 &&
+                  root.GetNode<Control>(Setup + "ThemeFields").Visible &&
+                  boardSkin.Disabled && cheeseSkin.Disabled && meatSkin.Disabled,
+                "classic theme is default with green board and visible disabled selectors");
             Check(boardSkin.ItemCount == 8 && cheeseSkin.ItemCount == 7 && meatSkin.ItemCount == 7,
                 "all eight board options, six cheeses and six meats are available");
             appearance.Select(1);
@@ -193,7 +357,14 @@ public partial class MenuTests : Node
             Check(!root.GetNode<Button>(Setup + "Continue").Disabled, "Continue enabled after saving");
 
             // A new random game must work through the same three-page menu flow.
-            StartNew(root, againstRandom: true);
+            // Opening a fresh setup resets its visual defaults; choose this match's theme.
+            Press(root, Home + "NewGame");
+            appearance.Select(1);
+            appearance.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
+            boardSkin.Select(0);
+            cheeseSkin.Select(1);
+            meatSkin.Select(3);
+            Press(root, Setup + "Random");
             await Frames();
             var random = root.CurrentGame!;
             Check(!ReferenceEquals(random, human) && root.AgainstRandom, "AI creates a new game");
@@ -202,6 +373,10 @@ public partial class MenuTests : Node
             Check(random.History.Count == 1, "white can move against the AI");
             Move(root, "e7", "e5");
             Check(random.History.Count == 1, "human cannot move the AI pieces");
+            Check(root.GetNode<BoardView>("Board").IsMoveAnimating && random.History.Count == 1,
+                "AI waits for the white piece to finish sliding");
+            await ToSignal(GetTree().CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
+            await Frames();
             await WaitFor(() => random.History.Count == 2);
             Check(random.History.Count == 2 && random.Turn == PlayerColor.White, "AI replies with a legal move");
             Press(root, "SidePanel/Margin/Content/Files/Save");
@@ -241,6 +416,7 @@ public partial class MenuTests : Node
             var legacy = JsonNode.Parse(saved)!;
             legacy.AsObject().Remove("AgainstRandom");
             legacy.AsObject().Remove("Theme");
+            legacy.AsObject().Remove("Mode");
             legacy.AsObject().Remove("AgainstStockfish");
             legacy["Version"] = 1;
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))

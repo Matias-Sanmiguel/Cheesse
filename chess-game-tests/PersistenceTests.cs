@@ -67,6 +67,7 @@ public partial class PersistenceTests : Node
     private void RunCases(FileSaveRepository repository)
     {
         Legacy_themed_save_keeps_appearance_without_v2_metadata();
+        Previous_numeric_save_values_keep_their_original_meaning();
         Fondue_mode_and_melted_king_survive_save_load(repository);
         Claimed_draw_results_roundtrip(repository);
         Invalid_positions_in_edited_saves_are_rejected(repository);
@@ -91,6 +92,7 @@ public partial class PersistenceTests : Node
         RoundTrip(repository, FenSerializer.InitialPosition,
             "g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8");
         RepetitionContinuesAfterLoad(repository);
+        PicadaRoundTrip(repository);
         InvalidSavesKeepOpenGame(repository);
         OverwriteUsesMostRecentSave(repository);
         SaveFailureKeepsPreviousFile(repository);
@@ -119,6 +121,39 @@ public partial class PersistenceTests : Node
         Check(game.TimeControl == TimeControl.Unlimited && repository.AgainstStockfish,
             "legacy AI save defaults to unlimited time and migrated opponent");
         Check(game.Undo(), "legacy themed save retains Undo after upgrade");
+    }
+
+    private void Previous_numeric_save_values_keep_their_original_meaning()
+    {
+        // Fixtures use the numeric values written by the previous two branches.
+        const string stalemateFen = "7k/5K2/6Q1/8/8/8/8/8 b - - 0 1";
+        var oldV2 = new
+        {
+            Version = 2, Fen = stalemateFen,
+            Pgn = "[SetUp \"1\"] [FEN \"" + stalemateFen + "\"] [Result \"1/2-1/2\"] 1/2-1/2",
+            EngineElo = 1800, Status = 3,
+            TimeControl = new { InitialSeconds = 0, IncrementSeconds = 0 },
+            Clock = new { WhiteSeconds = 0, BlackSeconds = 0, Running = false },
+            ClockHistory = new[] { new { WhiteSeconds = 0, BlackSeconds = 0, Running = false } }
+        };
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+            file.StoreString(JsonSerializer.Serialize(oldV2));
+        var repository = new FileSaveRepository();
+        var target = Create(repository);
+        Check(repository.Load(target) && target.Status == GameStatus.Stalemate,
+            "main's v2 numeric outcome still loads as stalemate after adding Picada");
+
+        var oldPicada = new
+        {
+            Version = 1, Mode = 1,
+            Fen = "7k/8/8/8/4K3/8/8/8 b - - 1 1",
+            Pgn = "[Variant \"Rey de la Picada\"] [SetUp \"1\"] [FEN \"7k/8/8/8/8/4K3/8/8 w - - 0 1\"] [Result \"1-0\"] 1. Ke4 1-0"
+        };
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+            file.StoreString(JsonSerializer.Serialize(oldPicada));
+        Check(repository.Load(target) && target.Mode == GameMode.ReyDeLaPicada &&
+            target.Status == GameStatus.PicadaVictory && target.Winner == PlayerColor.White,
+            "Nico's v1 numeric mode still loads as a Picada win, not Fondue");
     }
 
     private void Fondue_mode_and_melted_king_survive_save_load(FileSaveRepository repository)
@@ -292,6 +327,27 @@ public partial class PersistenceTests : Node
         Check(!repository.Load(game), "missing save returns false");
         Check(Snapshot(game) == before && ReferenceEquals(game.Board, board), "missing save keeps open game");
         Check(game.Undo(), "missing save keeps Undo");
+    }
+
+    private void PicadaRoundTrip(FileSaveRepository repository)
+    {
+        const string fen = "7k/8/8/8/8/4K3/8/8 w - - 0 1";
+        var source = new ChessGame(new Events(), repository, new Clock(),
+            FenSerializer.Load(fen), GameMode.ReyDeLaPicada);
+        Play(source, "e3e4");
+        Check(source.Status == GameStatus.PicadaVictory, "Picada ends when king reaches center");
+        repository.Save(source);
+
+        var target = Create(repository);
+        Check(repository.Load(target), "Picada save reloads");
+        Check(target.Mode == GameMode.ReyDeLaPicada &&
+              target.Status == GameStatus.PicadaVictory &&
+              FenSerializer.Write(target.Board) == FenSerializer.Write(source.Board),
+            "saved mode, win status and board survive loading");
+        Check(target.Undo() && target.Status == GameStatus.Ongoing,
+            "undo works on a loaded Picada win");
+        Check(target.Redo() && target.Status == GameStatus.PicadaVictory,
+            "redo recovers loaded Picada win");
     }
 
     private void RepetitionContinuesAfterLoad(FileSaveRepository repository)

@@ -37,10 +37,20 @@ public partial class MvpTests : Node
             Move(root, "e2", "e5");
             Check(root.CurrentGame!.History.Count == 0, "illegal mouse move preserves position");
             Move(root, "e2", "e4");
+            var animatedBoard = root.GetNode<BoardView>("Board");
+            var slidingPawn = animatedBoard.GetChildren().OfType<Sprite2D>()
+                .FirstOrDefault(piece => piece.Name.ToString().StartsWith("SlidingPiece"));
+            Check(animatedBoard.IsMoveAnimating && slidingPawn is not null &&
+                  slidingPawn.Position.IsEqualApprox(new Vector2(4 * 96 + 48, 6 * 96 + 48)),
+                "a legal move starts an animated pawn at its original square");
             Move(root, "e7", "e5");
             Check(root.CurrentGame.History.Count == 2, "mouse plays both sides through commands");
             Keypress(Key.Z, ctrl: true);
             Check(root.CurrentGame.History.Count == 1, "Ctrl+Z undoes a move");
+            Check(animatedBoard.IsMoveAnimating &&
+                  animatedBoard.GetChildren().OfType<Sprite2D>()
+                      .Any(piece => piece.Name.ToString().StartsWith("SlidingPiece") && piece.Visible),
+                "undo animates the piece sliding back without changing the chess rules");
             Press(root, Panel + "History/Redo");
             Check(root.CurrentGame.History.Count == 2, "panel redoes keyboard undo");
 
@@ -51,18 +61,28 @@ public partial class MvpTests : Node
             Move(root, "d8", "h4");
             var overlay = root.GetNode<GameOverOverlay>("GameOverOverlay");
             Check(root.CurrentGame!.Status == GameStatus.Checkmate && overlay.Visible, "mouse checkmate opens overlay");
-            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANAN NEGRAS", "overlay identifies winner");
-            Move(root, "a2", "a3");
-            Check(root.CurrentGame.History.Count == 4, "overlay blocks board input");
+            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANARON NEGRAS", "overlay identifies winner");
+            // The game-over buttons are deliberately clickable above the board;
+            // don't click through their screen coordinates when testing move locking.
+            Check(root.CurrentGame.History.Count == 4 &&
+                  !root.CurrentGame.State.AcceptsMoves && overlay.Visible,
+                "completed match blocks further chess moves");
             await Frames();
-            ClickAt(root.GetNode<Button>(Panel + "History/Undo").GetGlobalRect().GetCenter());
-            Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible, "panel undo dismisses mate overlay");
+            // The centered result dialog covers the sidebar; use the supported
+            // keyboard shortcut rather than clicking a button behind the dialog.
+            Keypress(Key.Z, ctrl: true);
+            Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible,
+                "Ctrl+Z dismisses the checkmate overlay (status=" + root.CurrentGame.Status +
+                ", history=" + root.CurrentGame.History.Count +
+                ", modal=" + overlay.Visible +
+                ", menu=" + root.GetNode<MenuView>("Menu").Visible + ")");
             Press(root, Panel + "History/Redo");
             Check(overlay.Visible, "redo reopens mate overlay");
             Keypress(Key.Z, ctrl: true);
             Check(root.CurrentGame.Status == GameStatus.Ongoing && !overlay.Visible, "keyboard undo works through overlay");
             Press(root, Panel + "History/Redo");
-            Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/Rematch");
+            ClickAt(root.GetNode<Button>("GameOverOverlay/Overlay/Center/Panel/Content/Rematch")
+                .GetGlobalRect().GetCenter());
             Check(!overlay.Visible && FenSerializer.Write(root.CurrentGame.Board) == FenSerializer.InitialPosition, "rematch restores 32 initial pieces");
 
             LoadPosition(root, "7k/P7/8/8/8/8/8/7K w - - 0 1");

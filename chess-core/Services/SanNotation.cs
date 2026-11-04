@@ -114,6 +114,7 @@ public static class SanNotation
         pgn.Append("[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n");
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
         if (initialBoard.Mode == GameMode.Fondue) pgn.Append("[Variant \"Fondue\"]\n");
+        if (initialBoard.Mode == GameMode.ReyDeLaPicada) pgn.Append("[Variant \"Rey de la Picada\"]\n");
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -151,6 +152,13 @@ public static class SanNotation
     public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard) =>
         FromPgn(pgn, out initialBoard, out _);
 
+    public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard, GameMode mode)
+    {
+        var moves = FromPgn(pgn, out initialBoard);
+        if (initialBoard.Mode != mode) throw new FormatException("PGN variant does not match the game mode.");
+        return moves;
+    }
+
     public static IReadOnlyList<Move> FromPgn(string pgn, out Board initialBoard, out string result)
     {
         ArgumentNullException.ThrowIfNull(pgn);
@@ -175,6 +183,7 @@ public static class SanNotation
             initialBoard = initialBoard.WithMode(variant switch
             {
                 "Fondue" => GameMode.Fondue,
+                "Rey de la Picada" => GameMode.ReyDeLaPicada,
                 "Standard" => GameMode.Standard,
                 _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
             });
@@ -282,7 +291,7 @@ public static class SanNotation
 
     private static string Result(GameStatus status, Board board) => status switch
     {
-        GameStatus.Checkmate => board.Turn == PlayerColor.White ? "0-1" : "1-0",
+        GameStatus.Checkmate or GameStatus.PicadaVictory => board.Turn == PlayerColor.White ? "0-1" : "1-0",
         GameStatus.KingMelted => FondueRules.HasKing(board, PlayerColor.White) ? "1-0" : "0-1",
         GameStatus.Stalemate or GameStatus.DrawByFiftyMove or
             GameStatus.DrawByRepetition or GameStatus.DrawByInsufficientMaterial or

@@ -22,6 +22,19 @@ public partial class ReleaseTests : Node
             AddChild(root);
             await Frames();
             await Capture("menu");
+            if (OS.GetCmdlineUserArgs().Contains("--screenshots"))
+            {
+                ClickControl(root, "Menu/Stage/HomePage/Navigation/Modes");
+                await Frames();
+                await Capture("mode-selection");
+                ClickControl(root, "Menu/Stage/ModesPage/Mode1");
+                await Frames();
+                await Capture("picada-setup");
+                ClickControl(root, "Menu/Stage/SetupPage/Back");
+                await Frames();
+                ClickControl(root, "Menu/Stage/ModesPage/Mode0");
+                await Frames();
+            }
             root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(2);
             root.StartHumanGame();
             Check(root.CurrentGame!.TimeControl == new TimeControl(300, 3), "menu selects 5+3 clock");
@@ -62,11 +75,14 @@ public partial class ReleaseTests : Node
             Press(root, "EndActions/Draw");
             Check(root.CurrentGame.Status == GameStatus.DrawByAgreement, "panel accepts opponent draw");
             root.StartHumanGame();
+            root.GetNode<InGamePresentationView>("InGamePresentation")._Process(2.2);
             Press(root, "EndActions/Resign");
             var confirmation = root.GetNode<ConfirmationDialog>("ResignDialog");
             Check(confirmation.Visible, "resignation requires confirmation");
             confirmation.EmitSignal(ConfirmationDialog.SignalName.Confirmed);
             Check(root.CurrentGame!.Status == GameStatus.Resigned && root.CurrentGame.Winner == PlayerColor.Black, "resignation ends game");
+            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/TimeValue").Text == "00:02",
+                "timed game result includes the played session duration");
 
             root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(0);
             root.StartHumanGame();
@@ -81,7 +97,8 @@ public partial class ReleaseTests : Node
             Check(difficulty.Selected == 2, "new game preserves side-panel Stockfish strength");
             Check(root.AgainstStockfish, "Stockfish mode selected");
             Play(root, "e2e4");
-            await Frames();
+            await WaitUntil(() => root.IsThinking);
+            Check(!root.GetNode<BoardView>("Board").IsMoveAnimating, "Stockfish waits for the player's piece slide");
             Check(root.IsThinking, "engine searches asynchronously");
             Press(root, "History/Undo");
             await WaitUntil(() => !root.IsThinking);
@@ -105,6 +122,32 @@ public partial class ReleaseTests : Node
                 "unsupported engine leaves Fondue position untouched");
             Play(root, "h8h7");
             Check(root.CurrentGame.History.Count == 1, "Fondue continues between humans after engine fallback");
+            const string picadaPosition = "[Variant \"Rey de la Picada\"] [SetUp \"1\"] [FEN \"7k/8/8/8/8/4K3/8/8 w - - 0 1\"] [Result \"*\"] *";
+            Check(root.ImportGameText(picadaPosition, ".pgn"), "Picada analysis imports with its own rules");
+            Play(root, "e3e4");
+            await WaitUntil(() => root.GetNode<GameOverOverlay>("GameOverOverlay").Visible);
+            await Capture("picada-result");
+            root.GetNode<Button>("GameOverOverlay/Overlay/Center/Panel/Content/Rematch").EmitSignal(BaseButton.SignalName.Pressed);
+            Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada && root.CurrentGame.History.Count == 0,
+                "Picada rematch retains its mode with a fresh board");
+            Check(root.ImportGameText(picadaPosition, ".pgn"), "Picada cancellation fixture imports");
+            Play(root, "e3e4");
+            Press(root, "History/Undo");
+            await ToSignal(GetTree().CreateTimer(2.2), SceneTreeTimer.SignalName.Timeout);
+            Check(root.CurrentGame!.Status == GameStatus.Ongoing && !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Undo cancels a delayed Picada result");
+            Press(root, "History/Redo");
+            root.ShowMenu();
+            await ToSignal(GetTree().CreateTimer(2.2), SceneTreeTimer.SignalName.Timeout);
+            Check(root.GetNode<Control>("Menu").Visible && !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "menu cancels a delayed Picada result");
+            Check(root.ImportGameText(picadaPosition, ".pgn"), "Picada new-game fixture imports");
+            Play(root, "e3e4");
+            Press(root, "NewGame");
+            await ToSignal(GetTree().CreateTimer(2.2), SceneTreeTimer.SignalName.Timeout);
+            Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada && root.CurrentGame.History.Count == 0 &&
+                !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "new Picada game retains mode and cancels the previous delayed result");
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }
@@ -118,6 +161,8 @@ public partial class ReleaseTests : Node
     private async Task Capture(string name)
     {
         if (!OS.GetCmdlineUserArgs().Contains("--screenshots")) return;
+        if (name == "picada-result")
+            await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         using var image = GetViewport().GetTexture().GetImage();
         image.SavePng("/tmp/cheesse-" + name + ".png");

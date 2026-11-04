@@ -17,4 +17,5 @@ public enum GameStatus
     DrawByTimeout,
     DrawByResignation,
     KingMelted,
+    PicadaVictory,
 }
