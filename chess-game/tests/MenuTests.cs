@@ -34,6 +34,12 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible, "startup displays a separate home screen");
             Check(!root.GetNode<Control>("Menu/Stage/ModesPage").Visible, "modes screen starts hidden");
             Check(!root.GetNode<BoardView>("Board").Visible, "startup hides board");
+            var boardView = root.GetNode<BoardView>("Board");
+            Check(BoardView.LightSquare == new Color("e9deb7") &&
+                  BoardView.DarkSquare == new Color("c9aa63"),
+                "classic board uses the agreed warm cheese palette");
+            Check(boardView.CurrentTheme == VisualTheme.Classic && boardView.UsesFlatTiles,
+                "classic board uses flat squares without tiled textures");
             Check(!root.GetNode<SidePanelView>("SidePanel").Visible, "startup hides HUD");
             Check(root.CurrentGame is null, "no game before choosing");
             Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled without a save");
@@ -125,6 +131,8 @@ public partial class MenuTests : Node
             Check(root.GetNode<BoardView>("Board").CurrentTheme ==
                 new VisualTheme("01_TablaDePicada", "01_Brie_vs_Salame", "03_Emmental_vs_Pepperoni"),
                 "board receives chosen appearance");
+            Check(!boardView.UsesFlatTiles,
+                "custom boards keep their individual tile textures");
             Check(!root.GetNode<Control>("Menu").Visible && root.GetNode<BoardView>("Board").Visible,
                 "starting game hides menu and shows board");
             Move(root, "e2", "e4");
