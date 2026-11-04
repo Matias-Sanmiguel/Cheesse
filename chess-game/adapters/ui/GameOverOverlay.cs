@@ -22,8 +22,6 @@ public partial class GameOverOverlay : CanvasLayer
     private Label _title = null!;
     private Label _reason = null!;
     private Label _timeValue = null!;
-    private Label _movesValue = null!;
-    private Label _modeValue = null!;
     private Tween? _introTween;
 
     public override void _Ready()
@@ -148,21 +146,9 @@ public partial class GameOverOverlay : CanvasLayer
         return button;
     }
 
-    private Label AddStat(int index, string label, string icon)
-    {
-        float x = 21 + index * 60;
-        AddSprite(_content, "StatFrame" + index, "02_panel/stat_box_54x23.png", x, 121, 54, 23);
-        AddIcon(_content, "StatIcon" + index, "04_icons/" + icon + "_12x12.png",
-            x + 3, 126, 12, 12);
-        AddText(_content, "StatLabel" + index, label, x + 15, 122.5f, 37, 7, 18,
-            new Color("684538"), UiFontWeight.Medium);
-        return AddText(_content, "StatValue" + index, "--", x + 15, 131, 37, 10, 24,
-            new Color("442c21"), UiFontWeight.Bold);
-    }
-
     private void BuildComponents()
     {
-        // Layer order matters: base parchment, banner, ribbons, statistics and real buttons.
+        // Layer order matters: base parchment, banner, ribbons, compact clock and buttons.
         AddSprite(_content, "ResultPanel", "02_panel/result_panel_208x165.png",
             4, 29, 208, 165);
         _banner = AddSprite(_content, "ResultBanner", "01_banner/victory_banner_192x64.png",
@@ -183,13 +169,19 @@ public partial class GameOverOverlay : CanvasLayer
 
         AddSprite(_content, "StatsSeparator", "02_panel/stats_separator_174x5.png",
             21, 112, 174, 5);
-        _timeValue = AddStat(0, "TIEMPO", "clock");
-        _movesValue = AddStat(1, "JUGADAS", "moves");
-        _modeValue = AddStat(2, "MODO", "mode");
 
-        AddImageButton("Rematch", "REVANCHA", "primary", "rematch", 20, 145,
+        // One discreet centered time row instead of three bulky stat cards.
+        AddIcon(_content, "TimeIcon", "04_icons/clock_12x12.png",
+            64, 119, 12, 12);
+        AddText(_content, "TimeLabel", "TIEMPO", 81, 119, 39, 12, 22,
+            new Color("684538"), UiFontWeight.Medium);
+        _timeValue = AddText(_content, "TimeValue", "00:00", 122, 119, 36, 12, 28,
+            new Color("442c21"), UiFontWeight.Bold);
+
+        // Raise both buttons while keeping the full original pixel-art artwork.
+        AddImageButton("Rematch", "REVANCHA", "primary", "rematch", 20, 136,
             () => { Hide(); EmitSignal(SignalName.RematchRequested); });
-        AddImageButton("MainMenu", "MENU PRINCIPAL", "secondary", "home", 20, 167,
+        AddImageButton("MainMenu", "MENU PRINCIPAL", "secondary", "home", 20, 158,
             () => { Hide(); EmitSignal(SignalName.MainMenuRequested); });
     }
 
@@ -223,9 +215,6 @@ public partial class GameOverOverlay : CanvasLayer
         _banner.Size = decisive ? Size(192, 64) : Size(192, 48);
         int seconds = Math.Max(0, elapsedSeconds);
         _timeValue.Text = $"{seconds / 60:00}:{seconds % 60:00}";
-        // Show full moves rather than individual half-moves.
-        _movesValue.Text = ((game.History.Count + 1) / 2).ToString();
-        _modeValue.Text = game.Mode == GameMode.ReyDeLaPicada ? "PICADA" : "CLASICO";
 
         _introTween?.Kill();
         _panel.Modulate = Colors.White;
