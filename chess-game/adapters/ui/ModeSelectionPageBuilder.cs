@@ -87,7 +87,7 @@ internal static class ModeSelectionPageBuilder
             MouseDefaultCursorShape = mode.Available
                 ? Control.CursorShape.PointingHand : Control.CursorShape.Arrow,
             TooltipText = mode.Available
-                ? "Iniciar modo: " + mode.Name
+                ? "Ver reglas del modo: " + mode.Name
                 : mode.Name + ": proximamente",
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest
         };
@@ -161,7 +161,7 @@ internal static class ModeSelectionPageBuilder
         }
     }
 
-    private static Texture2D BrickWallTexture()
+    internal static Texture2D BrickWallTexture()
     {
         if (_wallTexture is not null) return _wallTexture;
         const int width = 480, height = 300;

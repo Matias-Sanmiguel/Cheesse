@@ -5,8 +5,8 @@ using Chess.Core.Model;
 namespace Cheesse.Game.Adapters.Ui;
 
 /// <summary>
-/// Three-step pixel UI: home -> game mode -> match setup.
-/// No chess rules live here; the mode previews remain locked until their rule sets exist.
+/// Four-step pixel UI: home -> game mode -> rules -> match setup.
+/// Rules are displayed as readable UI copy, never implemented in the menu.
 /// </summary>
 public partial class MenuView : Control
 {
@@ -21,11 +21,12 @@ public partial class MenuView : Control
     public TimeControl SelectedTimeControl => Controls[Math.Clamp(_time.Selected, 0, Controls.Length - 1)];
     public int SelectedEngineElo => EngineElos[Math.Clamp(_difficulty.Selected, 0, EngineElos.Length - 1)];
 
-    private enum Page { Home, Modes, Setup, Settings }
+    private enum Page { Home, Modes, Rules, Setup, Settings }
     private Page _current;
     private Control _stage = null!;
     private Control _home = null!;
     private Control _modes = null!;
+    private Control _rules = null!;
     private Control _setup = null!;
     private Control _settings = null!;
     private Button _continue = null!;
@@ -59,6 +60,7 @@ public partial class MenuView : Control
         BuildHeader();
         BuildHome();
         BuildModes();
+        BuildRules();
         BuildSetup();
         BuildSettings();
         Resized += FitStage;
@@ -79,6 +81,7 @@ public partial class MenuView : Control
             ShowPage(_current switch
             {
                 Page.Setup => _setupReturnPage,
+                Page.Rules => Page.Modes,
                 _ => Page.Home
             });
             GetViewport().SetInputAsHandled();
@@ -121,7 +124,7 @@ public partial class MenuView : Control
         _home.AddChild(PixelUiSkin.Image("HomeLogo", "logos/logo_cheese.png",
             new Vector2(282, 56), new Vector2(876, 256), 4));
 
-        // Single entry point for a new game: Home -> Modes -> Setup.
+        // Single entry point for a new game: Home -> Modes -> Rules -> Setup.
         // Saves are still resumed from the setup screen.
         var navigation = new Control
         {
@@ -176,16 +179,32 @@ public partial class MenuView : Control
         ShowPage(Page.Setup);
     }
 
+    private void OpenRules(GameMode mode)
+    {
+        SelectedMode = mode;
+        ModeRulesPageBuilder.Configure(_rules, mode);
+        ShowPage(Page.Rules);
+    }
+
     private void BuildModes()
     {
         _modes = MakePage("ModesPage");
         ModeSelectionPageBuilder.Build(
             _modes,
-            () => OpenSetup(Page.Modes),
-            () => OpenSetup(Page.Modes, GameMode.ReyDeLaPicada),
-            () => OpenSetup(Page.Modes, GameMode.QuesoSuizo),
-            () => OpenSetup(Page.Modes, GameMode.Fondue),
+            () => OpenRules(GameMode.Classic),
+            () => OpenRules(GameMode.ReyDeLaPicada),
+            () => OpenRules(GameMode.QuesoSuizo),
+            () => OpenRules(GameMode.Fondue),
             () => ShowPage(Page.Home));
+    }
+
+    private void BuildRules()
+    {
+        _rules = MakePage("RulesPage");
+        ModeRulesPageBuilder.Build(_rules,
+            () => ShowPage(Page.Modes),
+            () => OpenSetup(Page.Rules, SelectedMode));
+        ModeRulesPageBuilder.Configure(_rules, GameMode.Classic);
     }
 
     private void BuildSetup()
@@ -554,6 +573,7 @@ public partial class MenuView : Control
         _current = page;
         _home.Visible = page == Page.Home;
         _modes.Visible = page == Page.Modes;
+        _rules.Visible = page == Page.Rules;
         _setup.Visible = page == Page.Setup;
         _settings.Visible = page == Page.Settings;
         // Modes have their own compact logo; setup intentionally has no logo.
