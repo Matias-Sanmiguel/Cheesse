@@ -370,7 +370,7 @@ public partial class MenuView : Control
             new Vector2(575, 48), onPressed, fontSize: 26);
         button.AddChild(PixelUiSkin.Image("ActionIcon",
             "icons/" + icon + "_16x16.png",
-            new Vector2(18, 4), new Vector2(32, 32), 2));
+            new Vector2(18, 6), new Vector2(32, 32), 2));
         return button;
     }
 
@@ -391,7 +391,7 @@ public partial class MenuView : Control
             button.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
 
         var cardArt = PixelUiSkin.Image("CardArt",
-            SetupAssets + "cards/" + design + "_idle_73x28.png",
+            StyleCardAsset(design, "idle"),
             Vector2.Zero, new Vector2(292, 112), 4);
         button.AddChild(cardArt);
         // The art contains its own illustration on the left. Keep both
@@ -404,7 +404,7 @@ public partial class MenuView : Control
         button.AddChild(caption);
 
         void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
-            SetupAssets + "cards/" + design + "_" + state + "_73x28.png", 4);
+            StyleCardAsset(design, state), 4);
         bool Selected() => _appearance.Selected == index;
         // Use each original card state as supplied in the V4 asset pack.
         button.MouseEntered += () => ShowState(Selected() ? "selected" : "hover");
@@ -415,12 +415,17 @@ public partial class MenuView : Control
         return button;
     }
 
+    // Separate path for Picada's exact V4 pack art: avoids Godot's previously
+    // imported 73x28 textures remaining cached after older image revisions.
+    private static string StyleCardAsset(string design, string state) =>
+        SetupAssets + "cards/" + (design == "picada" ? "picada_v4" : design) +
+        "_" + state + "_73x28.png";
+
     private static void SetStyleCardSelected(Button card, bool selected)
     {
         string design = card.Name.ToString() == "ClassicStyle" ? "classic" : "picada";
         card.GetNode<TextureRect>("CardArt").Texture = PixelUiSkin.Texture(
-            SetupAssets + "cards/" + design + "_" +
-            (selected ? "selected" : "idle") + "_73x28.png", 4);
+            StyleCardAsset(design, selected ? "selected" : "idle"), 4);
     }
 
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
