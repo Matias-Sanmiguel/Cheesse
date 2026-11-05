@@ -45,11 +45,13 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled without a save");
             Check(!root.GetNode<InputAdapter>("Input").IsProcessingUnhandledInput(), "no chess input in menu");
 
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese.png") &&
-                  GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese.png")!.GetSize() == new Vector2(219, 64),
+            var fullLogoTexture = GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese.png");
+            var compactLogoTexture = GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese_compact.png");
+            Check(fullLogoTexture is not null &&
+                  fullLogoTexture.GetWidth() == 219 && fullLogoTexture.GetHeight() == 64,
                 "updated 219x64 CHEESSE logo imported");
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png") &&
-                  GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese_compact.png")!.GetSize() == new Vector2(147, 32),
+            Check(compactLogoTexture is not null &&
+                  compactLogoTexture.GetWidth() == 147 && compactLogoTexture.GetHeight() == 32,
                 "updated 147x32 CHEESSE compact logo imported");
             Check(ResourceLoader.Exists("res://assets/backgrounds/menu_background.png"), "new 360x225 tavern background imported");
             Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"), "four mode illustrations imported");
