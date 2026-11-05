@@ -195,6 +195,16 @@ public sealed class ChessGame
             removed.Add(new MeltedPiece(move.To, move.Promotion is PieceType promotion ? piece with { Type = promotion } : piece));
             Events.Publish(new PiecesMelted(move, removed));
         }
+        else if (Board.Mode == GameMode.Fondue &&
+                 FondueRules.HotLanding(previousBoard, move) is Square hot)
+        {
+            // A piece landing on residual heat burns alone: no new 3x3 melt,
+            // no new hot tile. Reuse the existing domain event and FX pipeline.
+            Piece burned = hot == move.To
+                ? move.Promotion is PieceType promoted ? piece with { Type = promoted } : piece
+                : new Piece(PieceType.Rook, mover); // castling rook on f/d-file
+            Events.Publish(new PiecesMelted(move, [new MeltedPiece(hot, burned)]));
+        }
         if (Status is GameStatus.Check or GameStatus.Checkmate) Events.Publish(new CheckRaised(Turn));
         if (!State.AcceptsMoves) Events.Publish(new GameEnded(Status));
         PublishDrawEvent();

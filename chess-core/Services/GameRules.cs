@@ -124,6 +124,8 @@ public static class GameRules
         var mode = board.Mode == GameMode.Standard ? "" : board.Mode + ":";
         if (board.Mode == GameMode.QuesoSuizo)
             mode += SwissCheeseRules.Format(board.SwissHoles) + ":";
+        if (board.Mode == GameMode.Fondue)
+            mode += (board.HotSquare?.ToString() ?? "-") + ":";
         return mode + string.Join(" ", fields.Take(4));
     }
 
