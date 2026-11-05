@@ -567,9 +567,9 @@ public partial class BoardView : Node2D
                 _slidingDestinations.Add(rookTo);
                 Square rookVisualTo = rookTo;
                 if (!backwards && _observedBoard is Board old &&
-                    GameRules.HeatContact(old, move) is Square hot &&
+                    GameRules.HeatContact(old, move) is Square rookHeat &&
                     !GameRules.HeatBurnsMover(old, move))
-                    rookVisualTo = hot;
+                    rookVisualTo = rookHeat;
                 tween.TweenProperty(rook, "position", SquareCenter(rookVisualTo), PieceSlideDuration);
             }
         }
