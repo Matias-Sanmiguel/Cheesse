@@ -50,6 +50,8 @@ las posiciones de ahogado o mate que puedan aparecer **durante** una partida.
 - Los PGN incluyen `[Variant "Queso Suizo"]` y
   `[SwissHoles "a3,b4,..."]` (en orden canónico). Guardar/cargar internamente
   usa el PGN para restaurar las casillas con precisión.
+- Exportar a FEN estándar en este modo devuelve un aviso en vez de eliminar
+  silenciosamente los agujeros; para compartir una partida usá **PGN**.
 - Los PGN antiguos de Queso Suizo **sin** `SwissHoles` siguen cargando su patrón
   original fijo `c3,f3,d4,e5,c6,f6`.
 - El cálculo de repetición distingue el modo y la distribución de agujeros.
