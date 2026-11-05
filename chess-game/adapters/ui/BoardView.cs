@@ -2,6 +2,7 @@
 using Chess.Core.Events;
 using Chess.Core.Model;
 using Chess.Core.Rules;
+using Chess.Core.Services;
 using Cheesse.Game.Adapters.Infra;
 using Godot;
 using Cheesse.Game.Adapters.Appearance;
@@ -559,6 +560,7 @@ public partial class BoardView : Node2D
         DrawPicadaGoals();
         DrawSwissHoles();
         DrawCheckOverlay();
+        DrawFondueCheckThreats();
         DrawPieces();
         DrawSelectionIndicators();
         DrawCoordinates();
@@ -634,6 +636,23 @@ public partial class BoardView : Node2D
                 DrawRect(rect, new Color("aa7739"));
                 DrawCircle(rect.GetCenter(), SquareSize * 0.31f, new Color("281a20"));
             }
+        }
+    }
+
+    // In Fondue a king can be checked by capturing a nearby piece rather
+    // than attacking the king directly. Outline those actual capture squares
+    // so players can see what they must protect (e.g., f7 in the demo).
+    private void DrawFondueCheckThreats()
+    {
+        if (_game?.Mode != GameMode.Fondue || _game.Status != GameStatus.Check)
+            return;
+
+        foreach (var target in GameRules.KingMeltingThreats(_game.Board, _game.Turn)
+                     .Select(move => move.To).Distinct())
+        {
+            var square = new Rect2(GetSquarePosition(target),
+                new Vector2(SquareSize, SquareSize)).Grow(-4f);
+            DrawRect(square, new Color(1f, 0.36f, 0.21f, 0.95f), false, 4f);
         }
     }
 
