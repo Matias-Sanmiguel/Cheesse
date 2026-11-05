@@ -35,7 +35,8 @@ public sealed class FileSaveRepository : IGameRepository
         game.Tick();
         var data = new SaveData(SaveVersion, FenSerializer.Write(game.Board), SanNotation.ToPgn(game),
             AgainstStockfish, AgainstStockfish, EngineElo, game.TimeControl, game.ClockState,
-            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray(), Theme, game.Mode);
+            game.Status, game.Winner, game.DrawOfferedBy, game.ClockHistory.ToArray(), Theme, game.Mode,
+            game.Mode == GameMode.Fondue ? game.Board.HotSquare?.ToString() ?? "-" : null);
         var content = JsonSerializer.Serialize(data, JsonOptions);
         var temporaryPath = SavePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -100,6 +101,13 @@ public sealed class FileSaveRepository : IGameRepository
             var expectedFen = FenSerializer.Write(FenSerializer.Load(data.Fen));
             if (FenSerializer.Write(restored.Board) != expectedFen)
                 return false;
+            // Version-2 games created before Fondue heat have no HotSquare
+            // property; new saves carry an explicit "-" even when cooled.
+            // Replaying PGN regenerates active heat deterministically.
+            if (data.HotSquare is not null &&
+                (restored.Mode != GameMode.Fondue ||
+                 (restored.Board.HotSquare?.ToString() ?? "-") != data.HotSquare))
+                return false;
 
             if (data.Version == SaveVersion)
             {
@@ -137,5 +145,6 @@ public sealed class FileSaveRepository : IGameRepository
     private sealed record SaveData(int Version, string? Fen, string? Pgn, bool AgainstRandom = false,
         bool? AgainstStockfish = null, int EngineElo = 1800, TimeControl? TimeControl = null,
         ClockSnapshot? Clock = null, GameStatus? Status = null, PlayerColor? Winner = null,
-        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null, VisualTheme? Theme = null, GameMode? Mode = null);
+        PlayerColor? DrawOfferedBy = null, ClockSnapshot[]? ClockHistory = null, VisualTheme? Theme = null,
+        GameMode? Mode = null, string? HotSquare = null);
 }
