@@ -121,6 +121,26 @@ public sealed class Board
 
         Piece moving = piece.Value;
 
+        // Traveling over hot Fondue without a knight burns the moving piece
+        // BEFORE it reaches its requested destination. Anything on the far
+        // side (including a potential capture) remains untouched. The attempt
+        // still consumes the player's turn and clears residual heat.
+        if (Mode == GameMode.Fondue && FondueRules.BurnsBeforeDestination(this, move))
+        {
+            next[move.From.Index] = null;
+            var rights = moving.Type switch
+            {
+                PieceType.King when moving.Color == PlayerColor.White =>
+                    Castling with { WhiteKingside = false, WhiteQueenside = false },
+                PieceType.King => Castling with { BlackKingside = false, BlackQueenside = false },
+                PieceType.Rook => WithoutRookRight(Castling, move.From, moving.Color),
+                _ => Castling
+            };
+            var opponent = moving.Color == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+            var moveNumber = FullmoveNumber + (moving.Color == PlayerColor.Black ? 1 : 0);
+            return new Board(next, rights, null, opponent, 0, moveNumber, Mode, _swissHoleMask);
+        }
+
         next[move.From.Index] = null;
 
         //Captura al paso (enPassant)
@@ -202,11 +222,17 @@ public sealed class Board
             }
         }
 
-        // Heat is lethal on landing (including a castling rook's destination),
-        // not while moving across the square. It expires after this response.
-        var hotLanding = Mode == GameMode.Fondue ? FondueRules.HotLanding(this, move) : null;
-        bool burned = hotLanding is Square hot && next[hot.Index] is not null;
-        if (burned) next[hotLanding!.Value.Index] = null;
+        // Burn the piece that lands on residual heat. Only the knight may
+        // leap over the hot square; castling may burn the rook separately if
+        // its path crosses heat but the king's path does not.
+        var hotContact = Mode == GameMode.Fondue ? FondueRules.HotLanding(this, move) : null;
+        bool burnsRook = hotContact is not null &&
+            !FondueRules.HotBurnsMover(this, move);
+        Square burnedSquare = burnsRook
+            ? new Square(move.To.File > move.From.File ? 5 : 3, move.From.Rank)
+            : move.To;
+        bool burned = hotContact is not null && next[burnedSquare.Index] is not null;
+        if (burned) next[burnedSquare.Index] = null;
 
         int halfmoveClock = moving.Type == PieceType.Pawn || capturedPiece is not null || burned
             ? 0
