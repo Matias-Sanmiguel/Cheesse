@@ -115,6 +115,7 @@ public static class SanNotation
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
         if (initialBoard.Mode == GameMode.Fondue) pgn.Append("[Variant \"Fondue\"]\n");
         if (initialBoard.Mode == GameMode.ReyDeLaPicada) pgn.Append("[Variant \"Rey de la Picada\"]\n");
+        if (initialBoard.Mode == GameMode.QuesoSuizo) pgn.Append("[Variant \"Queso Suizo\"]\n");
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -184,6 +185,7 @@ public static class SanNotation
             {
                 "Fondue" => GameMode.Fondue,
                 "Rey de la Picada" => GameMode.ReyDeLaPicada,
+                "Queso Suizo" => GameMode.QuesoSuizo,
                 "Standard" => GameMode.Standard,
                 _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
             });
