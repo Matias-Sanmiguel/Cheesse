@@ -47,6 +47,7 @@ public partial class BoardView : Node2D
     private Texture2D? _captureOverlay;
     private Texture2D? _checkOverlay;
     private Texture2D? _goalOverlay;
+    private Texture2D? _holeOverlay;
     private Texture2D? _picadaLightTile;
     private Texture2D? _picadaDarkTile;
     private double _goalPulseTime;
@@ -59,6 +60,7 @@ public partial class BoardView : Node2D
 
     public VisualTheme CurrentTheme => _visualTheme;
     public bool ShowsPicadaGoals => _game?.Mode == GameMode.ReyDeLaPicada;
+    public bool ShowsSwissHoles => _game?.Mode == GameMode.QuesoSuizo;
     internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
@@ -78,6 +80,7 @@ public partial class BoardView : Node2D
         _captureOverlay = LoadTextureIfExists(root + "capture_marker.png");
         _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
         _goalOverlay = LoadTextureIfExists(root + "goal_square.png");
+        _holeOverlay = LoadTextureIfExists(root + "hole_overlay.png");
         // Dedicated 48x48 pixel-art goals; only used for the four center squares in Picada.
         const string picadaTiles = "res://assets/ui/picada_goals/";
         _picadaLightTile = LoadTextureIfExists(picadaTiles + "light_tile.png");
@@ -429,6 +432,7 @@ public partial class BoardView : Node2D
         DrawBoard();
         DrawLastMove();
         DrawPicadaGoals();
+        DrawSwissHoles();
         DrawCheckOverlay();
         DrawPieces();
         DrawSelectionIndicators();
@@ -486,6 +490,24 @@ public partial class BoardView : Node2D
             {
                 DrawRect(rect, new Color(0.97f, 0.73f, 0.16f, 0.13f + 0.11f * alpha));
                 DrawRect(rect, new Color(0.96f, 0.66f, 0.11f, alpha), false, 4f);
+            }
+        }
+    }
+
+    // Swiss Cheese holes are painted above the tiles and below all pieces and
+    // interactive highlights, using the untouched supplied 48x48 native sprite.
+    private void DrawSwissHoles()
+    {
+        if (!ShowsSwissHoles) return;
+        foreach (var square in SwissCheeseRules.Holes)
+        {
+            var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
+            if (_holeOverlay is not null)
+                DrawTextureRect(_holeOverlay, rect, false);
+            else
+            {
+                DrawRect(rect, new Color("aa7739"));
+                DrawCircle(rect.GetCenter(), SquareSize * 0.31f, new Color("281a20"));
             }
         }
     }
