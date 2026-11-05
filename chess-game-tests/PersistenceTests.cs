@@ -69,6 +69,7 @@ public partial class PersistenceTests : Node
         Legacy_themed_save_keeps_appearance_without_v2_metadata();
         Previous_numeric_save_values_keep_their_original_meaning();
         Fondue_mode_and_melted_king_survive_save_load(repository);
+        SwissCheese_roundtrip_preserves_holes_and_history(repository);
         Claimed_draw_results_roundtrip(repository);
         Invalid_positions_in_edited_saves_are_rejected(repository);
         Clock_and_outcome_survive_save_and_restart(repository);
@@ -154,6 +155,41 @@ public partial class PersistenceTests : Node
         Check(repository.Load(target) && target.Mode == GameMode.ReyDeLaPicada &&
             target.Status == GameStatus.PicadaVictory && target.Winner == PlayerColor.White,
             "Nico's v1 numeric mode still loads as a Picada win, not Fondue");
+    }
+
+    private void SwissCheese_roundtrip_preserves_holes_and_history(FileSaveRepository repository)
+    {
+        repository.AgainstStockfish = false;
+        var source = new ChessGame(new Events(), repository, new Clock(), GameMode.QuesoSuizo);
+        source.ConfigureClock(new TimeControl(300, 3));
+        // Choose actual Swiss-legal moves; the holes vary between matches.
+        for (int ply = 0; ply < 3; ply++)
+        {
+            var next = source.LegalMoves().First();
+            Check(source.TryMove(next), "random Swiss opening remains playable");
+        }
+        var originalHoles = Chess.Core.Rules.SwissCheeseRules.Format(source.Board.SwissHoles);
+        var expected = Snapshot(source);
+        Check(GameTextFiles.Export(source, ".pgn").Contains("[SwissHoles \""),
+            "Swiss PGN carries its random layout");
+        bool fenRejected = false;
+        try { GameTextFiles.Export(source, ".fen"); }
+        catch (FormatException) { fenRejected = true; }
+        Check(fenRejected, "Swiss FEN export cannot silently discard the holes");
+        repository.Save(source);
+
+        var target = Create(repository);
+        Check(repository.Load(target), "Swiss game save loads");
+        Check(target.Mode == GameMode.QuesoSuizo &&
+              Chess.Core.Rules.SwissCheeseRules.Format(target.Board.SwissHoles) == originalHoles,
+            "Swiss exact random hole layout and variant survive save/load");
+        Check(Snapshot(target) == expected && target.History.Count == 3,
+            "Swiss PGN moves and board are restored exactly");
+        Check(target.TimeControl == new TimeControl(300, 3), "Swiss clock is preserved");
+        Check(target.Undo() && target.Mode == GameMode.QuesoSuizo &&
+              Chess.Core.Rules.SwissCheeseRules.Format(target.Board.SwissHoles) == originalHoles,
+            "Swiss exact random holes remain intact after undo");
+        Check(target.Redo() && Snapshot(target) == expected, "Swiss redo restores original history");
     }
 
     private void Fondue_mode_and_melted_king_survive_save_load(FileSaveRepository repository)

@@ -5,12 +5,14 @@ namespace Chess.Core.Model;
 public sealed class Board
 {
     private readonly Piece?[] _squares;
+    private readonly ulong _swissHoleMask;
 
     private Board(Piece?[] squares, CastlingRights castling, Square? enPassant,
         PlayerColor turn = PlayerColor.White, int halfmoveClock = 0, int fullmoveNumber = 1,
-        GameMode mode = GameMode.Standard)
+        GameMode mode = GameMode.Standard, ulong swissHoleMask = 0)
     {
         _squares = squares;
+        _swissHoleMask = swissHoleMask;
         Castling = castling;
         EnPassant = enPassant;
         Turn = turn;
@@ -23,11 +25,34 @@ public sealed class Board
 
     public GameMode Mode { get; }
 
+    // Immutable holes belong to this board, never to a global random layout.
+    public IReadOnlyList<Square> SwissHoles => Mode == GameMode.QuesoSuizo
+        ? SwissCheeseRules.FromMask(_swissHoleMask)
+        : Array.Empty<Square>();
+
+    public bool IsBlocked(Square square) => Mode == GameMode.QuesoSuizo &&
+        (_swissHoleMask & (1UL << square.Index)) != 0;
+
     public Board WithMode(GameMode mode)
     {
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        if (mode == GameMode.QuesoSuizo)
+        {
+            if (Mode == GameMode.QuesoSuizo)
+                return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
+                    Turn, HalfmoveClock, FullmoveNumber, mode, _swissHoleMask);
+            return WithSwissHoles(SwissCheeseRules.Generate(this));
+        }
         return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
             Turn, HalfmoveClock, FullmoveNumber, mode);
+    }
+
+    // Explicit layout for replay/import: does not regenerate holes.
+    public Board WithSwissHoles(IEnumerable<Square> holes)
+    {
+        var mask = SwissCheeseRules.ValidateLayout(this, holes);
+        return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
+            Turn, HalfmoveClock, FullmoveNumber, GameMode.QuesoSuizo, mask);
     }
 
     public int HalfmoveClock { get; }
@@ -44,7 +69,7 @@ public sealed class Board
         ArgumentOutOfRangeException.ThrowIfLessThan(fullmoveNumber, 1);
 
         return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
-            turn, halfmoveClock, fullmoveNumber, Mode);
+            turn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask);
     }
 
     public Square? EnPassant { get; } //Guarda la casilla a la que puede ir para capturar al paso, por ejemplo si el peón va de d7 a d5, el otro peón puede ir a d6 para capturarlo
@@ -55,18 +80,22 @@ public sealed class Board
 
     public Board WithPiece(Square square, Piece? piece)
     {
+        if (piece is not null && IsBlocked(square))
+            throw new InvalidOperationException("No se puede colocar una pieza dentro de un agujero.");
         var next = (Piece?[])_squares.Clone();
         next[square.Index] = piece;
-        return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode);
+        return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
     }
 
-    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode);
+    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
 
-    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant, Turn, HalfmoveClock, FullmoveNumber, Mode);
+    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
 
 
     public Board WithMove(Move move)
     {
+        if (IsBlocked(move.From) || IsBlocked(move.To))
+            throw new InvalidOperationException("No se puede mover una pieza desde o hacia un agujero.");
         var next = (Piece?[])_squares.Clone();
 
         Piece? piece = next[move.From.Index];
@@ -163,7 +192,7 @@ public sealed class Board
         int fullmoveNumber = FullmoveNumber + (moving.Color == PlayerColor.Black ? 1 : 0);
         PlayerColor nextTurn = moving.Color == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
 
-        var board = new Board(next, newCastling, newEnPassant, nextTurn, halfmoveClock, fullmoveNumber, Mode);
+        var board = new Board(next, newCastling, newEnPassant, nextTurn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask);
         return Mode == GameMode.Fondue && FondueRules.CapturedSquare(this, move) is Square captured
             ? FondueRules.Melt(board, move.To, captured)
             : board;

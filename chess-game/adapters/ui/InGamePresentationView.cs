@@ -158,7 +158,12 @@ public partial class InGamePresentationView : Control
         void Art(string name, string file, float x, float y, float w, float h) =>
             _stage.AddChild(InGameUiSkin.Sprite(name, file, new Vector2(x, y), new Vector2(w, h)));
 
-        Art("GameLogo", "res://assets/ui/logos/logo_cheese.png", 8, 18, 192, 64);
+        // The 219x64 source is wider than the space before the board frame.
+        // Fit proportionally inside the original 192px HUD slot, never distort it.
+        var gameLogo = InGameUiSkin.Sprite("GameLogo",
+            "res://assets/ui/logos/logo_cheese.png", new Vector2(-4, 18), new Vector2(192, 64));
+        gameLogo.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        _stage.AddChild(gameLogo);
         // The PNG has a transparent 384x384 opening. Draw only its wooden
         // border in front of the board, so the chess squares cannot cut off
         // the inner rim. It never captures mouse input and has no effect on

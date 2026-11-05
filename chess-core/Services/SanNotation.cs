@@ -115,6 +115,12 @@ public static class SanNotation
         pgn.Append("[Result \"").Append(result).Append("\"]\n");
         if (initialBoard.Mode == GameMode.Fondue) pgn.Append("[Variant \"Fondue\"]\n");
         if (initialBoard.Mode == GameMode.ReyDeLaPicada) pgn.Append("[Variant \"Rey de la Picada\"]\n");
+        if (initialBoard.Mode == GameMode.QuesoSuizo)
+        {
+            pgn.Append("[Variant \"Queso Suizo\"]\n");
+            pgn.Append("[SwissHoles \"").Append(SwissCheeseRules.Format(initialBoard.SwissHoles))
+                .Append("\"]\n");
+        }
 
         var initialFen = FenSerializer.Write(initialBoard);
         if (initialFen != FenSerializer.InitialPosition)
@@ -179,14 +185,33 @@ public static class SanNotation
             throw new FormatException("A custom PGN position requires both SetUp and FEN tags.");
 
         initialBoard = FenSerializer.Load(setup == "1" ? tags["FEN"] : FenSerializer.InitialPosition);
-        if (tags.TryGetValue("Variant", out var variant))
-            initialBoard = initialBoard.WithMode(variant switch
+        if (tags.TryGetValue("Variant", out var variant) && variant == "Queso Suizo")
+        {
+            // Older Swiss PGNs predate the layout tag and used a fixed pattern.
+            var holes = tags.TryGetValue("SwissHoles", out var encoded)
+                ? SwissCheeseRules.Parse(encoded) : SwissCheeseRules.LegacyHoles;
+            try
             {
-                "Fondue" => GameMode.Fondue,
-                "Rey de la Picada" => GameMode.ReyDeLaPicada,
-                "Standard" => GameMode.Standard,
-                _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
-            });
+                initialBoard = initialBoard.WithSwissHoles(holes);
+            }
+            catch (ArgumentException error)
+            {
+                throw new FormatException("El PGN tiene agujeros inválidos.", error);
+            }
+        }
+        else
+        {
+            if (tags.ContainsKey("SwissHoles"))
+                throw new FormatException("SwissHoles requiere la variante Queso Suizo.");
+            if (tags.TryGetValue("Variant", out variant))
+                initialBoard = initialBoard.WithMode(variant switch
+                {
+                    "Fondue" => GameMode.Fondue,
+                    "Rey de la Picada" => GameMode.ReyDeLaPicada,
+                    "Standard" => GameMode.Standard,
+                    _ => throw new FormatException($"Unsupported PGN variant: {variant}."),
+                });
+        }
         var board = initialBoard;
         var history = new List<Move>();
         var positions = new List<Board> { board };

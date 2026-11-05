@@ -34,7 +34,7 @@ public static class SpecialMoves
         Square fSquare = new Square(5, rank);
         Square gSquare = new Square(6, rank);
 
-        if (canCastleShort && shortRook is Piece rookShort && rookShort.Type == PieceType.Rook && rookShort.Color == side && board.At(fSquare) == null && board.At(gSquare) == null &&
+        if (canCastleShort && shortRook is Piece rookShort && rookShort.Type == PieceType.Rook && rookShort.Color == side && !board.IsBlocked(fSquare) && !board.IsBlocked(gSquare) && board.At(fSquare) == null && board.At(gSquare) == null &&
             SafeTransit(fSquare) && !board.IsAttacked(gSquare, opponent))
         {
             moves.Add(new Move(kingSquare, gSquare));
@@ -51,6 +51,7 @@ public static class SpecialMoves
         Square dSquare = new Square(3, rank);
 
         if (canCastleLong && longRook is Piece rookLong && rookLong.Type == PieceType.Rook && rookLong.Color == side &&
+            !board.IsBlocked(bSquare) && !board.IsBlocked(cSquare) && !board.IsBlocked(dSquare) &&
             board.At(bSquare) == null && board.At(cSquare) == null && board.At(dSquare) == null && SafeTransit(dSquare) && !board.IsAttacked(cSquare, opponent))
         {
             moves.Add(new Move(kingSquare, cSquare));
@@ -74,6 +75,7 @@ public static class SpecialMoves
             return moves;
 
         Square target = board.EnPassant.Value;
+        if (board.IsBlocked(target)) return moves;
 
         //Validamos la fila de destino según el color
         int expectedRank = side == PlayerColor.White ? 5 : 2;
@@ -136,7 +138,7 @@ public static class SpecialMoves
             //Promoción avanzando hacia adelante, promocion normal, solo va para adelante, por eso verificamos que la casilla de destino esté vacía
             Square forward = new Square(file, promotionRank);
 
-            if (board.At(forward) == null) {
+            if (!board.IsBlocked(forward) && board.At(forward) == null) {
                 foreach (PieceType promotion in promotions) {
                     moves.Add(new Move(from, forward, promotion));
                 }
@@ -152,7 +154,7 @@ public static class SpecialMoves
                 Square to = new Square(targetFile, promotionRank);
                 Piece? destination = board.At(to);
 
-                if (destination != null && destination.Value.Color != side && destination.Value.Type != PieceType.King) {
+                if (!board.IsBlocked(to) && destination != null && destination.Value.Color != side && destination.Value.Type != PieceType.King) {
                     foreach (PieceType promotion in promotions) {
                         moves.Add(new Move(from, to, promotion));
                     }

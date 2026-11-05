@@ -16,7 +16,7 @@ public static class GameModeRuleCatalog
 
     public static IGameModeRules For(GameMode mode) => mode switch
     {
-        GameMode.Classic or GameMode.Fondue => Classic,
+        GameMode.Classic or GameMode.Fondue or GameMode.QuesoSuizo => Classic,
         GameMode.ReyDeLaPicada => Picada,
         _ => throw new ArgumentOutOfRangeException(nameof(mode))
     };

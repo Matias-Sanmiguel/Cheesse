@@ -109,7 +109,7 @@ public partial class MenuView : Control
     {
         // Secondary pages use the compact new logo; the home page gets the full-size one.
         _subpageLogo = PixelUiSkin.Image("CompactLogo", "logos/logo_cheese_compact.png",
-            new Vector2(528, 75), new Vector2(384, 96), 3);
+            new Vector2(500, 75), new Vector2(441, 96), 3);
         _stage.AddChild(_subpageLogo);
     }
 
@@ -117,9 +117,9 @@ public partial class MenuView : Control
     {
         _home = MakePage("HomePage");
 
-        // Full-size 192x64 native logo at x4; do not trim or interpolate it.
+        // Full-size 219x64 CHEESSE logo at x4; centered without stretching.
         _home.AddChild(PixelUiSkin.Image("HomeLogo", "logos/logo_cheese.png",
-            new Vector2(336, 56), new Vector2(768, 256), 4));
+            new Vector2(282, 56), new Vector2(876, 256), 4));
 
         // Single entry point for a new game: Home -> Modes -> Setup.
         // Saves are still resumed from the setup screen.
@@ -163,9 +163,12 @@ public partial class MenuView : Control
         _whiteSkin.Select(picada ? 1 : 0);
         _blackSkin.Select(picada ? 1 : 0);
         _setup.GetNode<Label>("Heading").Text = "PREPARA TU PARTIDA";
-        _setup.GetNode<Label>("Preview/RuleTag").Text = picada
-            ? "OBJETIVO: REY EN D4 / E4 / D5 / E5"
-            : "REGLAS CLASICAS · PARTIDA NORMAL";
+        _setup.GetNode<Label>("Preview/RuleTag").Text = mode switch
+        {
+            GameMode.ReyDeLaPicada => "OBJETIVO: REY EN D4 / E4 / D5 / E5",
+            GameMode.QuesoSuizo => "AGUJEROS: BLOQUEAN CASILLAS Y CAMINOS",
+            _ => "REGLAS CLASICAS · PARTIDA NORMAL"
+        };
         UpdatePreview();
         ShowPage(Page.Setup);
     }
@@ -177,6 +180,7 @@ public partial class MenuView : Control
             _modes,
             () => OpenSetup(Page.Modes),
             () => OpenSetup(Page.Modes, GameMode.ReyDeLaPicada),
+            () => OpenSetup(Page.Modes, GameMode.QuesoSuizo),
             () => ShowPage(Page.Home));
     }
 
@@ -387,11 +391,11 @@ public partial class MenuView : Control
             button.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
 
         var cardArt = PixelUiSkin.Image("CardArt",
-            SetupAssets + "cards/" + design + "_idle_73x28.png",
+            StyleCardAsset(design, "idle"),
             Vector2.Zero, new Vector2(292, 112), 4);
         button.AddChild(cardArt);
-        // Center text in the visible 24px card face, excluding the
-        // 4px drop shadow. Preserve the original illustration in the PNG.
+        // The art contains its own illustration on the left. Keep both
+        // captions entirely inside the text area and truly centered vertically.
         var caption = PixelUiSkin.Label("Caption", label,
             new Vector2(112, 0), new Vector2(164, 96),
             index == 0 ? 24 : 20, pixel: true,
@@ -400,8 +404,9 @@ public partial class MenuView : Control
         button.AddChild(caption);
 
         void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
-            SetupAssets + "cards/" + design + "_" + state + "_73x28.png", 4);
+            StyleCardAsset(design, state), 4);
         bool Selected() => _appearance.Selected == index;
+        // Use each original card state as supplied in the V4 asset pack.
         button.MouseEntered += () => ShowState(Selected() ? "selected" : "hover");
         button.MouseExited += () => ShowState(Selected() ? "selected" : "idle");
         button.ButtonDown += () => ShowState("pressed");
@@ -410,12 +415,17 @@ public partial class MenuView : Control
         return button;
     }
 
+    // Separate path for Picada's exact V4 pack art: avoids Godot's previously
+    // imported 73x28 textures remaining cached after older image revisions.
+    private static string StyleCardAsset(string design, string state) =>
+        SetupAssets + "cards/" + (design == "picada" ? "picada_v4" : design) +
+        "_" + state + "_73x28.png";
+
     private static void SetStyleCardSelected(Button card, bool selected)
     {
         string design = card.Name.ToString() == "ClassicStyle" ? "classic" : "picada";
         card.GetNode<TextureRect>("CardArt").Texture = PixelUiSkin.Texture(
-            SetupAssets + "cards/" + design + "_" +
-            (selected ? "selected" : "idle") + "_73x28.png", 4);
+            StyleCardAsset(design, selected ? "selected" : "idle"), 4);
     }
 
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
@@ -441,6 +451,8 @@ public partial class MenuView : Control
         SetStyleCardSelected(_picadaStyleCard, themed);
         _note.Text = SelectedMode == GameMode.ReyDeLaPicada
             ? "REY DE LA PICADA: LLEVA TU REY A D4, E4, D5 O E5."
+            : SelectedMode == GameMode.QuesoSuizo
+                ? "QUESO SUIZO: LOS AGUJEROS NO SE PUEDEN CRUZAR."
             : themed
                 ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
                 : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";

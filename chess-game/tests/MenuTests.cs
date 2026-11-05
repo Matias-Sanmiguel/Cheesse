@@ -45,8 +45,14 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled without a save");
             Check(!root.GetNode<InputAdapter>("Input").IsProcessingUnhandledInput(), "no chess input in menu");
 
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese.png"), "new 192x64 logo imported");
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png"), "new 128x32 compact logo imported");
+            var fullLogoTexture = GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese.png");
+            var compactLogoTexture = GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese_compact.png");
+            Check(fullLogoTexture is not null &&
+                  fullLogoTexture.GetWidth() == 219 && fullLogoTexture.GetHeight() == 64,
+                "updated 219x64 CHEESSE logo imported");
+            Check(compactLogoTexture is not null &&
+                  compactLogoTexture.GetWidth() == 147 && compactLogoTexture.GetHeight() == 32,
+                "updated 147x32 CHEESSE compact logo imported");
             Check(ResourceLoader.Exists("res://assets/backgrounds/menu_background.png"), "new 360x225 tavern background imported");
             Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"), "four mode illustrations imported");
             foreach (string variant in new[] { "Regular", "Medium", "SemiBold", "Bold" })
@@ -71,7 +77,10 @@ public partial class MenuTests : Node
             Check(root.GetNode<Label>("SidePanel/Margin/Content/Turn").GetThemeFont("font") ==
                   PixelUiSkin.FontFor(UiFontWeight.SemiBold), "HUD turn label uses SemiBold");
             Check(root.GetNode<Control>("Menu").HasNode("Stage/PixelBackground"), "stage uses new pixel background");
-            Check(root.GetNode<Control>("Menu").HasNode("Stage/HomePage/HomeLogo"), "main logo is on landing page");
+            var homeLogo = root.GetNode<TextureRect>("Menu/Stage/HomePage/HomeLogo");
+            Check(homeLogo.Position.IsEqualApprox(new Vector2(282, 56)) &&
+                  homeLogo.Size.IsEqualApprox(new Vector2(876, 256)),
+                "main CHEESSE logo uses 219x64 art at native x4 scale and stays centered");
             Check(root.GetNode<Button>(Home + "NewGame").Text == "JUGAR" &&
                   !root.HasNode(Home + "Modes") &&
                   root.GetNode<Button>(Home + "Settings").Text == "CONFIGURACION" &&
@@ -109,17 +118,17 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
                 "JUGAR consistently reopens the unchanged mode-selection screen");
             Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
-                  root.GetNode<Button>(Modes + "Mode2").Disabled &&
+                  !root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
-                "Rey de la Picada is available, Swiss and Fondue remain locked");
+                "Picada and Swiss are available; Fondue remains locked");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
                   modePage.HasNode("GameLogo"),
                 "mode selection has its own pixel-art backdrop, compact logo and navigation");
             var modeLogo = modePage.GetNode<TextureRect>("GameLogo");
-            Check(modeLogo.Position.IsEqualApprox(new Vector2(528, 75)) &&
-                  modeLogo.Size.IsEqualApprox(new Vector2(384, 96)),
-                "mode logo uses the compact 128x32 artwork at x3 scale");
+            Check(modeLogo.Position.IsEqualApprox(new Vector2(500, 75)) &&
+                  modeLogo.Size.IsEqualApprox(new Vector2(441, 96)),
+                "mode logo uses the compact 147x32 artwork at x3 scale");
             Check(modePage.GetNode<Button>("Back").Position.IsEqualApprox(new Vector2(66, 86)) &&
                   modePage.GetNode<Label>("Heading").Position.Y >= 188,
                 "back button stays in the header and heading is separated from the logo");
@@ -149,15 +158,28 @@ public partial class MenuTests : Node
                     "mode " + i + " has independent editable description below the card");
             }
             Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR" &&
-                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR",
-                "classic and Picada are playable with dynamic JUGAR labels");
-            foreach (var locked in new[] { "Mode2", "Mode3" })
+                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode2/State").Text == "JUGAR",
+                "classic, Picada and Swiss are playable with dynamic JUGAR labels");
+            foreach (var locked in new[] { "Mode3" })
             {
                 Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
                       root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
                     locked + " is visibly locked with dynamic copy, without navigation");
             }
 
+            Check(ResourceLoader.Exists("res://assets/ui/overlays/hole_overlay.png"),
+                "Swiss holes use the supplied 48x48 overlay without editing the asset");
+            Press(root, Modes + "Mode2");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("AGUJEROS"),
+                "Swiss mode opens setup with its own blocked-square rule");
+            Check(root.GetNode<Button>("Menu/Stage/SetupPage/Options/Random").Disabled,
+                "unsupported standard Stockfish cannot be started in Swiss mode");
+            Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                "Swiss setup back preserves mode selection");
             Press(root, Modes + "Mode1");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
@@ -213,7 +235,7 @@ public partial class MenuTests : Node
             foreach (var state in new[] { "idle", "hover", "pressed", "selected" })
             {
                 var picture = GD.Load<Texture2D>(
-                    "res://assets/ui/setup_v4/cards/picada_" + state + "_73x28.png")!.GetImage();
+                    "res://assets/ui/setup_v4/cards/picada_v4_" + state + "_73x28.png")!.GetImage();
                 Check(picture.GetWidth() > 0 && picture.GetHeight() > 0 &&
                       picture.GetWidth() * 28 == picture.GetHeight() * 73,
                     "Picada " + state + " preserves its 73:28 pixel-art aspect ratio");
@@ -250,7 +272,7 @@ public partial class MenuTests : Node
                   !setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
                   !setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
                   setupOptions.GetNode<Button>("PicadaStyle").GetNode<TextureRect>("CardArt").Texture ==
-                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_selected_73x28.png", 4),
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_v4_selected_73x28.png", 4),
                 "Picada style selects V4 artwork and enables existing theme dropdowns");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),

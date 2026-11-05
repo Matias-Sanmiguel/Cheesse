@@ -148,6 +148,39 @@ public partial class ReleaseTests : Node
             Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada && root.CurrentGame.History.Count == 0 &&
                 !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
                 "new Picada game retains mode and cancels the previous delayed result");
+            // Swiss Cheese is a real selectable match, not just an unlocked card.
+            root.ShowMenu();
+            await Frames();
+            ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            await Frames();
+            ClickControl(root, "Menu/Stage/ModesPage/Mode2");
+            await Frames();
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo,
+                "Swiss menu card selects the new ruleset");
+            ClickControl(root, "Menu/Stage/SetupPage/Options/Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.QuesoSuizo &&
+                  root.GetNode<BoardView>("Board").ShowsSwissHoles &&
+                  root.CurrentGame.Board.SwissHoles.Count == 6 &&
+                  root.CurrentGame.Board.SwissHoles.All(hole => root.CurrentGame.Board.IsBlocked(hole)),
+                "Swiss match displays six generated holes and installs blocking rules");
+            Check(root.GetNode<CheckButton>(Settings + "Random").Disabled &&
+                  !root.AgainstStockfish,
+                "unsupported Stockfish toggle stays disabled in Swiss mode");
+            var swissOpening = root.CurrentGame.LegalMoves().First();
+            Play(root, swissOpening.From.ToString() + swissOpening.To.ToString());
+            await Frames();
+            Check(root.CurrentGame.History.Count == 1 &&
+                  root.CurrentGame.LegalMoves().All(move => !root.CurrentGame.Board.IsBlocked(move.To)),
+                "Swiss game accepts legal moves but never offers blocked destinations");
+            await Capture("swiss-board");
+            var originalSwissLayout = Chess.Core.Rules.SwissCheeseRules.Format(root.CurrentGame.Board.SwissHoles);
+            Press(root, "NewGame");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.QuesoSuizo &&
+                  Chess.Core.Rules.SwissCheeseRules.Format(root.CurrentGame.Board.SwissHoles) != originalSwissLayout,
+                "new Swiss match preserves the mode and rerolls the holes");
+
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }
