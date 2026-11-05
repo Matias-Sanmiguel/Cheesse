@@ -105,12 +105,20 @@ public partial class MenuTests : Node
                   !root.GetNode<Control>("Menu/Stage/SetupPage").Visible,
                 "JUGAR navigates to mode selection before setup");
             Press(root, Modes + "Mode0");
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible &&
+                  !root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic,
+                "CLASICO opens the rules board before match configuration");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic,
-                "choosing CLASICO leads to its match setup");
+                "continue on rules opens CLASICO match setup");
             Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible,
+                "setup back returns to its rules board");
+            Press(root, "Menu/Stage/RulesPage/Back");
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
-                "setup back returns to mode selection");
+                "rules back returns to mode selection");
             Press(root, Modes + "Back");
             Check(root.GetNode<Control>("Menu/Stage/HomePage").Visible,
                 "mode selection back returns to home");
@@ -158,11 +166,49 @@ public partial class MenuTests : Node
                     "mode " + i + " has independent editable description below the card");
             }
             Check(Enumerable.Range(0, 4).All(i =>
-                  root.GetNode<Label>(Modes + "Mode" + i + "/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode" + i + "/State").Text == "VER REGLAS" &&
                   !root.GetNode<Button>(Modes + "Mode" + i).HasNode("LockIcon")),
-                "all four cards use the available CTA without lock icons");
+                "all four cards invite players to view rules without lock icons");
+
+            // Every rules board must show the EXACT supplied 192x64 logo
+            // at x3 scale, the correct objective and five distinct rules.
+            foreach (var (index, mode, file, phrase) in new[]
+            {
+                (0, GameMode.Classic, "mode_clasico.png", "JAQUE MATE"),
+                (1, GameMode.ReyDeLaPicada, "mode_rey_de_la_picada.png", "D4"),
+                (2, GameMode.QuesoSuizo, "mode_queso_suizo.png", "AGUJEROS"),
+                (3, GameMode.Fondue, "mode_fondue.png", "DERRITIENDO")
+            })
+            {
+                Press(root, Modes + "Mode" + index);
+                var rules = root.GetNode<Control>("Menu/Stage/RulesPage");
+                var logo = rules.GetNode<TextureRect>("ModeLogo");
+                var asset = "res://assets/ui/logos/modes/alternativo_192x64/" + file;
+                var source = GD.Load<Texture2D>(asset);
+                Check(rules.Visible && !root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                      root.GetNode<MenuView>("Menu").SelectedMode == mode,
+                    "mode " + index + " stops at rules, not gameplay");
+                Check(source is not null && source.GetWidth() == 192 && source.GetHeight() == 64 &&
+                      logo.Texture == PixelUiSkin.Texture(asset, 3) &&
+                      logo.Size.IsEqualApprox(new Vector2(576, 192)),
+                    "mode " + index + " uses its supplied native logo x3, without stretching");
+                Check(rules.GetNode<Label>("Objective").Text.Contains(phrase) &&
+                      rules.GetNode<Label>("Summary").Text.Length > 20 &&
+                      Enumerable.Range(0, 5).All(n =>
+                          rules.GetNode<Label>("Rule" + n).Text.Length > 15),
+                    "mode " + index + " provides its own complete rules and win condition");
+                Check(rules.HasNode("BrickWall") && rules.HasNode("WoodenBoard") &&
+                      rules.HasNode("Parchment") &&
+                      rules.GetNode<Button>("Back").GetThemeStylebox("normal") is StyleBoxTexture &&
+                      rules.GetNode<Button>("Continue").GetThemeStylebox("normal") is StyleBoxTexture,
+                    "mode " + index + " uses existing wooden panels and themed buttons");
+                Press(root, "Menu/Stage/RulesPage/Back");
+                Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                    "rules back returns to mode selection for " + mode);
+            }
 
             Press(root, Modes + "Mode3");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Fondue &&
                   root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("DERRITEN"),
@@ -175,12 +221,16 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>(Setup + "Random").Disabled,
                 "standard Stockfish stays disabled for Fondue");
             Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible,
+                "setup back keeps selected mode's rules");
+            Press(root, "Menu/Stage/RulesPage/Back");
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
                 "Fondue setup back navigates to the mode list");
 
             Check(ResourceLoader.Exists("res://assets/ui/overlays/hole_overlay.png"),
                 "Swiss holes use the supplied 48x48 overlay without editing the asset");
             Press(root, Modes + "Mode2");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("AGUJEROS"),
@@ -188,9 +238,13 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>("Menu/Stage/SetupPage/Options/Random").Disabled,
                 "unsupported standard Stockfish cannot be started in Swiss mode");
             Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible,
+                "setup back keeps selected mode's rules");
+            Press(root, "Menu/Stage/RulesPage/Back");
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
                 "Swiss setup back preserves mode selection");
             Press(root, Modes + "Mode1");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
                 "Picada opens its own match setup");
@@ -375,6 +429,7 @@ public partial class MenuTests : Node
             Press(root, "GameOverOverlay/Overlay/Center/Panel/Content/MainMenu");
             Press(root, Home + "NewGame");
             Press(root, Modes + "Mode0");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible, "classic navigates to match setup");
             Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Classic &&
                   root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0,
@@ -432,6 +487,7 @@ public partial class MenuTests : Node
             // Opening a fresh setup resets its visual defaults; choose this match's theme.
             Press(root, Home + "NewGame");
             Press(root, Modes + "Mode0");
+            Press(root, "Menu/Stage/RulesPage/Continue");
             appearance.Select(1);
             appearance.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
             boardSkin.Select(0);
@@ -531,6 +587,7 @@ public partial class MenuTests : Node
     {
         Press(root, Home + "NewGame");
         Press(root, Modes + "Mode0");
+        Press(root, "Menu/Stage/RulesPage/Continue");
         Press(root, Setup + (againstRandom ? "Random" : "Human"));
     }
 
@@ -538,6 +595,7 @@ public partial class MenuTests : Node
     {
         Press(root, Home + "NewGame");
         Press(root, Modes + "Mode0");
+        Press(root, "Menu/Stage/RulesPage/Continue");
         Press(root, Setup + "Continue");
     }
 

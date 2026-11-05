@@ -87,7 +87,7 @@ internal static class ModeSelectionPageBuilder
             MouseDefaultCursorShape = mode.Available
                 ? Control.CursorShape.PointingHand : Control.CursorShape.Arrow,
             TooltipText = mode.Available
-                ? "Iniciar modo: " + mode.Name
+                ? "Ver reglas del modo: " + mode.Name
                 : mode.Name + ": proximamente",
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest
         };
@@ -119,7 +119,7 @@ internal static class ModeSelectionPageBuilder
             "components/cta_locked_76x10.png";
         Art("ActionPlate", cta, new Vector2(10, 99), new Vector2(76, 10));
         button.AddChild(PixelUiSkin.Label("State",
-            mode.Available ? "JUGAR" : "PROXIMAMENTE",
+            mode.Available ? "VER REGLAS" : "PROXIMAMENTE",
             new Vector2(10 * PixelScale, 98 * PixelScale), new Vector2(76 * PixelScale, 11 * PixelScale),
             17, pixel: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Medium));
@@ -161,7 +161,7 @@ internal static class ModeSelectionPageBuilder
         }
     }
 
-    private static Texture2D BrickWallTexture()
+    internal static Texture2D BrickWallTexture()
     {
         if (_wallTexture is not null) return _wallTexture;
         const int width = 480, height = 300;

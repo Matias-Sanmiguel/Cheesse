@@ -29,10 +29,23 @@ public partial class ReleaseTests : Node
                 await Capture("mode-selection");
                 ClickControl(root, "Menu/Stage/ModesPage/Mode1");
                 await Frames();
+                Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible &&
+                      root.GetNode<Label>("Menu/Stage/RulesPage/Objective").Text.Contains("D4"),
+                    "Picada opens its rules screen before any game configuration");
+                await Capture("picada-rules");
+                ClickControl(root, "Menu/Stage/RulesPage/Continue");
+                await Frames();
                 await Capture("picada-setup");
                 ClickControl(root, "Menu/Stage/SetupPage/Back");
                 await Frames();
+                Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible,
+                    "setup Back returns to the selected rules page");
+                ClickControl(root, "Menu/Stage/RulesPage/Back");
+                await Frames();
                 ClickControl(root, "Menu/Stage/ModesPage/Mode0");
+                await Frames();
+                await Capture("classic-rules");
+                ClickControl(root, "Menu/Stage/RulesPage/Continue");
                 await Frames();
             }
             root.GetNode<OptionButton>("Menu/Stage/SettingsPage/SettingsPanel/TimeControl").Select(2);
@@ -155,6 +168,12 @@ public partial class ReleaseTests : Node
             await Frames();
             ClickControl(root, "Menu/Stage/ModesPage/Mode2");
             await Frames();
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible &&
+                  root.GetNode<Label>("Menu/Stage/RulesPage/Rule0").Text.Contains("AGUJEROS"),
+                "Swiss rules board explains the randomly generated holes");
+            await Capture("swiss-rules");
+            ClickControl(root, "Menu/Stage/RulesPage/Continue");
+            await Frames();
             Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo,
                 "Swiss menu card selects the new ruleset");
             ClickControl(root, "Menu/Stage/SetupPage/Options/Human");
@@ -188,6 +207,13 @@ public partial class ReleaseTests : Node
             ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
             await Frames();
             ClickControl(root, "Menu/Stage/ModesPage/Mode3");
+            await Frames();
+            Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible &&
+                  root.GetNode<Label>("Menu/Stage/RulesPage/Rule3").Text.Contains("CALOR") &&
+                  root.GetNode<Label>("Menu/Stage/RulesPage/Rule4").Text.Contains("caballo", StringComparison.OrdinalIgnoreCase),
+                "Fondue rules explain both local melting and hot-square knight jumps");
+            await Capture("fondue-rules");
+            ClickControl(root, "Menu/Stage/RulesPage/Continue");
             await Frames();
             Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Fondue &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("DERRITEN"),
