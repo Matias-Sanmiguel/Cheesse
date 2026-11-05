@@ -678,10 +678,10 @@ public partial class BoardView : Node2D
         if (_game?.Mode != GameMode.Fondue || _selectedSquare is not Square from ||
             _fondueHoverSquare is not Square to || !_legalDestinations.Contains(to))
             return;
-        var move = _game.LegalMoves().FirstOrDefault(candidate =>
-            candidate.From == from && candidate.To == to);
-        if (move is null) return;
-        foreach (Square square in GameRules.MeltingSquares(_game.Board, move))
+        var move = _game.LegalMoves().Where(candidate =>
+            candidate.From == from && candidate.To == to).ToArray();
+        if (move.Length == 0) return;
+        foreach (Square square in GameRules.MeltingSquares(_game.Board, move[0]))
         {
             bool king = _game.Board.At(square) is Piece { Type: PieceType.King };
             var rect = new Rect2(GetSquarePosition(square),
