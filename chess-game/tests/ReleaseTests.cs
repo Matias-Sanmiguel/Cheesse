@@ -204,6 +204,27 @@ public partial class ReleaseTests : Node
             Check(root.CurrentGame!.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
                 "new Fondue match preserves the selected mode");
 
+            // Screenshot regression: a geometrically valid Fondue capture can
+            // expose a melt threat, and an indirect king check must be explained.
+            const string fondueThreatDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueThreatDemo, ".pgn"),
+                "Fondue screenshot position can be loaded as a real match");
+            Play(root, "e5d6");
+            await Frames();
+            var fondueMessage = root.GetNode<SidePanelView>("SidePanel")
+                .GetNode<Label>("Margin/Content/Message");
+            Check(root.CurrentGame!.History.Count == 0 && fondueMessage.Text.Contains("d2"),
+                "attempting e5xd6 explains that the black queen could melt the king via d2");
+            Play(root, "e5e6");
+            await Frames();
+            var fondueStatus = root.GetNode<SidePanelView>("SidePanel")
+                .GetNode<Label>("Margin/Content/Status");
+            Check(root.CurrentGame!.Status == GameStatus.Check &&
+                  fondueStatus.Text == "JAQUE POR FONDUE" &&
+                  fondueStatus.TooltipText.Contains("f7"),
+                "black king's indirect check is labeled and points out the f7 capture threat");
+            await Capture("fondue-check");
+
             const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
             Check(root.ImportGameText(fondueVictory, ".pgn"),
                 "Fondue victory demonstration imports");
