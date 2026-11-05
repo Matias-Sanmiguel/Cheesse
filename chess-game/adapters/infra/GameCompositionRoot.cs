@@ -156,6 +156,7 @@ public partial class GameCompositionRoot : Node
         CurrentGame?.PauseClock();
         CurrentGame = game;
         _engineEnabled = _repository.AgainstStockfish && game.Mode == GameMode.Standard;
+        _repository.AgainstStockfish = _engineEnabled;
         _engineFailed = false;
         _board.Attach(game, _bus);
         _board.SetVisualTheme(_repository.Theme);
