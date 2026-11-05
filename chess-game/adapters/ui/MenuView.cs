@@ -169,7 +169,7 @@ public partial class MenuView : Control
         {
             GameMode.ReyDeLaPicada => "OBJETIVO: REY EN D4 / E4 / D5 / E5",
             GameMode.QuesoSuizo => "AGUJEROS: BLOQUEAN CASILLAS Y CAMINOS",
-            GameMode.Fondue => "FONDUE: LAS CAPTURAS DERRITEN EN CADENA",
+            GameMode.Fondue => "FONDUE: OTRAS PIEZAS DERRITEN AREA 3X3",
             _ => "REGLAS CLASICAS · PARTIDA NORMAL"
         };
         UpdatePreview();
@@ -458,7 +458,7 @@ public partial class MenuView : Control
             : SelectedMode == GameMode.QuesoSuizo
                 ? "QUESO SUIZO: LOS AGUJEROS NO SE PUEDEN CRUZAR."
             : SelectedMode == GameMode.Fondue
-                ? "FONDUE: CAPTURAR DERRITE PIEZAS VECINAS EN CADENA."
+                ? "FONDUE: COMER PEONES ES NORMAL. OTRAS PIEZAS DERRITEN 3X3."
             : themed
                 ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
                 : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";
