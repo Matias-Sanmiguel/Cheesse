@@ -113,6 +113,23 @@ public sealed class StockfishEngineInstallerTests
         Assert.That(Directory.GetFiles(_directory), Is.Empty);
     }
 
+    [Test]
+    public async Task Official_windows_archive_installs_and_plays_an_actual_move()
+    {
+        if (!OperatingSystem.IsWindows() ||
+            Environment.GetEnvironmentVariable("CHEESSE_RUN_REAL_INSTALLER") != "1")
+            Assert.Ignore("Windows release smoke test runs only on its dedicated CI job.");
+
+        var official = StockfishEngineInstaller.OfficialPackage();
+        var installed = await StockfishEngineInstaller.InstallAsync(Destination, official);
+        Assert.That(File.Exists(installed), Is.True, "The official binary was installed.");
+        var game = GameTestSupport.Create();
+        Assert.That(game.TryMove(GameTestSupport.Move("e2", "e4")), Is.True);
+        var move = await new StockfishAI(installed, 1400, 100).ChooseMoveAsync(game);
+        Assert.That(game.LegalMoves(), Does.Contain(move),
+            "The freshly downloaded official Windows Stockfish must reply legally.");
+    }
+
     private static StockfishEngineInstaller.Package Package(byte[] bytes, string entry, bool zip) =>
         new("https://example.invalid/official-stockfish", Convert.ToHexString(SHA256.HashData(bytes)), entry, zip);
 
