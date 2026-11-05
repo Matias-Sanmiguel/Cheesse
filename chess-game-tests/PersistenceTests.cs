@@ -170,6 +170,12 @@ public partial class PersistenceTests : Node
         }
         var originalHoles = Chess.Core.Rules.SwissCheeseRules.Format(source.Board.SwissHoles);
         var expected = Snapshot(source);
+        Check(GameTextFiles.Export(source, ".pgn").Contains("[SwissHoles \""),
+            "Swiss PGN carries its random layout");
+        bool fenRejected = false;
+        try { GameTextFiles.Export(source, ".fen"); }
+        catch (FormatException) { fenRejected = true; }
+        Check(fenRejected, "Swiss FEN export cannot silently discard the holes");
         repository.Save(source);
 
         var target = Create(repository);
