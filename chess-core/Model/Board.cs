@@ -193,8 +193,8 @@ public sealed class Board
         PlayerColor nextTurn = moving.Color == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
 
         var board = new Board(next, newCastling, newEnPassant, nextTurn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask);
-        return Mode == GameMode.Fondue && FondueRules.CapturedSquare(this, move) is Square captured
-            ? FondueRules.Melt(board, move.To, captured)
+        return Mode == GameMode.Fondue && FondueRules.IsMeltingCapture(this, move)
+            ? FondueRules.Melt(board, move.To)
             : board;
     }
 

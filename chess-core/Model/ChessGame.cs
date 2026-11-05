@@ -183,7 +183,7 @@ public sealed class ChessGame
         }
         _clockHistory.Add(_clockState);
         Events.Publish(new PieceMoved(move, piece));
-        if (Board.Mode == GameMode.Fondue && FondueRules.CapturedSquare(previousBoard, move) is not null)
+        if (Board.Mode == GameMode.Fondue && FondueRules.IsMeltingCapture(previousBoard, move))
         {
             var removed = new List<MeltedPiece>();
             for (var index = 0; index < 64; index++)

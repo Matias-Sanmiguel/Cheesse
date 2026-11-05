@@ -21,35 +21,54 @@ internal static class FondueRules
         return null;
     }
 
-    internal static Board Melt(Board moved, Square destination, Square captured)
-    {
-        var pending = new Queue<Square>();
-        var visited = new HashSet<Square>();
-        pending.Enqueue(destination);
-        pending.Enqueue(captured);
-        var board = moved;
-        while (pending.TryDequeue(out var square))
-        {
-            if (!visited.Add(square)) continue;
-            board = board.WithPiece(square, null);
-            for (var dx = -1; dx <= 1; dx++)
-            for (var dy = -1; dy <= 1; dy++)
-            {
-                var file = square.File + dx;
-                var rank = square.Rank + dy;
-                if (file is < 0 or >= 8 || rank is < 0 or >= 8) continue;
-                var neighbor = new Square(file, rank);
-                if (board.At(neighbor) is not null) pending.Enqueue(neighbor);
-            }
-        }
+    // Fondue 2.0: ordinary pawn captures stay ordinary. Only capturing a
+    // knight, bishop, rook or queen starts melting. Neither adjacent pawns
+    // nor more distant pieces propagate the effect.
+    internal static bool IsMeltingCapture(Board board, Move move) =>
+        CapturedSquare(board, move) is Square captured &&
+        board.At(captured) is Piece { Type: not PieceType.Pawn };
 
+    private static IReadOnlyList<Square> MeltSquares(Board moved, Square destination)
+    {
+        var affected = new List<Square> { destination }; // victim + attacker
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            if (dx == 0 && dy == 0) continue;
+            int file = destination.File + dx, rank = destination.Rank + dy;
+            if (file is < 0 or >= 8 || rank is < 0 or >= 8) continue;
+            var nearby = new Square(file, rank);
+            if (moved.At(nearby) is Piece { Type: not PieceType.Pawn })
+                affected.Add(nearby);
+        }
+        return affected;
+    }
+
+    // This is the single source of truth for the preview. Simulate without
+    // melting first, so the preview and the actual area are always identical.
+    internal static IReadOnlyList<Square> Preview(Board board, Move move)
+    {
+        if (board.Mode != GameMode.Fondue || !IsMeltingCapture(board, move))
+            return [];
+        var quiet = board.WithMode(GameMode.Standard).WithMove(move);
+        return MeltSquares(quiet, move.To);
+    }
+
+    internal static Board Melt(Board moved, Square destination)
+    {
+        var board = moved;
+        foreach (var square in MeltSquares(moved, destination))
+            board = board.WithPiece(square, null);
+
+        // Adjacent home rooks can also melt, so recompute castle rights after
+        // the effect, without touching the movement rules of the other modes.
         var rights = board.Castling;
         foreach (var side in new[] { PlayerColor.White, PlayerColor.Black })
         {
-            var rank = side == PlayerColor.White ? 0 : 7;
-            var king = board.At(new Square(4, rank)) == new Piece(PieceType.King, side);
-            var shortRook = king && board.At(new Square(7, rank)) == new Piece(PieceType.Rook, side);
-            var longRook = king && board.At(new Square(0, rank)) == new Piece(PieceType.Rook, side);
+            int rank = side == PlayerColor.White ? 0 : 7;
+            bool king = board.At(new Square(4, rank)) == new Piece(PieceType.King, side);
+            bool shortRook = king && board.At(new Square(7, rank)) == new Piece(PieceType.Rook, side);
+            bool longRook = king && board.At(new Square(0, rank)) == new Piece(PieceType.Rook, side);
             rights = side == PlayerColor.White
                 ? rights with { WhiteKingside = rights.WhiteKingside && shortRook, WhiteQueenside = rights.WhiteQueenside && longRook }
                 : rights with { BlackKingside = rights.BlackKingside && shortRook, BlackQueenside = rights.BlackQueenside && longRook };
@@ -77,7 +96,7 @@ internal static class FondueRules
         foreach (var move in MoveGenerator.Generate(geometry, opponent))
         {
             if (board.At(move.To) is Piece { Type: PieceType.King } ||
-                CapturedSquare(geometry, move) is null) continue;
+                !IsMeltingCapture(geometry, move)) continue;
             var after = board.WithMove(move);
             if (HasKing(after, opponent) && !HasKing(after, side))
                 captures.Add(move);
