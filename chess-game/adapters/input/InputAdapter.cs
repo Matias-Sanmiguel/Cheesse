@@ -95,10 +95,11 @@ public partial class InputAdapter : Node
                 return;
             }
 
-            if (_game.Board.At(square) is Piece friend && friend.Color == _game.Turn)
+            if (_game.Mode == GameMode.Fondue &&
+                _game.Board.At(square) is Piece friend && friend.Color == _game.Turn)
             {
-                // Switching directly to another friendly piece is expected chess
-                // behavior, even if the original piece was pinned or checked.
+                // Fondue: change the selected piece directly while exploring
+                // which moves are legal in an indirect melting check.
                 SelectOwnPiece(square);
             }
             else
