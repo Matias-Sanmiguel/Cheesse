@@ -1,6 +1,8 @@
 
+using Chess.Core.Events;
 using Chess.Core.Model;
 using Chess.Core.Rules;
+using Chess.Core.Services;
 using Cheesse.Game.Adapters.Infra;
 using Godot;
 using Cheesse.Game.Adapters.Appearance;
@@ -20,6 +22,7 @@ public partial class BoardView : Node2D
     private GodotEventBus? _bus;
 
     private Square? _selectedSquare;
+    private Square? _fondueHoverSquare;
     private readonly HashSet<Square> _legalDestinations = new();
     private Move? _lastMove;
 
@@ -48,19 +51,32 @@ public partial class BoardView : Node2D
     private Texture2D? _checkOverlay;
     private Texture2D? _goalOverlay;
     private Texture2D? _holeOverlay;
+    private Texture2D? _heatOverlay;
+    private Texture2D? _steamTexture;
+    private Texture2D? _fondueDropTexture;
     private Texture2D? _picadaLightTile;
     private Texture2D? _picadaDarkTile;
     private double _goalPulseTime;
     private double _goalRedrawClock;
+    private double _fondueHeatTime;
+    private double _fondueHeatRedrawClock;
+    private Square? _fondueCoolingSquare;
+    private double _fondueCoolingElapsed;
     private Node2D? _picadaVictoryFx;
+    private Node2D? _fondueMeltFx;
 
     // The celebration should be visible before its result dialog covers the board.
     public const double PicadaVictoryEffectDurationSeconds = 1.8;
+    public const double FondueMeltEffectDurationSeconds = 1.45;
+    public const double FondueHeatFadeSeconds = 0.82;
     private VisualTheme _visualTheme = VisualTheme.Classic;
 
     public VisualTheme CurrentTheme => _visualTheme;
     public bool ShowsPicadaGoals => _game?.Mode == GameMode.ReyDeLaPicada;
     public bool ShowsSwissHoles => _game?.Mode == GameMode.QuesoSuizo;
+    public bool ShowsFondueMeltFx => _fondueMeltFx is not null && GodotObject.IsInstanceValid(_fondueMeltFx);
+    public Square? VisibleHotSquare => _game?.Mode == GameMode.Fondue ? _game.Board.HotSquare : null;
+    public Square? CoolingHotSquare => _fondueCoolingSquare;
     internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
@@ -81,6 +97,9 @@ public partial class BoardView : Node2D
         _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
         _goalOverlay = LoadTextureIfExists(root + "goal_square.png");
         _holeOverlay = LoadTextureIfExists(root + "hole_overlay.png");
+        _heatOverlay = LoadTextureIfExists(root + "heat_overlay.png");
+        _steamTexture = LoadTextureIfExists("res://assets/fx/steam_16x16.png");
+        _fondueDropTexture = LoadTextureIfExists("res://assets/fx/fondue_drop_16x16.png");
         // Dedicated 48x48 pixel-art goals; only used for the four center squares in Picada.
         const string picadaTiles = "res://assets/ui/picada_goals/";
         _picadaLightTile = LoadTextureIfExists(picadaTiles + "light_tile.png");
@@ -91,9 +110,13 @@ public partial class BoardView : Node2D
     {
         // Evitar suscripciones duplicadas.
         if (_bus is not null)
+        {
             _bus.StateChanged -= OnStateChanged;
+            _bus.PiecesMeltedPublished -= OnPiecesMelted;
+        }
 
         ClearPicadaVictoryFx();
+        ClearFondueMeltFx();
         CancelPieceSlide();
         _game = game;
         _bus = bus;
@@ -103,8 +126,14 @@ public partial class BoardView : Node2D
         _observedLastMove = game.History.Count == 0 ? null : game.History[^1];
         _goalPulseTime = 0;
         _goalRedrawClock = 0;
+        _fondueHeatTime = 0;
+        _fondueHeatRedrawClock = 0;
+        _fondueCoolingSquare = null;
+        _fondueCoolingElapsed = 0;
+        _fondueHoverSquare = null;
 
         bus.StateChanged += OnStateChanged;
+        bus.PiecesMeltedPublished += OnPiecesMelted;
 
         RefreshFromGame();
     }
@@ -122,12 +151,52 @@ public partial class BoardView : Node2D
     public override void _ExitTree()
     {
         if (_bus is not null)
+        {
             _bus.StateChanged -= OnStateChanged;
+            _bus.PiecesMeltedPublished -= OnPiecesMelted;
+        }
+        ClearFondueMeltFx();
+        _fondueCoolingSquare = null;
         CancelPieceSlide();
     }
 
     public override void _Process(double delta)
     {
+        // Only ask for a repaint when the hovered square changes; no
+        // additional input handlers or assumptions about the game engine.
+        Square? hover = null;
+        if (Visible && _game?.Mode == GameMode.Fondue && _selectedSquare is not null &&
+            TryGetSquare(GetLocalMousePosition(), out Square square))
+            hover = square;
+        if (hover != _fondueHoverSquare)
+        {
+            _fondueHoverSquare = hover;
+            QueueRedraw();
+        }
+
+        // Residual heat pulses slowly on the opponent's response turn.
+        if (Visible && _game?.Mode == GameMode.Fondue &&
+            _game.Board.HotSquare is not null)
+        {
+            _fondueHeatTime += delta;
+            _fondueHeatRedrawClock += delta;
+            if (_fondueHeatRedrawClock >= 0.125)
+            {
+                _fondueHeatRedrawClock %= 0.125;
+                QueueRedraw();
+            }
+        }
+
+        // The board stops being dangerous immediately, but the heat art cools
+        // smoothly for a short moment with a fading glow and rising steam.
+        if (_fondueCoolingSquare is not null)
+        {
+            _fondueCoolingElapsed += delta;
+            if (_fondueCoolingElapsed >= FondueHeatFadeSeconds)
+                _fondueCoolingSquare = null;
+            QueueRedraw();
+        }
+
         // Pixel-art pulse at 8 fps, only while a Picada match is active.
         if (!Visible || _game?.Mode != GameMode.ReyDeLaPicada ||
             _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
@@ -267,6 +336,122 @@ public partial class BoardView : Node2D
         _picadaVictoryFx = null;
     }
 
+    /// <summary>
+    /// Render-only feedback for the authoritative Core PiecesMelted event.
+    /// The game has already removed the pieces; the view never simulates
+    /// captures or changes board state.
+    /// </summary>
+    private void OnPiecesMelted(PiecesMelted melted)
+    {
+        if (_game?.Mode != GameMode.Fondue || !Visible) return;
+
+        ClearFondueMeltFx();
+        var removedSquares = melted.Pieces.Select(piece => piece.Square).Distinct().ToArray();
+        if (removedSquares.Length == 0) return;
+        // A single burned piece can die on the hot square before reaching
+        // move.To. Multi-piece Fondue captures still originate at move.To.
+        Square impact = melted.Pieces.Count == 1 ? melted.Pieces[0].Square : melted.Move.To;
+
+        var meltedTile = LoadTextureIfExists("res://assets/ui/overlays/melted_square.png");
+        var steam = _steamTexture;
+        var drop = _fondueDropTexture;
+        var fx = new Node2D
+        {
+            Name = "FondueMeltFx",
+            ZIndex = 20,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        AddChild(fx);
+        _fondueMeltFx = fx;
+
+        // Keep a ghost of each removed piece while it dissolves; the attacker
+        // is already animated separately by the regular piece-slide tween.
+        var mover = _game.Turn == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+        foreach (var item in melted.Pieces.GroupBy(piece => piece.Square).Select(group => group.First()))
+        {
+            if (item.Piece.Color == mover &&
+                (item.Square == melted.Move.To || melted.Pieces.Count == 1)) continue;
+            if (!_pieceTextures.TryGetValue((item.Piece.Type, item.Piece.Color), out var texture)) continue;
+            var ghost = new Sprite2D
+            {
+                Name = "MeltingPiece" + item.Square,
+                Texture = texture,
+                Position = SquareCenter(item.Square),
+                Scale = new Vector2(SquareSize / (float)texture.GetWidth(),
+                    SquareSize / (float)texture.GetHeight()),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                Modulate = Colors.White
+            };
+            fx.AddChild(ghost);
+            var dissolve = fx.CreateTween();
+            dissolve.TweenInterval(0.18);
+            dissolve.TweenProperty(ghost, "modulate:a", 0f, 0.44);
+        }
+
+        for (int i = 0; i < removedSquares.Length; i++)
+        {
+            Square square = removedSquares[i];
+            float delay = 0.19f + 0.065f * Math.Max(
+                Math.Abs(square.File - impact.File),
+                Math.Abs(square.Rank - impact.Rank));
+            Vector2 center = SquareCenter(square);
+
+            if (meltedTile is not null)
+            {
+                var overlay = new Sprite2D
+                {
+                    Name = "MeltSquare" + square,
+                    Texture = meltedTile,
+                    Position = center,
+                    Scale = new Vector2(SquareSize / (float)meltedTile.GetWidth(),
+                        SquareSize / (float)meltedTile.GetHeight()),
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                    Modulate = new Color(1f, 1f, 1f, 0f)
+                };
+                fx.AddChild(overlay);
+                var flash = fx.CreateTween();
+                flash.TweenInterval(delay);
+                flash.TweenProperty(overlay, "modulate:a", 0.95f, 0.13);
+                flash.TweenInterval(0.12);
+                flash.TweenProperty(overlay, "modulate:a", 0f, 0.40);
+            }
+
+            Texture2D? particleTexture = i % 2 == 0 ? steam ?? drop : drop ?? steam;
+            if (particleTexture is null) continue;
+            var particle = new Sprite2D
+            {
+                Name = "FondueSteam" + i,
+                Texture = particleTexture,
+                Position = center + new Vector2((i % 3 - 1) * 11f, -10f),
+                Scale = Vector2.One * 2.5f,
+                Modulate = new Color(1f, 0.95f, 0.7f, 0f),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+            };
+            fx.AddChild(particle);
+            var rise = fx.CreateTween();
+            rise.TweenInterval(delay);
+            rise.TweenProperty(particle, "modulate:a", 0.96f, 0.12);
+            rise.TweenProperty(particle, "position:y", particle.Position.Y - 39f, 0.50)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            rise.Parallel().TweenProperty(particle, "modulate:a", 0f, 0.50);
+        }
+
+        var lifetime = fx.CreateTween();
+        lifetime.TweenInterval(FondueMeltEffectDurationSeconds);
+        lifetime.TweenCallback(Callable.From(() =>
+        {
+            if (ReferenceEquals(_fondueMeltFx, fx)) _fondueMeltFx = null;
+            fx.QueueFree();
+        }));
+    }
+
+    private void ClearFondueMeltFx()
+    {
+        if (_fondueMeltFx is not null && GodotObject.IsInstanceValid(_fondueMeltFx))
+            _fondueMeltFx.QueueFree();
+        _fondueMeltFx = null;
+    }
+
     // Compatibilidad con InputAdapter de main.
     public void SelectSquare(Square? square)
     {
@@ -351,6 +536,12 @@ public partial class BoardView : Node2D
 
         Square from = backwards ? move.To : move.From;
         Square to = backwards ? move.From : move.To;
+        // The piece animates to its actual melting point, not to a destination
+        // it could never reach after crossing the hot square.
+        if (!backwards && _observedBoard is Board prior &&
+            GameRules.HeatContact(prior, move) is Square hot &&
+            GameRules.HeatBurnsMover(prior, move))
+            to = hot;
         var movingSprite = MakeSlidingSprite(movingPiece, from);
         if (movingSprite is null) return;
 
@@ -374,7 +565,12 @@ public partial class BoardView : Node2D
             if (rook is not null)
             {
                 _slidingDestinations.Add(rookTo);
-                tween.TweenProperty(rook, "position", SquareCenter(rookTo), PieceSlideDuration);
+                Square rookVisualTo = rookTo;
+                if (!backwards && _observedBoard is Board old &&
+                    GameRules.HeatContact(old, move) is Square rookHeat &&
+                    !GameRules.HeatBurnsMover(old, move))
+                    rookVisualTo = rookHeat;
+                tween.TweenProperty(rook, "position", SquareCenter(rookVisualTo), PieceSlideDuration);
             }
         }
 
@@ -431,11 +627,15 @@ public partial class BoardView : Node2D
     {
         DrawBoard();
         DrawLastMove();
+        DrawFondueHeat();
+        DrawFondueCooling();
         DrawPicadaGoals();
         DrawSwissHoles();
         DrawCheckOverlay();
+        DrawFondueCheckThreats();
         DrawPieces();
         DrawSelectionIndicators();
+        DrawFonduePreview();
         DrawCoordinates();
     }
 
@@ -470,6 +670,56 @@ public partial class BoardView : Node2D
         if (_lastMove is not Move move) return;
         DrawOverlay(move.From, _lastFromOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
         DrawOverlay(move.To, _lastToOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
+    }
+
+    // Original heat_overlay.png at native pixel-art scaling. The orange
+    // glow and steam are purely decorative: the Board alone owns hot timing.
+    private void DrawFondueHeat()
+    {
+        if (VisibleHotSquare is not Square square) return;
+        var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
+        float pulse = 0.5f + 0.5f * Mathf.Sin((float)_fondueHeatTime * 6f);
+        DrawRect(rect, new Color(1f, 0.35f, 0.06f, 0.11f + 0.09f * pulse));
+        if (_heatOverlay is not null)
+            DrawTextureRect(_heatOverlay, rect, false,
+                new Color(1f, 1f, 1f, 0.70f + 0.27f * pulse));
+        DrawRect(rect.Grow(-4f), new Color(1f, 0.40f, 0.12f, 0.66f + 0.27f * pulse),
+            false, 3f);
+
+        if (_steamTexture is not null)
+        {
+            float lift = 9f * pulse;
+            var smokeRect = new Rect2(GetSquarePosition(square) +
+                new Vector2(SquareSize * 0.33f, -12f - lift),
+                new Vector2(SquareSize * 0.34f, SquareSize * 0.34f));
+            DrawTextureRect(_steamTexture, smokeRect, false,
+                new Color(1f, 0.92f, 0.77f, 0.48f + 0.27f * pulse));
+        }
+    }
+
+    private void DrawFondueCooling()
+    {
+        if (_fondueCoolingSquare is not Square square) return;
+        float t = Mathf.Clamp((float)(_fondueCoolingElapsed / FondueHeatFadeSeconds), 0f, 1f);
+        float fade = (1f - t) * (1f - t);
+        Vector2 origin = GetSquarePosition(square);
+        float inset = 2f + 13f * t;
+        var tile = new Rect2(origin, new Vector2(SquareSize, SquareSize));
+
+        // Last warm glow contracts while the steam lifts and thins out.
+        DrawRect(tile.Grow(-inset),
+            new Color(1f, 0.34f, 0.08f, 0.15f * fade));
+        if (_heatOverlay is not null)
+            DrawTextureRect(_heatOverlay, tile.Grow(-inset), false,
+                new Color(1f, 1f, 1f, 0.8f * fade));
+        if (_steamTexture is not null)
+        {
+            var smoke = new Rect2(origin +
+                new Vector2(SquareSize * 0.33f, -13f - 33f * t),
+                new Vector2(SquareSize * 0.34f, SquareSize * 0.34f));
+            DrawTextureRect(_steamTexture, smoke, false,
+                new Color(1f, 0.92f, 0.75f, 0.74f * fade));
+        }
     }
 
     private void DrawPicadaGoals()
@@ -509,6 +759,54 @@ public partial class BoardView : Node2D
                 DrawRect(rect, new Color("aa7739"));
                 DrawCircle(rect.GetCenter(), SquareSize * 0.31f, new Color("281a20"));
             }
+        }
+    }
+
+    // In Fondue a king can be checked by capturing a nearby piece rather
+    // than attacking the king directly. Outline those actual capture squares
+    // so players can see what they must protect (e.g., f7 in the demo).
+    private void DrawFondueCheckThreats()
+    {
+        if (_game?.Mode != GameMode.Fondue || _game.Status != GameStatus.Check)
+            return;
+
+        foreach (var target in GameRules.KingMeltingThreats(_game.Board, _game.Turn)
+                     .Select(move => move.To).Distinct())
+        {
+            var square = new Rect2(GetSquarePosition(target),
+                new Vector2(SquareSize, SquareSize)).Grow(-4f);
+            DrawRect(square, new Color(1f, 0.36f, 0.21f, 0.95f), false, 4f);
+        }
+    }
+
+    // Preview precisely the pieces that will disappear on this legal capture.
+    // If the target is a pawn, there is no explosion to preview.
+    private void DrawFonduePreview()
+    {
+        if (_game?.Mode != GameMode.Fondue || _selectedSquare is not Square from ||
+            _fondueHoverSquare is not Square to || !_legalDestinations.Contains(to))
+            return;
+        var moves = _game.LegalMoves().Where(candidate =>
+            candidate.From == from && candidate.To == to).ToArray();
+        if (moves.Length == 0) return;
+        if (GameRules.HeatContact(_game.Board, moves[0]) is Square heated)
+        {
+            // For non-knights, danger can lie anywhere on the path. The
+            // marker is on the ACTUAL burn square, even past the cursor.
+            var danger = new Rect2(GetSquarePosition(heated),
+                new Vector2(SquareSize, SquareSize)).Grow(-8f);
+            DrawRect(danger, new Color(0.98f, 0.18f, 0.10f, 0.95f), false, 5f);
+            return;
+        }
+        foreach (Square square in GameRules.MeltingSquares(_game.Board, moves[0]))
+        {
+            bool king = _game.Board.At(square) is Piece { Type: PieceType.King };
+            var rect = new Rect2(GetSquarePosition(square),
+                new Vector2(SquareSize, SquareSize)).Grow(-5f);
+            var color = king ? new Color(0.95f, 0.23f, 0.23f, 0.95f)
+                             : new Color(1f, 0.65f, 0.16f, 0.9f);
+            DrawRect(rect, new Color(color.R, color.G, color.B, 0.17f));
+            DrawRect(rect, color, false, 4f);
         }
     }
 
@@ -830,6 +1128,29 @@ public partial class BoardView : Node2D
         if (_game is null) return;
 
         int count = _game.History.Count;
+        bool committedMove = count == _observedHistoryCount + 1 &&
+            _observedBoard is not null;
+        if (!ReferenceEquals(_observedBoard, _game.Board))
+        {
+            ClearFondueMeltFx();
+            Square? previousHeat = _observedBoard?.Mode == GameMode.Fondue
+                ? _observedBoard.HotSquare : null;
+            Square? currentHeat = _game.Board.Mode == GameMode.Fondue
+                ? _game.Board.HotSquare : null;
+            if (committedMove && previousHeat is Square oldHot &&
+                previousHeat != currentHeat)
+            {
+                _fondueCoolingSquare = oldHot;
+                _fondueCoolingElapsed = 0;
+            }
+            else if (!committedMove)
+            {
+                // Undo, redo, import and new game update immediately and must
+                // not resurrect visual heat from an unrelated position.
+                _fondueCoolingSquare = null;
+                _fondueCoolingElapsed = 0;
+            }
+        } // A new move, undo, redo or load invalidates the old overlay.
         if (count == _observedHistoryCount + 1 && _observedBoard is not null)
         {
             Move move = _game.History[^1];

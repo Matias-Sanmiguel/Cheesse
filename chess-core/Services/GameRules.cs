@@ -11,6 +11,53 @@ public static class GameRules
         return Evaluate(game.Board, game.Turn, game.Positions);
     }
 
+    /// <summary>
+    /// Capture moves that can melt <paramref name="side"/>'s king without
+    /// destroying the opposing king. Used by UI to explain Fondue check.
+    /// This has no effect on legal-move generation.
+    /// </summary>
+    public static IReadOnlyList<Move> KingMeltingThreats(Board board, PlayerColor side)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.KingMeltingCaptures(board, side)
+            : [];
+    }
+
+    /// <summary>
+    /// Exact local impact of a Fondue capture, before committing the move.
+    /// Pawn captures return no melting squares. The view must only ask for
+    /// legal moves, as this prediction does not validate legality.
+    /// </summary>
+    public static IReadOnlyList<Square> MeltingSquares(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.Preview(board, move)
+            : [];
+    }
+
+
+    /// <summary>
+    /// Return the heated tile a candidate move touches, even when the player
+    /// asked to travel beyond it. For previews/animation only; the core decides
+    /// piece survival and whether the move is legal.
+    /// </summary>
+    public static Square? HeatContact(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.HotLanding(board, move)
+            : null;
+    }
+
+    public static bool HeatBurnsMover(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue &&
+            FondueRules.HotBurnsMover(board, move);
+    }
+
     public static GameStatus Evaluate(Board board, PlayerColor side) =>
         Evaluate(board, side, null);
 
@@ -97,6 +144,8 @@ public static class GameRules
         var mode = board.Mode == GameMode.Standard ? "" : board.Mode + ":";
         if (board.Mode == GameMode.QuesoSuizo)
             mode += SwissCheeseRules.Format(board.SwissHoles) + ":";
+        if (board.Mode == GameMode.Fondue)
+            mode += (board.HotSquare?.ToString() ?? "-") + ":";
         return mode + string.Join(" ", fields.Take(4));
     }
 

@@ -122,10 +122,29 @@ public partial class SidePanelView : PanelContainer
             GameMode.Fondue => "MODO: FONDUE",
             _ => "MODO: CLASICO"
         };
-        _turn.Text = _game.Status == GameStatus.PicadaVictory
+        _turn.Text = _game.Status is GameStatus.PicadaVictory or GameStatus.KingMelted
             ? (_game.Winner == PlayerColor.White ? "GANAN BLANCAS" : "GANAN NEGRAS")
             : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
-        _status.Text = _thinking ? "STOCKFISH PENSANDO…" : StatusText(_game.Status).ToUpperInvariant();
+        IReadOnlyList<Move> fondueThreats = _game.Mode == GameMode.Fondue &&
+            _game.Status == GameStatus.Check
+            ? GameRules.KingMeltingThreats(_game.Board, _game.Turn)
+            : Array.Empty<Move>();
+        bool meltCheck = fondueThreats.Count > 0;
+        Square? hot = _game.Mode == GameMode.Fondue ? _game.Board.HotSquare : null;
+        _status.Text = _thinking ? "STOCKFISH PENSANDO…" :
+            meltCheck ? "JAQUE POR FONDUE" :
+            _game.Status == GameStatus.Ongoing && hot is Square burning
+                ? "CALIENTE: " + burning
+                : StatusText(_game.Status).ToUpperInvariant();
+        string statusTip = meltCheck
+            ? "El rival puede capturar en " +
+              string.Join(", ", fondueThreats.Select(move => move.To.ToString()).Distinct()) +
+              " y derretir a tu rey. Tenés que impedir esa captura o mover el rey."
+            : StatusText(_game.Status);
+        if (hot is Square danger)
+            statusTip += " | " + danger +
+                " está caliente hasta que termine esta jugada. Solo el caballo puede saltarla; cualquier otra pieza que cruce o termine ahí se derrite (el rey no puede sacrificarse).";
+        _status.TooltipText = statusTip;
         _statusDot.Modulate = _game.Status switch
         {
             GameStatus.Ongoing => new Color("5abf69"),
@@ -169,6 +188,7 @@ public partial class SidePanelView : PanelContainer
     public static string StatusText(GameStatus status) => status switch
     {
         GameStatus.PicadaVictory => "Rey al centro: victoria",
+        GameStatus.KingMelted => "Rey derretido: victoria",
         GameStatus.Ongoing => "En juego", GameStatus.Check => "Jaque", GameStatus.Checkmate => "Jaque mate",
         GameStatus.Stalemate => "Tablas por ahogado", GameStatus.DrawByFiftyMove => "Tablas por 50 movimientos",
         GameStatus.DrawByRepetition => "Tablas por repetición", GameStatus.DrawByInsufficientMaterial => "Tablas por material insuficiente",

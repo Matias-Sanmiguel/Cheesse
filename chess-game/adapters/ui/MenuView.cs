@@ -156,17 +156,20 @@ public partial class MenuView : Control
     {
         _setupReturnPage = fromPage;
         SelectedMode = mode;
-        // Picada has a themed default; users may still customize teams and board.
+        // Suggested presets are optional: each mode still lets players choose
+        // the classic appearance or customize the board and both teams.
         bool picada = mode == GameMode.ReyDeLaPicada;
-        _appearance.Select(picada ? 1 : 0);
-        _boardSkin.Select(0);
-        _whiteSkin.Select(picada ? 1 : 0);
-        _blackSkin.Select(picada ? 1 : 0);
+        bool fondue = mode == GameMode.Fondue;
+        _appearance.Select(picada || fondue ? 1 : 0);
+        _boardSkin.Select(fondue ? 3 : 0); // Mármol Bistro
+        _whiteSkin.Select(fondue ? 2 : picada ? 1 : 0); // Cheddar
+        _blackSkin.Select(fondue ? 2 : picada ? 1 : 0); // Chorizo
         _setup.GetNode<Label>("Heading").Text = "PREPARA TU PARTIDA";
         _setup.GetNode<Label>("Preview/RuleTag").Text = mode switch
         {
             GameMode.ReyDeLaPicada => "OBJETIVO: REY EN D4 / E4 / D5 / E5",
             GameMode.QuesoSuizo => "AGUJEROS: BLOQUEAN CASILLAS Y CAMINOS",
+            GameMode.Fondue => "FONDUE: OTRAS PIEZAS DERRITEN AREA 3X3",
             _ => "REGLAS CLASICAS · PARTIDA NORMAL"
         };
         UpdatePreview();
@@ -181,6 +184,7 @@ public partial class MenuView : Control
             () => OpenSetup(Page.Modes),
             () => OpenSetup(Page.Modes, GameMode.ReyDeLaPicada),
             () => OpenSetup(Page.Modes, GameMode.QuesoSuizo),
+            () => OpenSetup(Page.Modes, GameMode.Fondue),
             () => ShowPage(Page.Home));
     }
 
@@ -453,6 +457,8 @@ public partial class MenuView : Control
             ? "REY DE LA PICADA: LLEVA TU REY A D4, E4, D5 O E5."
             : SelectedMode == GameMode.QuesoSuizo
                 ? "QUESO SUIZO: LOS AGUJEROS NO SE PUEDEN CRUZAR."
+            : SelectedMode == GameMode.Fondue
+                ? "FONDUE: COMER PEONES ES NORMAL. OTRAS PIEZAS DERRITEN 3X3."
             : themed
                 ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
                 : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";

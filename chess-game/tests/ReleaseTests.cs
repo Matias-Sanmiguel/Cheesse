@@ -181,6 +181,169 @@ public partial class ReleaseTests : Node
                   Chess.Core.Rules.SwissCheeseRules.Format(root.CurrentGame.Board.SwissHoles) != originalSwissLayout,
                 "new Swiss match preserves the mode and rerolls the holes");
 
+            // Fondue is selectable through the original card and reuses the
+            // existing chess-core cascade, save flow and themed board.
+            root.ShowMenu();
+            await Frames();
+            ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            await Frames();
+            ClickControl(root, "Menu/Stage/ModesPage/Mode3");
+            await Frames();
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Fondue &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("DERRITEN"),
+                "Fondue menu card opens real match setup with melting rules");
+            Check(root.GetNode<Button>("Menu/Stage/SetupPage/Options/Random").Disabled,
+                "standard Stockfish is not offered for Fondue");
+            ClickControl(root, "Menu/Stage/SetupPage/Options/Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.Fondue &&
+                  root.CurrentGame.Status == GameStatus.Ongoing && !root.AgainstStockfish,
+                "Fondue starts a playable human match");
+            await Capture("fondue-start");
+            Press(root, "NewGame");
+            Check(root.CurrentGame!.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
+                "new Fondue match preserves the selected mode");
+
+            // Regression: pawn captures must be playable without unadvertised
+            // explosion/check. A real non-pawn capture remains a king threat.
+            const string fonduePawnDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fonduePawnDemo, ".pgn"),
+                "Fondue screenshot position can be loaded");
+            Play(root, "e5d6");
+            await Frames();
+            var fondueBoard = root.GetNode<BoardView>("Board");
+            Check(root.CurrentGame!.History.Count == 1 &&
+                  root.CurrentGame.Board.At(new Square(3, 5)) ==
+                      new Piece(PieceType.Pawn, PlayerColor.White) &&
+                  !fondueBoard.ShowsFondueMeltFx,
+                "e5xd6 is a normal pawn capture and causes no explosion");
+            Check(root.ImportGameText(fonduePawnDemo, ".pgn"),
+                "Fondue screenshot position resets");
+            Play(root, "e5e6");
+            await Frames();
+            Check(root.CurrentGame!.Status == GameStatus.Ongoing,
+                "e6 no longer creates a false melt check by threatening the f7 pawn");
+            await Capture("fondue-regular-pawn");
+
+            const string fondueCheckDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6n1/8/8/8/8/8/K5R1 b - - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueCheckDemo, ".pgn"),
+                "real king-melting check position imports");
+            var fondueStatus = root.GetNode<SidePanelView>("SidePanel")
+                .GetNode<Label>("Margin/Content/Status");
+            Check(root.CurrentGame!.Status == GameStatus.Check &&
+                  fondueStatus.Text == "JAQUE POR FONDUE" &&
+                  fondueStatus.TooltipText.Contains("g7"),
+                "a real non-pawn-capture threat still explains which square endangers the king");
+            await Capture("fondue-check");
+
+            // The original heat-overlay asset persists after a melt for
+            // exactly one opposing move; landing on it destroys just that piece.
+            const string fondueHeatDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat fixture imports");
+            Play(root, "d1d5");
+            await Frames();
+            var hotBoard = root.GetNode<BoardView>("Board");
+            var hotStatus = root.GetNode<SidePanelView>("SidePanel")
+                .GetNode<Label>("Margin/Content/Status");
+            Check(root.CurrentGame!.Board.HotSquare == Square("d5") &&
+                  hotBoard.VisibleHotSquare == Square("d5") &&
+                  ResourceLoader.Exists("res://assets/ui/overlays/heat_overlay.png"),
+                "melt creates visible hot d5 and uses supplied heat pixel-art asset");
+            Check(hotStatus.Text.Contains("CALIENTE") &&
+                  hotStatus.TooltipText.Contains("d5"),
+                "player receives a warning and knows when the tile cools");
+            await Capture("fondue-hot");
+            Press(root, "History/Undo");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  hotBoard.VisibleHotSquare is null,
+                "undo removes the hot effect along with the capture");
+            Press(root, "History/Redo");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare == Square("d5"),
+                "redo restores heat without replaying visual particles");
+            Play(root, "d7d5");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  root.CurrentGame.Board.At(Square("d5")) is null &&
+                  root.CurrentGame.History.Count == 2 &&
+                  hotBoard.VisibleHotSquare is null,
+                "landing on heat burns the rook alone and cools the square");
+            Check(hotBoard.ShowsFondueMeltFx,
+                "landing on heat plays the melt and steam particles");
+            Check(hotBoard.CoolingHotSquare == Square("d5"),
+                "expired heat enters a visual cooldown, not an instant disappearance");
+            await Capture("fondue-hot-burn");
+            await ToSignal(GetTree().CreateTimer(BoardView.FondueHeatFadeSeconds + 0.15),
+                SceneTreeTimer.SignalName.Timeout);
+            Check(hotBoard.CoolingHotSquare is null,
+                "heat overlay fades completely after cooling without remaining dangerous");
+
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat crossing fixture can restart");
+            Play(root, "d1d5");
+            await Frames();
+            Play(root, "d7d3");
+            await Frames();
+            Check(root.CurrentGame!.Board.At(Square("d7")) is null &&
+                  root.CurrentGame.Board.At(Square("d3")) is null &&
+                  root.CurrentGame.Board.HotSquare is null &&
+                  hotBoard.CoolingHotSquare == Square("d5"),
+                "rook can move through hot tile but dies on d5 before reaching d3");
+            Check(hotBoard.ShowsFondueMeltFx,
+                "burning mid-path plays melt effects at the hazardous square");
+            await Capture("fondue-hot-cross");
+
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat fixture can restart for expiry test");
+            Play(root, "d1d5", "h8h7");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  root.CurrentGame.Board.At(Square("d7")) ==
+                      new Piece(PieceType.Rook, PlayerColor.Black),
+                "one ordinary reply cools the hot square without melting other pieces");
+
+            const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueVictory, ".pgn"),
+                "Fondue victory demonstration imports");
+            Play(root, "g1g7");
+            await Frames();
+            var fondueFx = root.GetNode<BoardView>("Board");
+            Check(root.CurrentGame!.Status == GameStatus.KingMelted &&
+                  root.CurrentGame.Winner == PlayerColor.White &&
+                  root.CurrentGame.Board.At(new Square(7, 7)) is null,
+                "capture melts its surrounding chain, including the enemy king");
+            Check(fondueFx.ShowsFondueMeltFx &&
+                  fondueFx.GetNodeOrNull<Node2D>("FondueMeltFx") is { } melt &&
+                  melt.GetChildren().OfType<Sprite2D>().Any(sprite => sprite.Name.ToString().StartsWith("MeltSquare")),
+                "Fondue renders original melting and steam sprites from domain events");
+            Check(!root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Fondue victory waits for the visual cascade before opening its modal");
+            await Capture("fondue-melt");
+            await WaitUntil(() => root.GetNode<GameOverOverlay>("GameOverOverlay").Visible);
+            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Reason").Text == "REY DERRETIDO" &&
+                  root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANARON BLANCAS",
+                "Fondue victory modal identifies the melted king and winner");
+            await Capture("fondue-result");
+            Press(root, "History/Undo");
+            await Frames();
+            Check(root.CurrentGame.Status == GameStatus.Ongoing &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible &&
+                  !fondueFx.ShowsFondueMeltFx,
+                "undo restores the king, clears effects and cancels the result");
+            Press(root, "History/Redo");
+            await WaitUntil(() => root.GetNode<GameOverOverlay>("GameOverOverlay").Visible);
+            Check(root.CurrentGame.Status == GameStatus.KingMelted,
+                "redo restores Fondue victory");
+            Press(root, "NewGame");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.Fondue &&
+                  root.CurrentGame.Status == GameStatus.Ongoing &&
+                  root.CurrentGame.History.Count == 0 &&
+                  !fondueFx.ShowsFondueMeltFx,
+                "Fondue rematch resets to a clean playable board");
+
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }

@@ -183,7 +183,7 @@ public sealed class ChessGame
         }
         _clockHistory.Add(_clockState);
         Events.Publish(new PieceMoved(move, piece));
-        if (Board.Mode == GameMode.Fondue && FondueRules.CapturedSquare(previousBoard, move) is not null)
+        if (Board.Mode == GameMode.Fondue && FondueRules.IsMeltingCapture(previousBoard, move))
         {
             var removed = new List<MeltedPiece>();
             for (var index = 0; index < 64; index++)
@@ -194,6 +194,17 @@ public sealed class ChessGame
             }
             removed.Add(new MeltedPiece(move.To, move.Promotion is PieceType promotion ? piece with { Type = promotion } : piece));
             Events.Publish(new PiecesMelted(move, removed));
+        }
+        else if (Board.Mode == GameMode.Fondue &&
+                 FondueRules.HotLanding(previousBoard, move) is Square hot)
+        {
+            // A piece landing on residual heat burns alone: no new 3x3 melt,
+            // no new hot tile. Reuse the existing domain event and FX pipeline.
+            Piece burned = FondueRules.HotBurnsMover(previousBoard, move)
+                ? hot == move.To && move.Promotion is PieceType promoted
+                    ? piece with { Type = promoted } : piece
+                : new Piece(PieceType.Rook, mover); // castling rook crossed the heat
+            Events.Publish(new PiecesMelted(move, [new MeltedPiece(hot, burned)]));
         }
         if (Status is GameStatus.Check or GameStatus.Checkmate) Events.Publish(new CheckRaised(Turn));
         if (!State.AcceptsMoves) Events.Publish(new GameEnded(Status));

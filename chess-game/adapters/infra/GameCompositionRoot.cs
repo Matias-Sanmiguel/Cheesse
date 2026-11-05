@@ -28,7 +28,7 @@ public partial class GameCompositionRoot : Node
     private CancellationTokenSource? _searchCancellation;
     private int _searchGeneration;
     private int _gameOverRevision;
-    private Board? _picadaResultBoard;
+    private Board? _delayedResultBoard;
     private bool _engineEnabled, _engineFailed;
     private Move? _announcedClaim;
     private PlayerColor _resigningSide;
@@ -62,6 +62,7 @@ public partial class GameCompositionRoot : Node
         _ingame.InstallForeground(this, _menu);
 
         _input = GetNode<InputAdapter>("Input");
+        _input.MoveRejected += message => _panel.SetMessage(message);
         _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
         _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
         CreateDialogs();
@@ -298,7 +299,7 @@ public partial class GameCompositionRoot : Node
     public void ShowMenu()
     {
         _gameOverRevision++;
-        _picadaResultBoard = null;
+        _delayedResultBoard = null;
         CancelSearch();
         CurrentGame?.PauseClock();
         _gameOver.Hide();
@@ -458,27 +459,32 @@ public partial class GameCompositionRoot : Node
         if (game is null || game.State.AcceptsMoves || _menu.Visible)
         {
             _gameOverRevision++;
-            _picadaResultBoard = null;
+            _delayedResultBoard = null;
             _gameOver.Hide();
             return;
         }
-        if (game.Status == GameStatus.PicadaVictory)
+        if (game.Status is GameStatus.PicadaVictory or GameStatus.KingMelted)
         {
-            // Several domain events can describe the same finished move.
-            if (ReferenceEquals(_picadaResultBoard, game.Board)) return;
-            _picadaResultBoard = game.Board;
+            // Several events describe the same winning move. The dialog opens
+            // once, after the king's on-board animation finishes.
+            if (ReferenceEquals(_delayedResultBoard, game.Board)) return;
+            _delayedResultBoard = game.Board;
             int revision = ++_gameOverRevision;
             _gameOver.Hide();
-            if (game.History.Count > 0) _board.CelebratePicadaVictory(game.History[^1].To);
-            await ToSignal(GetTree().CreateTimer(BoardView.PicadaVictoryEffectDurationSeconds + 0.25), SceneTreeTimer.SignalName.Timeout);
+            if (game.Status == GameStatus.PicadaVictory && game.History.Count > 0)
+                _board.CelebratePicadaVictory(game.History[^1].To);
+            double effectDuration = game.Status == GameStatus.PicadaVictory
+                ? BoardView.PicadaVictoryEffectDurationSeconds + 0.25
+                : BoardView.FondueMeltEffectDurationSeconds + 0.12;
+            await ToSignal(GetTree().CreateTimer(effectDuration), SceneTreeTimer.SignalName.Timeout);
             if (!GodotObject.IsInstanceValid(this) || revision != _gameOverRevision ||
                 !ReferenceEquals(CurrentGame, game) || _menu.Visible ||
-                game.Status != GameStatus.PicadaVictory) return;
+                game.Status is not (GameStatus.PicadaVictory or GameStatus.KingMelted)) return;
         }
         else
         {
             _gameOverRevision++;
-            _picadaResultBoard = null;
+            _delayedResultBoard = null;
         }
         _gameOver.ShowResult(game, _ingame.TotalElapsedSeconds);
     }

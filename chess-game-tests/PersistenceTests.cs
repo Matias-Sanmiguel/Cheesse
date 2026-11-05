@@ -69,6 +69,7 @@ public partial class PersistenceTests : Node
         Legacy_themed_save_keeps_appearance_without_v2_metadata();
         Previous_numeric_save_values_keep_their_original_meaning();
         Fondue_mode_and_melted_king_survive_save_load(repository);
+        Fondue_heat_survives_save_load_and_cools_on_response(repository);
         SwissCheese_roundtrip_preserves_holes_and_history(repository);
         Claimed_draw_results_roundtrip(repository);
         Invalid_positions_in_edited_saves_are_rejected(repository);
@@ -197,8 +198,8 @@ public partial class PersistenceTests : Node
         var ports = Create(repository);
         foreach (var fen in new[]
         {
-            "7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1",
-            "7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1",
+            "7k/8/5n2/3rB3/8/8/8/K2R4 w - - 0 1",
+            "7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1",
         })
         {
             var initial = FenSerializer.Load(fen).WithMode(GameMode.Fondue);
@@ -209,11 +210,69 @@ public partial class PersistenceTests : Node
             var restored = Create(repository);
             Check(repository.Load(restored), "Fondue save loads: " + fen);
             Check(restored.Board.Mode == GameMode.Fondue, "Fondue mode restored");
-            Check(FenSerializer.Write(restored.Board) == FenSerializer.Write(game.Board), "Fondue chain restored");
+            Check(FenSerializer.Write(restored.Board) == FenSerializer.Write(game.Board), "Fondue local melt restored");
             Check(restored.Status == game.Status && restored.Winner == game.Winner, "Fondue outcome restored");
+            Check(restored.Board.HotSquare == game.Board.HotSquare,
+                "Fondue residual heat is reconstructed from replay");
             Check(restored.Undo() && FenSerializer.Write(restored.Board) == fen, "Fondue undo after load");
             Check(restored.Redo() && restored.Status == game.Status, "Fondue redo after load");
         }
+    }
+
+    private void Fondue_heat_survives_save_load_and_cools_on_response(FileSaveRepository repository)
+    {
+        const string fen = "7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1";
+        var ports = Create(repository);
+        var source = new ChessGame(ports.Events, repository, ports.Clock,
+            FenSerializer.Load(fen).WithMode(GameMode.Fondue));
+        Play(source, "d1d5");
+        Check(source.Board.HotSquare == new Square(3, 4),
+            "Fondue capture creates hot tile d5");
+
+        repository.Save(source);
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read))
+        {
+            var data = JsonNode.Parse(file!.GetAsText())!;
+            Check(data["HotSquare"]!.GetValue<string>() == "d5",
+                "save includes exact hot-square metadata");
+        }
+
+        var restored = Create(repository);
+        Check(repository.Load(restored), "game loads with residual heat still active");
+        Check(restored.Mode == GameMode.Fondue &&
+              restored.Board.HotSquare == new Square(3, 4) &&
+              restored.LegalMoves().Any(move => move.From == new Square(3, 6) &&
+                                                  move.To == new Square(3, 4)),
+            "loaded hot position has same rules and allows a rook sacrifice");
+
+        Check(restored.Undo() && restored.Board.HotSquare is null,
+            "undo restores the unheated initial position");
+        Check(restored.Redo() && restored.Board.HotSquare == new Square(3, 4),
+            "redo restores the active heat");
+        Play(restored, "d7d5");
+        Check(restored.Board.HotSquare is null &&
+              restored.Board.At(new Square(3, 4)) is null,
+            "moving to the hot square burns the rook and cools the tile");
+        repository.Save(restored);
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read))
+        {
+            var data = JsonNode.Parse(file!.GetAsText())!;
+            Check(data["HotSquare"]!.GetValue<string>() == "-",
+                "cooled Fondue position records an explicit no-heat marker");
+        }
+        var cooled = Create(repository);
+        Check(repository.Load(cooled) && cooled.Board.HotSquare is null &&
+              cooled.History.Count == 2, "cooled state loads with exact move history");
+
+        // A malicious or corrupt hot-square field must not override the board.
+        using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read))
+        {
+            var data = JsonNode.Parse(file!.GetAsText())!;
+            data["HotSquare"] = "a1";
+            using var writer = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
+            writer!.StoreString(data.ToJsonString());
+        }
+        Check(!repository.Load(cooled), "tampered hot-square state is rejected");
     }
 
     private void Claimed_draw_results_roundtrip(FileSaveRepository repository)
