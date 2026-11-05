@@ -85,6 +85,37 @@ public class FondueTests
     }
 
     [Test]
+    public void Preview_matches_local_melt_and_excludes_pawns_and_secondary_neighbors()
+    {
+        var game = Fondue("7k/8/2p2n2/3rB3/8/8/8/K2R4 w - - 0 1");
+        var before = game.Board;
+        var move = Move("d1", "d5");
+        Assert.That(GameRules.MeltingSquares(before, move), Is.EquivalentTo(new[]
+        {
+            Square("d5"), Square("e5")
+        }));
+        Assert.That(game.Board, Is.SameAs(before), "preview must not mutate the game");
+        Assert.That(GameRules.MeltingSquares(before, Move("a1", "a2")), Is.Empty);
+        var standard = before.WithMode(GameMode.Standard);
+        Assert.That(GameRules.MeltingSquares(standard, move), Is.Empty);
+    }
+
+    [Test]
+    public void Pawn_capturing_a_knight_melts_itself_but_not_neighboring_pawns()
+    {
+        var events = new Recorder();
+        var game = Fondue("7k/8/3p4/3n4/4P3/8/8/K7 w - - 0 1", events);
+        Assert.That(game.TryMove(Move("e4", "d5")), Is.True);
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
+        Assert.That(game.Board.At(Square("d6"))?.Type, Is.EqualTo(PieceType.Pawn));
+        Assert.That(events.Items.OfType<PiecesMelted>().Single().Pieces, Is.EquivalentTo(new[]
+        {
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Knight, PlayerColor.Black)),
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Pawn, PlayerColor.White))
+        }));
+    }
+
+    [Test]
     public void Standard_mode_capture_is_unchanged()
     {
         var game = Create("7k/8/5n2/3rB3/8/8/8/K2R4 w - - 0 1");
