@@ -9,7 +9,8 @@ public sealed class Board
 
     private Board(Piece?[] squares, CastlingRights castling, Square? enPassant,
         PlayerColor turn = PlayerColor.White, int halfmoveClock = 0, int fullmoveNumber = 1,
-        GameMode mode = GameMode.Standard, ulong swissHoleMask = 0)
+        GameMode mode = GameMode.Standard, ulong swissHoleMask = 0,
+        Square? hotSquare = null)
     {
         _squares = squares;
         _swissHoleMask = swissHoleMask;
@@ -19,11 +20,25 @@ public sealed class Board
         HalfmoveClock = halfmoveClock;
         FullmoveNumber = fullmoveNumber;
         Mode = mode;
+        HotSquare = mode == GameMode.Fondue ? hotSquare : null;
     }
 
     public PlayerColor Turn { get; }
 
     public GameMode Mode { get; }
+
+    // The one-turn residual heat left by a Fondue capture. Only the immediate
+    // opposing move can interact with it; every completed move clears it.
+    // Its presence is part of the immutable chess position (undo/replay/save).
+    public Square? HotSquare { get; }
+
+    internal Board WithHotSquare(Square square)
+    {
+        if (Mode != GameMode.Fondue || At(square) is not null)
+            throw new InvalidOperationException("Heat requires an empty square in Fondue.");
+        return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
+            Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask, square);
+    }
 
     // Immutable holes belong to this board, never to a global random layout.
     public IReadOnlyList<Square> SwissHoles => Mode == GameMode.QuesoSuizo
@@ -44,7 +59,8 @@ public sealed class Board
             return WithSwissHoles(SwissCheeseRules.Generate(this));
         }
         return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
-            Turn, HalfmoveClock, FullmoveNumber, mode);
+            Turn, HalfmoveClock, FullmoveNumber, mode,
+            hotSquare: mode == GameMode.Fondue ? HotSquare : null);
     }
 
     // Explicit layout for replay/import: does not regenerate holes.
@@ -69,7 +85,7 @@ public sealed class Board
         ArgumentOutOfRangeException.ThrowIfLessThan(fullmoveNumber, 1);
 
         return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
-            turn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask);
+            turn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask, HotSquare);
     }
 
     public Square? EnPassant { get; } //Guarda la casilla a la que puede ir para capturar al paso, por ejemplo si el peón va de d7 a d5, el otro peón puede ir a d6 para capturarlo
@@ -84,12 +100,12 @@ public sealed class Board
             throw new InvalidOperationException("No se puede colocar una pieza dentro de un agujero.");
         var next = (Piece?[])_squares.Clone();
         next[square.Index] = piece;
-        return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
+        return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask, HotSquare);
     }
 
-    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
+    public Board WithCastling(CastlingRights castling) => new((Piece?[])_squares.Clone(), castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask, HotSquare);
 
-    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask);
+    public Board WithEnPassant(Square? enPassant) => new((Piece?[])_squares.Clone(), Castling, enPassant, Turn, HalfmoveClock, FullmoveNumber, Mode, _swissHoleMask, HotSquare);
 
 
     public Board WithMove(Move move)
@@ -186,15 +202,23 @@ public sealed class Board
             }
         }
 
-        int halfmoveClock = moving.Type == PieceType.Pawn || capturedPiece is not null
+        // Heat is lethal on landing (including a castling rook's destination),
+        // not while moving across the square. It expires after this response.
+        var hotLanding = Mode == GameMode.Fondue ? FondueRules.HotLanding(this, move) : null;
+        bool burned = hotLanding is Square hot && next[hot.Index] is not null;
+        if (burned) next[hotLanding!.Value.Index] = null;
+
+        int halfmoveClock = moving.Type == PieceType.Pawn || capturedPiece is not null || burned
             ? 0
             : HalfmoveClock + 1;
         int fullmoveNumber = FullmoveNumber + (moving.Color == PlayerColor.Black ? 1 : 0);
         PlayerColor nextTurn = moving.Color == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
 
         var board = new Board(next, newCastling, newEnPassant, nextTurn, halfmoveClock, fullmoveNumber, Mode, _swissHoleMask);
+        // A new Fondue capture replaces any old heat. Otherwise, the old
+        // square cools immediately after the opponent's single responding move.
         return Mode == GameMode.Fondue && FondueRules.IsMeltingCapture(this, move)
-            ? FondueRules.Melt(board, move.To)
+            ? FondueRules.Melt(board, move.To).WithHotSquare(move.To)
             : board;
     }
 
