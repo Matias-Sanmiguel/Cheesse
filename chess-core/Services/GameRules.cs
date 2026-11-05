@@ -11,6 +11,20 @@ public static class GameRules
         return Evaluate(game.Board, game.Turn, game.Positions);
     }
 
+    /// <summary>
+    /// Capture moves that can melt <paramref name="side"/>'s king without
+    /// destroying the opposing king. Used by UI to explain Fondue check.
+    /// This has no effect on legal-move generation.
+    /// </summary>
+    public static IReadOnlyList<Move> KingMeltingThreats(Board board, PlayerColor side)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.KingMeltingCaptures(board, side)
+            : [];
+    }
+
+
     public static GameStatus Evaluate(Board board, PlayerColor side) =>
         Evaluate(board, side, null);
 
