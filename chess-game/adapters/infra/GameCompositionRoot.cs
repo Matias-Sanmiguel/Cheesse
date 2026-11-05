@@ -410,7 +410,9 @@ public partial class GameCompositionRoot : Node
                 GameTextFiles.Write(path, ExportGameText(Path.GetExtension(path)));
                 _panel.SetMessage("Archivo exportado.");
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or FormatException)
+            catch (FormatException error)
+            { _panel.SetMessage(error.Message); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             { _panel.SetMessage("No se pudo exportar. Revisá la ubicación y los permisos."); }
         };
         AddChild(_exportDialog);
