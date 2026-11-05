@@ -112,6 +112,7 @@ public partial class SidePanelView : PanelContainer
         GetNode<Label>("Margin/Content/Mode").Text = _game.Mode switch
         {
             GameMode.ReyDeLaPicada => "MODO: PICADA",
+            GameMode.QuesoSuizo => "MODO: QUESO SUIZO",
             GameMode.Fondue => "MODO: FONDUE",
             _ => "MODO: CLASICO"
         };
