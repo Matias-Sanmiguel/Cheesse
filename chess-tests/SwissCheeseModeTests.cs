@@ -82,6 +82,23 @@ public class SwissCheeseModeTests
     }
 
     [Test]
+    public void King_moves_and_en_passant_cannot_use_hole_destinations()
+    {
+        var kings = FenSerializer.Load("7k/8/8/8/8/4K3/8/8 w - - 0 1")
+            .WithMode(GameMode.QuesoSuizo);
+        var kingMoves = MoveGenerator.Legal(kings, PlayerColor.White);
+        Assert.That(kingMoves, Does.Not.Contain(Move("e3", "d4")));
+        Assert.That(kingMoves, Does.Contain(Move("e3", "e4")));
+
+        var pawnPosition = FenSerializer.Load("7k/8/8/1Pp5/8/8/8/K7 w - c6 0 1");
+        Assert.That(SpecialMoves.EnPassant(pawnPosition, PlayerColor.White),
+            Does.Contain(Move("b5", "c6")));
+        var swiss = pawnPosition.WithMode(GameMode.QuesoSuizo);
+        Assert.That(SpecialMoves.EnPassant(swiss, PlayerColor.White),
+            Does.Not.Contain(Move("b5", "c6")));
+    }
+
+    [Test]
     public void Cannot_put_pieces_inside_holes()
     {
         var initial = FenSerializer.Load("7k/8/8/8/8/2N5/8/K7 w - - 0 1");
