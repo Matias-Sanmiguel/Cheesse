@@ -24,7 +24,7 @@ public partial class GameCompositionRoot : Node
     private InputAdapter _input = null!;
     private PromotionDialog _promotionDialog = null!;
     private GameOverOverlay _gameOver = null!;
-    private ConfirmationDialog _resignDialog = null!, _claimDialog = null!;
+    private ConfirmationDialog _resignDialog = null!, _claimDialog = null!, _stockfishErrorDialog = null!;
     private FileDialog _importDialog = null!, _exportDialog = null!;
     private CancellationTokenSource? _searchCancellation;
     private int _searchGeneration;
@@ -38,7 +38,7 @@ public partial class GameCompositionRoot : Node
     public bool AgainstRandom => AgainstStockfish;
     public bool IsThinking { get; private set; }
     public bool IsInstallingEngine => _engineInstalling;
-    private bool HasModal => _promotionDialog.Visible || _resignDialog.Visible || _claimDialog.Visible || _importDialog.Visible || _exportDialog.Visible;
+    private bool HasModal => _promotionDialog.Visible || _resignDialog.Visible || _claimDialog.Visible || _importDialog.Visible || _exportDialog.Visible || _stockfishErrorDialog.Visible;
 
     public override void _Ready()
     {
@@ -166,6 +166,7 @@ public partial class GameCompositionRoot : Node
         _board.SetVisualTheme(_repository.Theme);
         _ingame.Attach(game);
         _panel.Attach(game, game.Caretaker, _bus, AgainstStockfish, () => _repository.HasSave);
+        _stockfishErrorDialog.Hide();
         _panel.SetEngineError(null);
         _panel.SetEnginePreparing(false);
         _panel.SetDifficulty(_repository.EngineElo);
@@ -251,7 +252,13 @@ public partial class GameCompositionRoot : Node
                     NotSupportedException => error.Message,
                     _ => "Stockfish no pudo iniciar o responder: " + error.Message
                 };
-                _panel.SetEngineError(detail + " Reintentá cambiando el nivel o apagando y activando Stockfish.");
+                _panel.SetEngineError(detail);
+                _stockfishErrorDialog.DialogText =
+                    "Stockfish no pudo responder al movimiento de las blancas.\n\n" +
+                    detail +
+                    "\n\nDETALLE TECNICO: " + error.GetType().Name + "\n" + error.Message +
+                    "\n\nPodes reintentar sin perder tu jugada o continuar entre humanos.";
+                _stockfishErrorDialog.PopupCentered();
                 GD.PushWarning("Stockfish: " + error);
             }
         }
@@ -344,6 +351,7 @@ public partial class GameCompositionRoot : Node
         _gameOver.Hide();
         _resignDialog.Hide();
         _claimDialog.Hide();
+        _stockfishErrorDialog.Hide();
         _importDialog.Hide();
         _exportDialog.Hide();
         _input.SetProcessUnhandledInput(false);
@@ -423,6 +431,33 @@ public partial class GameCompositionRoot : Node
 
     private void CreateDialogs()
     {
+        _stockfishErrorDialog = new ConfirmationDialog
+        {
+            Name = "StockfishErrorDialog",
+            Title = "No se pudo iniciar Stockfish",
+            OkButtonText = "Reintentar",
+            CancelButtonText = "Continuar entre humanos",
+            Size = new Vector2I(770, 315),
+        };
+        _stockfishErrorDialog.Confirmed += () =>
+        {
+            _stockfishErrorDialog.Hide();
+            if (CurrentGame is { Mode: GameMode.Standard } &&
+                AgainstStockfish && _engineFailed && !_menu.Visible)
+            {
+                _engineFailed = false;
+                _panel.SetEngineError(null);
+                _panel.SetMessage("Reintentando Stockfish...");
+                // Black's move is still pending; _Process starts a fresh search.
+            }
+        };
+        _stockfishErrorDialog.Canceled += () =>
+        {
+            _stockfishErrorDialog.Hide();
+            if (AgainstStockfish) SetStockfishOpponent(false);
+        };
+        AddChild(_stockfishErrorDialog);
+
         _resignDialog = new ConfirmationDialog { Name = "ResignDialog", Title = "Abandonar partida", OkButtonText = "Abandonar", CancelButtonText = "Seguir jugando" };
         _resignDialog.Confirmed += () => { _resignDialog.Hide(); CurrentGame?.Resign(_resigningSide); _bus.NotifyStateChanged(); };
         AddChild(_resignDialog);
