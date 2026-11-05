@@ -15,20 +15,20 @@
 
 - Cada **captura que activa derretimiento** (capturar una pieza que no es peón) deja la **casilla de captura vacía y caliente**. Capturar peones no genera calor.
 - Se mantiene caliente **durante la única respuesta inmediata del rival**. Si el rival juega a otra casilla, se enfría al terminar esa jugada. No acumula rondas adicionales.
-- **Cualquier pieza que termine el movimiento allí se derrite ella sola**, incluidos los peones, las piezas mayores y el caballo. No se extiende a vecinos ni crea otra casilla caliente. La pieza que se sacrifica cuenta como una jugada realizada. No se puede sacrificar el rey: el generador de movimientos lo prohíbe por seguridad.
-- Se puede **pasar o saltar por encima** sin riesgo: alfiles, torres, damas y caballos solo reciben el efecto si aterrizan allí. La torre de un enroque también puede derretirse si termina en la casilla caliente, sin afectar al rey en otra casilla.
+- **Cualquier pieza que toque la casilla caliente se derrite**, con una sola excepción: **el caballo puede saltarla sin peligro**. Si el caballo **aterriza** allí, también se derrite. La pieza se quema al cruzarla, *antes de llegar al destino*, aunque ese destino contenga una pieza enemiga: esa pieza permanece intacta. No se extiende a vecinos ni crea otra casilla caliente; la jugada se consume normalmente. El rey no puede suicidarse.
+- **Solo el caballo salta sin quemarse.** Torre, alfil y dama que atraviesan la casilla quedan derretidos allí, pero la jugada no está bloqueada. Un peón que avanza dos casillas y pasa por una caliente también se derrite allí. Los movimientos de rey que tocarían calor son ilegales por seguridad; durante un enroque la torre puede derretirse en su recorrido, pero el rey no puede atravesar la casilla caliente.
 - Si el rival hace otra captura que activa Fondue durante su respuesta, se enfría el primer lugar y **solo el nuevo destino** queda caliente para la siguiente jugada. Nunca hay más de una casilla activa.
 - El calor forma parte del valor inmutable `Board.HotSquare` y se reproduce con Undo/Redo, movimientos legales, guardado y carga. `GameRules.PositionKey` diferencia posiciones con y sin calor activo.
 
 ## Interfaz / experiencia de juego
 
 - Al seleccionar una pieza y pasar por encima de un **destino legal que captura una pieza no peón**, el tablero marca las casillas exactas que se derriten. El destino marca el sacrificio del atacante; los peones vecinos no aparecen en el efecto.
-- `heat_overlay.png` se muestra sobre la casilla ardiente con pulso naranja y `steam_16x16.png` flotando; si el jugador está por aterrizar allí, el cursor resalta el peligro en rojo. El panel lateral indica la coordenada y aclara que se enfría al terminar la respuesta rival.
-- Si una pieza aterriza en esa casilla, `PiecesMelted` publica **una sola pieza**, y el tablero reutiliza `melted_square.png`, `steam_16x16.png` y `fondue_drop_16x16.png`, sin activar una nueva reacción de Fondue.
+- `heat_overlay.png` se muestra sobre la casilla ardiente con pulso naranja y `steam_16x16.png` flotando. Si el cursor indica una jugada que **aterriza o atraviesa** el calor, la casilla concreta de quemadura se resalta en rojo. Al terminar la respuesta rival, **el brillo se contrae y se desvanece gradualmente durante 0,82 s**, mientras el vapor asciende; la casilla deja de ser peligrosa de inmediato, sin esperar a que termine la animación. El panel indica la coordenada y duración.
+- Si una pieza aterriza o atraviesa la casilla, `PiecesMelted` publica **una sola pieza**, en la coordenada donde se quemó; el tablero reproduce el desplazamiento solo hasta ese punto y reutiliza `melted_square.png`, `steam_16x16.png` y `fondue_drop_16x16.png`, sin activar otra reacción.
 - Las capturas de peones se muestran como capturas normales. El panel lateral distingue `JAQUE POR FONDUE` únicamente si existe una amenaza real de derretimiento del rey, identificando el objetivo.
 - Si el jugador intenta una captura ilegal, el panel explica si la propia captura derretiría su rey o si lo dejaría en jaque.
 - `Board.Mode` se conserva con Undo/Redo, mementos, nueva partida, guardado y carga; la UI **nunca** aplica las reglas ni decide qué piezas desaparecerán. `GameRules.MeltingSquares(board, move)` proporciona la vista previa exacta para una jugada que la UI ya verificó como legal.
-- `PiecesMelted` se emite **solo** en capturas de una pieza no peón; la lista incluye tanto víctima como atacante (dos entradas para el mismo destino) y vecinos que efectivamente desaparecen. Las capturas normales publican `PieceMoved`, sin `PiecesMelted`.
+- `PiecesMelted` se emite en capturas de una pieza no peón **y** en quemaduras individuales por casilla caliente; en capturas especiales incluye víctima, atacante y vecinos, y en cruces calientes solo la pieza que se quemó. Las capturas normales de peón sin peligro publican `PieceMoved`, sin `PiecesMelted`.
 - El overlay de `KingMelted` se muestra después del efecto visual del tablero. Una promoción que se derrite no publica `PromotionOccurred`.
 
 ## Demostraciones / regresiones
@@ -51,5 +51,5 @@ FEN codifica la posición; al cargar una posición de este modo aplicar `WithMod
 
 **Guardado:** el PGN reproduce la casilla caliente por historial, y el archivo JSON de guardado incluye `HotSquare` como coordenada o `"-"`, validada al cargar. Los guardados antiguos sin este campo todavía se aceptan. Un FEN convencional de seis campos no codifica el calor temporal; para conservarlo hay que guardar la partida completa (PGN o guardado JSON), no solo su posición FEN.
 
-**Regresión:** captura de caballo en `d5` → `d5` caliente para las negras → torre negra `d7-d5` se derrite sin reacción, o `Rh8-h7` enfría la casilla. Las pruebas también cubren paso de torre por `d5`, sacrificio de rey prohibido, renovación del calor, Undo/Redo, PGN y JSON.
+**Regresión:** captura de caballo en `d5` → `d5` caliente para las negras → torre negra `d7-d5` se derrite sin reacción; `d7-d3` puede seleccionarse, pero la torre se derrite en `d5` y jamás llega a `d3`. La regla también cubre alfil, dama, doble paso de peón, salto y aterrizaje del caballo, prohibición de suicidio del rey, enfriamiento gradual, Undo/Redo, PGN y JSON.
 
