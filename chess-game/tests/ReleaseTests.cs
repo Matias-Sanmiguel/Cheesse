@@ -148,6 +148,31 @@ public partial class ReleaseTests : Node
             Check(root.CurrentGame!.Mode == GameMode.ReyDeLaPicada && root.CurrentGame.History.Count == 0 &&
                 !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
                 "new Picada game retains mode and cancels the previous delayed result");
+            // Swiss Cheese is a real selectable match, not just an unlocked card.
+            root.ShowMenu();
+            await Frames();
+            ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            await Frames();
+            ClickControl(root, "Menu/Stage/ModesPage/Mode2");
+            await Frames();
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo,
+                "Swiss menu card selects the new ruleset");
+            ClickControl(root, "Menu/Stage/SetupPage/Options/Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.QuesoSuizo &&
+                  root.GetNode<BoardView>("Board").ShowsSwissHoles &&
+                  root.CurrentGame.Board.IsBlocked(new Square(2, 2)),
+                "Swiss match displays permanent holes and installs blocking rules");
+            Check(root.GetNode<CheckButton>(Settings + "Random").Disabled &&
+                  !root.AgainstStockfish,
+                "unsupported Stockfish toggle stays disabled in Swiss mode");
+            Play(root, "e2e4");
+            await Frames();
+            Check(root.CurrentGame.History.Count == 1 &&
+                  !root.CurrentGame.LegalMoves().Any(move => move.To == new Square(2, 5)),
+                "Swiss game accepts legal moves but never offers blocked destinations");
+            await Capture("swiss-board");
+
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }
