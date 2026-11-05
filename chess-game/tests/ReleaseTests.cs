@@ -181,6 +181,69 @@ public partial class ReleaseTests : Node
                   Chess.Core.Rules.SwissCheeseRules.Format(root.CurrentGame.Board.SwissHoles) != originalSwissLayout,
                 "new Swiss match preserves the mode and rerolls the holes");
 
+            // Fondue is selectable through the original card and reuses the
+            // existing chess-core cascade, save flow and themed board.
+            root.ShowMenu();
+            await Frames();
+            ClickControl(root, "Menu/Stage/HomePage/Navigation/NewGame");
+            await Frames();
+            ClickControl(root, "Menu/Stage/ModesPage/Mode3");
+            await Frames();
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Fondue &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("DERRITEN"),
+                "Fondue menu card opens real match setup with melting rules");
+            Check(root.GetNode<Button>("Menu/Stage/SetupPage/Options/Random").Disabled,
+                "standard Stockfish is not offered for Fondue");
+            ClickControl(root, "Menu/Stage/SetupPage/Options/Human");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.Fondue &&
+                  root.CurrentGame.Status == GameStatus.Ongoing && !root.AgainstStockfish,
+                "Fondue starts a playable human match");
+            await Capture("fondue-start");
+            Press(root, "NewGame");
+            Check(root.CurrentGame!.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
+                "new Fondue match preserves the selected mode");
+
+            const string fondueVictory = "[Variant \\"Fondue\\"]\\n[SetUp \\"1\\"]\\n[FEN \\"7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1\\"]\\n[Result \\"*\\"]\\n\\n*";
+            Check(root.ImportGameText(fondueVictory, ".pgn"),
+                "Fondue victory demonstration imports");
+            Play(root, "g1g7");
+            await Frames();
+            var fondueFx = root.GetNode<BoardView>("Board");
+            Check(root.CurrentGame!.Status == GameStatus.KingMelted &&
+                  root.CurrentGame.Winner == PlayerColor.White &&
+                  root.CurrentGame.Board.At(new Square(7, 7)) is null,
+                "capture melts its surrounding chain, including the enemy king");
+            Check(fondueFx.ShowsFondueMeltFx &&
+                  fondueFx.GetNodeOrNull<Node2D>("FondueMeltFx") is { } melt &&
+                  melt.GetChildren().OfType<Sprite2D>().Any(sprite => sprite.Name.ToString().StartsWith("MeltSquare")),
+                "Fondue renders original melting and steam sprites from domain events");
+            Check(!root.GetNode<GameOverOverlay>("GameOverOverlay").Visible,
+                "Fondue victory waits for the visual cascade before opening its modal");
+            await Capture("fondue-melt");
+            await WaitUntil(() => root.GetNode<GameOverOverlay>("GameOverOverlay").Visible);
+            Check(root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Reason").Text == "REY DERRETIDO" &&
+                  root.GetNode<Label>("GameOverOverlay/Overlay/Center/Panel/Content/Title").Text == "GANARON BLANCAS",
+                "Fondue victory modal identifies the melted king and winner");
+            await Capture("fondue-result");
+            Press(root, "History/Undo");
+            await Frames();
+            Check(root.CurrentGame.Status == GameStatus.Ongoing &&
+                  !root.GetNode<GameOverOverlay>("GameOverOverlay").Visible &&
+                  !fondueFx.ShowsFondueMeltFx,
+                "undo restores the king, clears effects and cancels the result");
+            Press(root, "History/Redo");
+            await WaitUntil(() => root.GetNode<GameOverOverlay>("GameOverOverlay").Visible);
+            Check(root.CurrentGame.Status == GameStatus.KingMelted,
+                "redo restores Fondue victory");
+            Press(root, "NewGame");
+            await Frames();
+            Check(root.CurrentGame!.Mode == GameMode.Fondue &&
+                  root.CurrentGame.Status == GameStatus.Ongoing &&
+                  root.CurrentGame.History.Count == 0 &&
+                  !fondueFx.ShowsFondueMeltFx,
+                "Fondue rematch resets to a clean playable board");
+
             GD.Print($"PASS: release, {_checks} checks.");
             GetTree().Quit(0);
         }

@@ -119,8 +119,8 @@ public partial class MenuTests : Node
                 "JUGAR consistently reopens the unchanged mode-selection screen");
             Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
                   !root.GetNode<Button>(Modes + "Mode2").Disabled &&
-                  root.GetNode<Button>(Modes + "Mode3").Disabled,
-                "Picada and Swiss are available; Fondue remains locked");
+                  !root.GetNode<Button>(Modes + "Mode3").Disabled,
+                "all four chess modes are playable");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
                   modePage.HasNode("GameLogo"),
@@ -157,16 +157,26 @@ public partial class MenuTests : Node
                       PixelUiSkin.FontFor(UiFontWeight.Regular),
                     "mode " + i + " has independent editable description below the card");
             }
-            Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR" &&
-                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR" &&
-                  root.GetNode<Label>(Modes + "Mode2/State").Text == "JUGAR",
-                "classic, Picada and Swiss are playable with dynamic JUGAR labels");
-            foreach (var locked in new[] { "Mode3" })
-            {
-                Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
-                      root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
-                    locked + " is visibly locked with dynamic copy, without navigation");
-            }
+            Check(Enumerable.Range(0, 4).All(i =>
+                  root.GetNode<Label>(Modes + "Mode" + i + "/State").Text == "JUGAR" &&
+                  !root.GetNode<Button>(Modes + "Mode" + i).HasNode("LockIcon")),
+                "all four cards use the available CTA without lock icons");
+
+            Press(root, Modes + "Mode3");
+            Check(root.GetNode<MenuView>("Menu").SelectedMode == GameMode.Fondue &&
+                  root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("DERRITEN"),
+                "Fondue card opens its own setup and explains chain melting");
+            Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
+                  root.GetNode<OptionButton>(Setup + "ThemeFields/Board").Selected == 3 &&
+                  root.GetNode<OptionButton>(Setup + "ThemeFields/White").Selected == 2 &&
+                  root.GetNode<OptionButton>(Setup + "ThemeFields/Black").Selected == 2,
+                "Fondue suggests marble, Cheddar and Chorizo but allows changing each choice");
+            Check(root.GetNode<Button>(Setup + "Random").Disabled,
+                "standard Stockfish stays disabled for Fondue");
+            Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                "Fondue setup back navigates to the mode list");
 
             Check(ResourceLoader.Exists("res://assets/ui/overlays/hole_overlay.png"),
                 "Swiss holes use the supplied 48x48 overlay without editing the asset");
