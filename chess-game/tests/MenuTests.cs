@@ -249,10 +249,10 @@ public partial class MenuTests : Node
                   picadaCard.Position.X - (classicCard.Position.X + classicCard.Size.X) == 14 &&
                   classicCaption.Position == new Vector2(112, 0) &&
                   picadaCaption.Position == new Vector2(112, 0) &&
-                  classicCaption.Size == new Vector2(164, 112) &&
-                  picadaCaption.Size == new Vector2(164, 112) &&
+                  classicCaption.Size == new Vector2(164, 96) &&
+                  picadaCaption.Size == new Vector2(164, 96) &&
                   picadaCaption.AutowrapMode == TextServer.AutowrapMode.Off,
-                "style cards are centered with even outer margins and aligned captions");
+                "style cards center captions within their faces rather than including the lower shadows");
             Press(root, Setup + "ClassicStyle");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 0 &&
                   root.GetNode<Control>(Setup + "ThemeFields").Visible &&
@@ -327,11 +327,17 @@ public partial class MenuTests : Node
                   ribbonBehindIcon.G > ribbonBehindIcon.B,
                 "winner ribbon shows uninterrupted green behind the original piece icon");
             var winnerIcon = modalContent.GetNode<TextureRect>("WinnerIcon");
+            var winnerTitle = modalContent.GetNode<Label>("Title");
+            // The icon and caption are one centered group rather than independent positions.
+            float winnerGroupCenter = (winnerIcon.Position.X +
+                winnerTitle.Position.X + winnerTitle.Size.X) / 2f;
             Check(winnerIcon.Texture is not null &&
                   winnerIcon.Texture.ResourcePath.EndsWith("/white_12x12.png") &&
-                  winnerIcon.Position.IsEqualApprox(new Vector2(29 * 4, 71 * 4)) &&
-                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)),
-                "winner ribbon uses its original small white piece, centered without any extra box");
+                  winnerIcon.Position.Y == 71 * 4 &&
+                  winnerIcon.Size.IsEqualApprox(new Vector2(12 * 4, 12 * 4)) &&
+                  winnerTitle.Position.X - (winnerIcon.Position.X + winnerIcon.Size.X) == 4 * 4 &&
+                  Mathf.Abs(winnerGroupCenter - 108 * 4) <= 2f,
+                "winner chess piece sits beside the text and both are centered within the ribbon");
             var rematch = modalContent.GetNode<Button>("Rematch");
             var mainMenu = modalContent.GetNode<Button>("MainMenu");
             Check(!rematch.HasNode("RematchIcon") && !mainMenu.HasNode("MainMenuIcon") &&
