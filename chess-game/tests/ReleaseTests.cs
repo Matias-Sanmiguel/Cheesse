@@ -204,28 +204,39 @@ public partial class ReleaseTests : Node
             Check(root.CurrentGame!.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
                 "new Fondue match preserves the selected mode");
 
-            // Screenshot regression: a geometrically valid Fondue capture can
-            // expose a melt threat, and an indirect king check must be explained.
-            const string fondueThreatDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1\"]\n[Result \"*\"]\n\n*";
-            Check(root.ImportGameText(fondueThreatDemo, ".pgn"),
-                "Fondue screenshot position can be loaded as a real match");
+            // Regression: pawn captures must be playable without unadvertised
+            // explosion/check. A real non-pawn capture remains a king threat.
+            const string fonduePawnDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fonduePawnDemo, ".pgn"),
+                "Fondue screenshot position can be loaded");
             Play(root, "e5d6");
             await Frames();
-            var fondueMessage = root.GetNode<SidePanelView>("SidePanel")
-                .GetNode<Label>("Margin/Content/Message");
-            Check(root.CurrentGame!.History.Count == 0 && fondueMessage.Text.Contains("d2"),
-                "attempting e5xd6 explains that the black queen could melt the king via d2");
+            var fondueBoard = root.GetNode<BoardView>("Board");
+            Check(root.CurrentGame!.History.Count == 1 &&
+                  root.CurrentGame.Board.At(new Square(3, 5)) ==
+                      new Piece(PieceType.Pawn, PlayerColor.White) &&
+                  !fondueBoard.ShowsFondueMeltFx,
+                "e5xd6 is a normal pawn capture and causes no explosion");
+            Check(root.ImportGameText(fonduePawnDemo, ".pgn"),
+                "Fondue screenshot position resets");
             Play(root, "e5e6");
             await Frames();
+            Check(root.CurrentGame!.Status == GameStatus.Ongoing,
+                "e6 no longer creates a false melt check by threatening the f7 pawn");
+            await Capture("fondue-regular-pawn");
+
+            const string fondueCheckDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6n1/8/8/8/8/8/K5R1 b - - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueCheckDemo, ".pgn"),
+                "real king-melting check position imports");
             var fondueStatus = root.GetNode<SidePanelView>("SidePanel")
                 .GetNode<Label>("Margin/Content/Status");
             Check(root.CurrentGame!.Status == GameStatus.Check &&
                   fondueStatus.Text == "JAQUE POR FONDUE" &&
-                  fondueStatus.TooltipText.Contains("f7"),
-                "black king's indirect check is labeled and points out the f7 capture threat");
+                  fondueStatus.TooltipText.Contains("g7"),
+                "a real non-pawn-capture threat still explains which square endangers the king");
             await Capture("fondue-check");
 
-            const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
+            const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
             Check(root.ImportGameText(fondueVictory, ".pgn"),
                 "Fondue victory demonstration imports");
             Play(root, "g1g7");
