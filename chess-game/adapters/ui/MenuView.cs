@@ -163,9 +163,12 @@ public partial class MenuView : Control
         _whiteSkin.Select(picada ? 1 : 0);
         _blackSkin.Select(picada ? 1 : 0);
         _setup.GetNode<Label>("Heading").Text = "PREPARA TU PARTIDA";
-        _setup.GetNode<Label>("Preview/RuleTag").Text = picada
-            ? "OBJETIVO: REY EN D4 / E4 / D5 / E5"
-            : "REGLAS CLASICAS · PARTIDA NORMAL";
+        _setup.GetNode<Label>("Preview/RuleTag").Text = mode switch
+        {
+            GameMode.ReyDeLaPicada => "OBJETIVO: REY EN D4 / E4 / D5 / E5",
+            GameMode.QuesoSuizo => "AGUJEROS: BLOQUEAN CASILLAS Y CAMINOS",
+            _ => "REGLAS CLASICAS · PARTIDA NORMAL"
+        };
         UpdatePreview();
         ShowPage(Page.Setup);
     }
@@ -177,6 +180,7 @@ public partial class MenuView : Control
             _modes,
             () => OpenSetup(Page.Modes),
             () => OpenSetup(Page.Modes, GameMode.ReyDeLaPicada),
+            () => OpenSetup(Page.Modes, GameMode.QuesoSuizo),
             () => ShowPage(Page.Home));
     }
 
@@ -441,6 +445,8 @@ public partial class MenuView : Control
         SetStyleCardSelected(_picadaStyleCard, themed);
         _note.Text = SelectedMode == GameMode.ReyDeLaPicada
             ? "REY DE LA PICADA: LLEVA TU REY A D4, E4, D5 O E5."
+            : SelectedMode == GameMode.QuesoSuizo
+                ? "QUESO SUIZO: LOS AGUJEROS NO SE PUEDEN CRUZAR."
             : themed
                 ? "EL QUESO Y EL FIAMBRE CAMBIAN EL ASPECTO, NO LAS REGLAS."
                 : "REGLAS CLASICAS. PIEZAS Y TABLERO ORIGINALES.";
