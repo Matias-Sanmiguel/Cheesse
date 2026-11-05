@@ -22,6 +22,7 @@ public partial class BoardView : Node2D
     private GodotEventBus? _bus;
 
     private Square? _selectedSquare;
+    private Square? _fondueHoverSquare;
     private readonly HashSet<Square> _legalDestinations = new();
     private Move? _lastMove;
 
@@ -112,6 +113,7 @@ public partial class BoardView : Node2D
         _observedLastMove = game.History.Count == 0 ? null : game.History[^1];
         _goalPulseTime = 0;
         _goalRedrawClock = 0;
+        _fondueHoverSquare = null;
 
         bus.StateChanged += OnStateChanged;
         bus.PiecesMeltedPublished += OnPiecesMelted;
@@ -142,6 +144,18 @@ public partial class BoardView : Node2D
 
     public override void _Process(double delta)
     {
+        // Only ask for a repaint when the hovered square changes; no
+        // additional input handlers or assumptions about the game engine.
+        Square? hover = null;
+        if (Visible && _game?.Mode == GameMode.Fondue && _selectedSquare is not null &&
+            TryGetSquare(GetLocalMousePosition(), out Square square))
+            hover = square;
+        if (hover != _fondueHoverSquare)
+        {
+            _fondueHoverSquare = hover;
+            QueueRedraw();
+        }
+
         // Pixel-art pulse at 8 fps, only while a Picada match is active.
         if (!Visible || _game?.Mode != GameMode.ReyDeLaPicada ||
             _game.Status is not (GameStatus.Ongoing or GameStatus.Check))
@@ -563,6 +577,7 @@ public partial class BoardView : Node2D
         DrawFondueCheckThreats();
         DrawPieces();
         DrawSelectionIndicators();
+        DrawFonduePreview();
         DrawCoordinates();
     }
 
@@ -653,6 +668,28 @@ public partial class BoardView : Node2D
             var square = new Rect2(GetSquarePosition(target),
                 new Vector2(SquareSize, SquareSize)).Grow(-4f);
             DrawRect(square, new Color(1f, 0.36f, 0.21f, 0.95f), false, 4f);
+        }
+    }
+
+    // Preview precisely the pieces that will disappear on this legal capture.
+    // If the target is a pawn, there is no explosion to preview.
+    private void DrawFonduePreview()
+    {
+        if (_game?.Mode != GameMode.Fondue || _selectedSquare is not Square from ||
+            _fondueHoverSquare is not Square to || !_legalDestinations.Contains(to))
+            return;
+        var move = _game.LegalMoves().FirstOrDefault(candidate =>
+            candidate.From == from && candidate.To == to);
+        if (move is null) return;
+        foreach (Square square in GameRules.MeltingSquares(_game.Board, move))
+        {
+            bool king = _game.Board.At(square) is Piece { Type: PieceType.King };
+            var rect = new Rect2(GetSquarePosition(square),
+                new Vector2(SquareSize, SquareSize)).Grow(-5f);
+            var color = king ? new Color(0.95f, 0.23f, 0.23f, 0.95f)
+                             : new Color(1f, 0.65f, 0.16f, 0.9f);
+            DrawRect(rect, new Color(color.R, color.G, color.B, 0.17f));
+            DrawRect(rect, color, false, 4f);
         }
     }
 
