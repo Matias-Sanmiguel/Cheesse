@@ -122,7 +122,7 @@ public partial class SidePanelView : PanelContainer
             GameMode.Fondue => "MODO: FONDUE",
             _ => "MODO: CLASICO"
         };
-        _turn.Text = _game.Status == GameStatus.PicadaVictory
+        _turn.Text = _game.Status is GameStatus.PicadaVictory or GameStatus.KingMelted
             ? (_game.Winner == PlayerColor.White ? "GANAN BLANCAS" : "GANAN NEGRAS")
             : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
         _status.Text = _thinking ? "STOCKFISH PENSANDO…" : StatusText(_game.Status).ToUpperInvariant();
@@ -169,6 +169,7 @@ public partial class SidePanelView : PanelContainer
     public static string StatusText(GameStatus status) => status switch
     {
         GameStatus.PicadaVictory => "Rey al centro: victoria",
+        GameStatus.KingMelted => "Rey derretido: victoria",
         GameStatus.Ongoing => "En juego", GameStatus.Check => "Jaque", GameStatus.Checkmate => "Jaque mate",
         GameStatus.Stalemate => "Tablas por ahogado", GameStatus.DrawByFiftyMove => "Tablas por 50 movimientos",
         GameStatus.DrawByRepetition => "Tablas por repetición", GameStatus.DrawByInsufficientMaterial => "Tablas por material insuficiente",

@@ -223,6 +223,7 @@ public partial class GameOverOverlay : CanvasLayer
         {
             GameStatus.Checkmate => "JAQUE MATE",
             GameStatus.PicadaVictory => "REY AL CENTRO",
+            GameStatus.KingMelted => "REY DERRETIDO",
             GameStatus.Stalemate => "REY AHOGADO",
             GameStatus.DrawByFiftyMove => "50 MOVIMIENTOS",
             GameStatus.DrawByRepetition => "TRIPLE REPETICION",
