@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Http;
 using Chess.Core.Model;
 using Chess.Core.Ports;
 using Chess.Core.Services;
@@ -203,8 +204,8 @@ public partial class GameCompositionRoot : Node
             string project = ProjectSettings.GlobalizePath("res://engines/" + name);
             string perUser = ProjectSettings.GlobalizePath("user://engines/" + name);
             var installed = StockfishEngineInstaller.FindExisting(name,
-                Environment.GetEnvironmentVariable("CHEESSE_STOCKFISH_PATH"),
-                [bundled, project, perUser], Environment.GetEnvironmentVariable("PATH"));
+                System.Environment.GetEnvironmentVariable("CHEESSE_STOCKFISH_PATH"),
+                [bundled, project, perUser], System.Environment.GetEnvironmentVariable("PATH"));
 
             if (installed is null)
             {
