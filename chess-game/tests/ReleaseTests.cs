@@ -236,6 +236,53 @@ public partial class ReleaseTests : Node
                 "a real non-pawn-capture threat still explains which square endangers the king");
             await Capture("fondue-check");
 
+            // The original heat-overlay asset persists after a melt for
+            // exactly one opposing move; landing on it destroys just that piece.
+            const string fondueHeatDemo = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1\"]\n[Result \"*\"]\n\n*";
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat fixture imports");
+            Play(root, "d1d5");
+            await Frames();
+            var hotBoard = root.GetNode<BoardView>("Board");
+            var hotStatus = root.GetNode<SidePanelView>("SidePanel")
+                .GetNode<Label>("Margin/Content/Status");
+            Check(root.CurrentGame!.Board.HotSquare == Square("d5") &&
+                  hotBoard.VisibleHotSquare == Square("d5") &&
+                  ResourceLoader.Exists("res://assets/ui/overlays/heat_overlay.png"),
+                "melt creates visible hot d5 and uses supplied heat pixel-art asset");
+            Check(hotStatus.Text.Contains("CALIENTE") &&
+                  hotStatus.TooltipText.Contains("d5"),
+                "player receives a warning and knows when the tile cools");
+            await Capture("fondue-hot");
+            Press(root, "History/Undo");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  hotBoard.VisibleHotSquare is null,
+                "undo removes the hot effect along with the capture");
+            Press(root, "History/Redo");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare == Square("d5"),
+                "redo restores heat without replaying visual particles");
+            Play(root, "d7d5");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  root.CurrentGame.Board.At(Square("d5")) is null &&
+                  root.CurrentGame.History.Count == 2 &&
+                  hotBoard.VisibleHotSquare is null,
+                "landing on heat burns the rook alone and cools the square");
+            Check(hotBoard.ShowsFondueMeltFx,
+                "landing on heat plays the melt and steam particles");
+            await Capture("fondue-hot-burn");
+
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat fixture can restart for expiry test");
+            Play(root, "d1d5", "h8h7");
+            await Frames();
+            Check(root.CurrentGame!.Board.HotSquare is null &&
+                  root.CurrentGame.Board.At(Square("d7")) ==
+                      new Piece(PieceType.Rook, PlayerColor.Black),
+                "one ordinary reply cools the hot square without melting other pieces");
+
             const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
             Check(root.ImportGameText(fondueVictory, ".pgn"),
                 "Fondue victory demonstration imports");
