@@ -204,7 +204,7 @@ public partial class ReleaseTests : Node
             Check(root.CurrentGame!.Mode == GameMode.Fondue && root.CurrentGame.History.Count == 0,
                 "new Fondue match preserves the selected mode");
 
-            const string fondueVictory = "[Variant \\"Fondue\\"]\\n[SetUp \\"1\\"]\\n[FEN \\"7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1\\"]\\n[Result \\"*\\"]\\n\\n*";
+            const string fondueVictory = "[Variant \"Fondue\"]\n[SetUp \"1\"]\n[FEN \"7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1\"]\n[Result \"*\"]\n\n*";
             Check(root.ImportGameText(fondueVictory, ".pgn"),
                 "Fondue victory demonstration imports");
             Play(root, "g1g7");
