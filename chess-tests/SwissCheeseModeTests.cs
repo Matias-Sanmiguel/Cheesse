@@ -107,7 +107,7 @@ public class SwissCheeseModeTests
         Assert.That(white, Does.Not.Contain(Move("g1", "f3")));
         Assert.That(white, Does.Not.Contain(Move("b1", "c3")));
         Assert.That(white, Does.Contain(Move("g1", "h3")));
-        Assert.That(white, Does.Contain(Move("b1", "d2")));
+        Assert.That(white, Does.Contain(Move("b1", "a3")));
         Assert.That(white, Does.Contain(Move("e2", "e4")));
         var before = game.Board;
         Assert.That(game.TryMove(Move("c2", "c4")), Is.False);
@@ -131,7 +131,8 @@ public class SwissCheeseModeTests
         Assert.That(rook.LegalMoves(), Does.Not.Contain(Move("c1", "c4")));
         Assert.Throws<InvalidOperationException>(() => rook.Board.WithMove(Move("c1", "c3")));
 
-        var bishop = Swiss("7k/8/8/8/8/8/8/B6K w - - 0 1");
+        // The extra pawn prevents an immediate insufficient-material draw, so LegalMoves() remains available.
+        var bishop = Swiss("7k/8/8/8/8/8/4P3/B6K w - - 0 1");
         Assert.That(bishop.LegalMoves(), Does.Contain(Move("a1", "b2")));
         Assert.That(bishop.LegalMoves(), Does.Not.Contain(Move("a1", "c3")));
         Assert.That(bishop.LegalMoves(), Does.Not.Contain(Move("a1", "d4")));
