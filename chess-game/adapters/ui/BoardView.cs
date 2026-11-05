@@ -1,4 +1,5 @@
 
+using Chess.Core.Events;
 using Chess.Core.Model;
 using Chess.Core.Rules;
 using Cheesse.Game.Adapters.Infra;
@@ -53,14 +54,17 @@ public partial class BoardView : Node2D
     private double _goalPulseTime;
     private double _goalRedrawClock;
     private Node2D? _picadaVictoryFx;
+    private Node2D? _fondueMeltFx;
 
     // The celebration should be visible before its result dialog covers the board.
     public const double PicadaVictoryEffectDurationSeconds = 1.8;
+    public const double FondueMeltEffectDurationSeconds = 1.45;
     private VisualTheme _visualTheme = VisualTheme.Classic;
 
     public VisualTheme CurrentTheme => _visualTheme;
     public bool ShowsPicadaGoals => _game?.Mode == GameMode.ReyDeLaPicada;
     public bool ShowsSwissHoles => _game?.Mode == GameMode.QuesoSuizo;
+    public bool ShowsFondueMeltFx => _fondueMeltFx is not null && GodotObject.IsInstanceValid(_fondueMeltFx);
     internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
@@ -91,9 +95,13 @@ public partial class BoardView : Node2D
     {
         // Evitar suscripciones duplicadas.
         if (_bus is not null)
+        {
             _bus.StateChanged -= OnStateChanged;
+            _bus.PiecesMeltedPublished -= OnPiecesMelted;
+        }
 
         ClearPicadaVictoryFx();
+        ClearFondueMeltFx();
         CancelPieceSlide();
         _game = game;
         _bus = bus;
@@ -105,6 +113,7 @@ public partial class BoardView : Node2D
         _goalRedrawClock = 0;
 
         bus.StateChanged += OnStateChanged;
+        bus.PiecesMeltedPublished += OnPiecesMelted;
 
         RefreshFromGame();
     }
@@ -122,7 +131,11 @@ public partial class BoardView : Node2D
     public override void _ExitTree()
     {
         if (_bus is not null)
+        {
             _bus.StateChanged -= OnStateChanged;
+            _bus.PiecesMeltedPublished -= OnPiecesMelted;
+        }
+        ClearFondueMeltFx();
         CancelPieceSlide();
     }
 
@@ -265,6 +278,118 @@ public partial class BoardView : Node2D
         if (_picadaVictoryFx is not null && GodotObject.IsInstanceValid(_picadaVictoryFx))
             _picadaVictoryFx.QueueFree();
         _picadaVictoryFx = null;
+    }
+
+    /// <summary>
+    /// Render-only feedback for the authoritative Core PiecesMelted event.
+    /// The game has already removed the pieces; the view never simulates
+    /// captures or changes board state.
+    /// </summary>
+    private void OnPiecesMelted(PiecesMelted melted)
+    {
+        if (_game?.Mode != GameMode.Fondue || !Visible) return;
+
+        ClearFondueMeltFx();
+        var removedSquares = melted.Pieces.Select(piece => piece.Square).Distinct().ToArray();
+        if (removedSquares.Length == 0) return;
+
+        var meltedTile = LoadTextureIfExists("res://assets/ui/overlays/melted_square.png");
+        var steam = LoadTextureIfExists("res://assets/fx/steam_16x16.png");
+        var drop = LoadTextureIfExists("res://assets/fx/fondue_drop_16x16.png");
+        var fx = new Node2D
+        {
+            Name = "FondueMeltFx",
+            ZIndex = 20,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        AddChild(fx);
+        _fondueMeltFx = fx;
+
+        // Keep a ghost of each removed piece while it dissolves; the attacker
+        // is already animated separately by the regular piece-slide tween.
+        var mover = _game.Turn == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
+        foreach (var item in melted.Pieces.GroupBy(piece => piece.Square).Select(group => group.First()))
+        {
+            if (item.Square == melted.Move.To && item.Piece.Color == mover) continue;
+            if (!_pieceTextures.TryGetValue((item.Piece.Type, item.Piece.Color), out var texture)) continue;
+            var ghost = new Sprite2D
+            {
+                Name = "MeltingPiece" + item.Square,
+                Texture = texture,
+                Position = SquareCenter(item.Square),
+                Scale = new Vector2(SquareSize / (float)texture.GetWidth(),
+                    SquareSize / (float)texture.GetHeight()),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                Modulate = Colors.White
+            };
+            fx.AddChild(ghost);
+            var dissolve = fx.CreateTween();
+            dissolve.TweenInterval(0.18);
+            dissolve.TweenProperty(ghost, "modulate:a", 0f, 0.44);
+        }
+
+        for (int i = 0; i < removedSquares.Length; i++)
+        {
+            Square square = removedSquares[i];
+            float delay = 0.19f + 0.065f * Math.Max(
+                Math.Abs(square.File - melted.Move.To.File),
+                Math.Abs(square.Rank - melted.Move.To.Rank));
+            Vector2 center = SquareCenter(square);
+
+            if (meltedTile is not null)
+            {
+                var overlay = new Sprite2D
+                {
+                    Name = "MeltSquare" + square,
+                    Texture = meltedTile,
+                    Position = center,
+                    Scale = new Vector2(SquareSize / (float)meltedTile.GetWidth(),
+                        SquareSize / (float)meltedTile.GetHeight()),
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                    Modulate = new Color(1f, 1f, 1f, 0f)
+                };
+                fx.AddChild(overlay);
+                var flash = fx.CreateTween();
+                flash.TweenInterval(delay);
+                flash.TweenProperty(overlay, "modulate:a", 0.95f, 0.13);
+                flash.TweenInterval(0.12);
+                flash.TweenProperty(overlay, "modulate:a", 0f, 0.40);
+            }
+
+            Texture2D? particleTexture = i % 2 == 0 ? steam ?? drop : drop ?? steam;
+            if (particleTexture is null) continue;
+            var particle = new Sprite2D
+            {
+                Name = "FondueSteam" + i,
+                Texture = particleTexture,
+                Position = center + new Vector2((i % 3 - 1) * 11f, -10f),
+                Scale = Vector2.One * 2.5f,
+                Modulate = new Color(1f, 0.95f, 0.7f, 0f),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+            };
+            fx.AddChild(particle);
+            var rise = fx.CreateTween();
+            rise.TweenInterval(delay);
+            rise.TweenProperty(particle, "modulate:a", 0.96f, 0.12);
+            rise.TweenProperty(particle, "position:y", particle.Position.Y - 39f, 0.50)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            rise.Parallel().TweenProperty(particle, "modulate:a", 0f, 0.50);
+        }
+
+        var lifetime = fx.CreateTween();
+        lifetime.TweenInterval(FondueMeltEffectDurationSeconds);
+        lifetime.TweenCallback(Callable.From(() =>
+        {
+            if (ReferenceEquals(_fondueMeltFx, fx)) _fondueMeltFx = null;
+            fx.QueueFree();
+        }));
+    }
+
+    private void ClearFondueMeltFx()
+    {
+        if (_fondueMeltFx is not null && GodotObject.IsInstanceValid(_fondueMeltFx))
+            _fondueMeltFx.QueueFree();
+        _fondueMeltFx = null;
     }
 
     // Compatibilidad con InputAdapter de main.
@@ -830,6 +955,8 @@ public partial class BoardView : Node2D
         if (_game is null) return;
 
         int count = _game.History.Count;
+        if (!ReferenceEquals(_observedBoard, _game.Board))
+            ClearFondueMeltFx(); // A new move, undo, redo or load invalidates the old overlay.
         if (count == _observedHistoryCount + 1 && _observedBoard is not null)
         {
             Move move = _game.History[^1];
