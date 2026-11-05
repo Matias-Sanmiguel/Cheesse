@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bxhypb5s7aq25"
+
+[deps]
+
+files=["res://docs/ui/mode_selection/INVENTARIO.ancho.translation", "res://docs/ui/mode_selection/INVENTARIO.alto.translation", "res://docs/ui/mode_selection/INVENTARIO.uso.translation"]
+
+source_file="res://docs/ui/mode_selection/INVENTARIO.csv"
+dest_files=["res://docs/ui/mode_selection/INVENTARIO.ancho.translation", "res://docs/ui/mode_selection/INVENTARIO.alto.translation", "res://docs/ui/mode_selection/INVENTARIO.uso.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

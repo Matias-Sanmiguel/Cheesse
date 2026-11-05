@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bw0rj8h6wdmgf"
+
+[deps]
+
+files=["res://docs/ui/mode_selection/textos_sugeridos.estado.translation", "res://docs/ui/mode_selection/textos_sugeridos.descripcion.translation"]
+
+source_file="res://docs/ui/mode_selection/textos_sugeridos.csv"
+dest_files=["res://docs/ui/mode_selection/textos_sugeridos.estado.translation", "res://docs/ui/mode_selection/textos_sugeridos.descripcion.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

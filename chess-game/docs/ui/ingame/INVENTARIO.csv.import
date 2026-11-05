@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bojaxip03nm8e"
+
+[deps]
+
+files=["res://docs/ui/ingame/INVENTARIO.ancho.translation", "res://docs/ui/ingame/INVENTARIO.alto.translation", "res://docs/ui/ingame/INVENTARIO.formato.translation", "res://docs/ui/ingame/INVENTARIO.tiene.translation", "res://docs/ui/ingame/INVENTARIO.categoria.translation", "res://docs/ui/ingame/INVENTARIO.sha256.translation"]
+
+source_file="res://docs/ui/ingame/INVENTARIO.csv"
+dest_files=["res://docs/ui/ingame/INVENTARIO.ancho.translation", "res://docs/ui/ingame/INVENTARIO.alto.translation", "res://docs/ui/ingame/INVENTARIO.formato.translation", "res://docs/ui/ingame/INVENTARIO.tiene.translation", "res://docs/ui/ingame/INVENTARIO.categoria.translation", "res://docs/ui/ingame/INVENTARIO.sha256.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
