@@ -200,9 +200,10 @@ public sealed class ChessGame
         {
             // A piece landing on residual heat burns alone: no new 3x3 melt,
             // no new hot tile. Reuse the existing domain event and FX pipeline.
-            Piece burned = hot == move.To
-                ? move.Promotion is PieceType promoted ? piece with { Type = promoted } : piece
-                : new Piece(PieceType.Rook, mover); // castling rook on f/d-file
+            Piece burned = FondueRules.HotBurnsMover(previousBoard, move)
+                ? hot == move.To && move.Promotion is PieceType promoted
+                    ? piece with { Type = promoted } : piece
+                : new Piece(PieceType.Rook, mover); // castling rook crossed the heat
             Events.Publish(new PiecesMelted(move, [new MeltedPiece(hot, burned)]));
         }
         if (Status is GameStatus.Check or GameStatus.Checkmate) Events.Publish(new CheckRaised(Turn));
