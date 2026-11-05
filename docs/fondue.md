@@ -1,63 +1,39 @@
-# Fondue (MAT-298)
+# Fondue 2.0 (MAT-298 / MAT-299)
 
-## Reglas
+## Reglas definitivas
 
-- Se activa con `board.WithMode(GameMode.Fondue)` antes de construir `ChessGame`.
-  El valor por defecto sigue siendo `Standard`.
-- Una captura derrite la pieza capturada, la atacante en su destino y las piezas
-  de ambos colores en las ocho casillas vecinas (diagonales incluidas).
-- Cada pieza derretida propaga el efecto a sus ocho vecinas. Las casillas vacías
-  cortan la propagación; cada casilla se procesa una sola vez. No hay inmunidad
-  de peones. El origen del atacante ya está vacío cuando se resuelve la cadena.
-- Al paso empieza en la casilla de destino y también en la del peón capturado.
-  Una promoción que captura se derrite como cualquier otra pieza.
-- No se permite derretir el propio rey, ni siquiera si también cae el rival.
-  Se mantienen el jaque y la prohibición de capturar directamente al rey; además,
-  una captura rival que podría derretir nuestro rey sin perder el suyo es jaque.
-  Derretir al rey rival con el propio a salvo gana inmediatamente, aun si había
-  otra amenaza. El enroque no puede atravesar una amenaza de derretimiento.
-- Mate, ahogado y reglas de tablas por movimientos/repetición siguen vigentes.
-  Los finales con piezas menores no usan la regla de material insuficiente del
-  ajedrez normal; dos reyes solos sí son tablas.
+- Se activa mediante \`board.WithMode(GameMode.Fondue)\`; las demás variantes y el modo estándar no cambian.
+- **Capturar un peón es una captura normal de ajedrez.** El atacante permanece en el destino, no hay derretimiento, y la captura al paso también es normal.
+- **Capturar una pieza distinta de un peón** (caballo, alfil, torre o dama) activa Fondue: desaparecen tanto la pieza capturada como la atacante, además de las piezas **que no sean peones** que ocupen cualquiera de las ocho casillas adyacentes al destino, incluidas diagonales. El centro siempre se derrite, aunque la atacante sea un peón que capturó una pieza mayor.
+- **Los peones vecinos son inmunes y no propagan nada**. Ninguna pieza derretida inicia otra reacción. El efecto siempre termina en la región de 3×3 centrada en la casilla de captura.
+- La propia casilla de origen del atacante queda vacía antes de calcular el radio de 3×3. En los bordes del tablero no existe envolvimiento.
+- No se permite una captura que derrita al rey propio, aunque también derrita al enemigo. La captura directa del rey está prohibida; un rey solo puede capturar un peón de manera normal, no capturar una pieza que lo derretiría.
+- Derretir al rey rival manteniendo el propio significa victoria inmediata (\`KingMelted\`). Una amenaza de captura de **no peón** que pueda derretir al rey adversario sin derretir el propio cuenta como jaque indirecto. Capturar un peón junto al rey **nunca** crea un jaque por derretimiento.
+- Siguen existiendo jaque directo, mate, ahogado, enroques, promociones y reglas de tablas; material insuficiente admite solo dos reyes solos como tablas en Fondue.
 
-## Contrato para la UI (Nico, MAT-299)
+## Interfaz / experiencia de juego
 
-`Board.Mode` identifica el modo y se conserva al mover y en los mementos.
-La vista obtiene destinos de `ChessGame.LegalMoves()` y lee el tablero completo
-después de cada jugada; nunca calcula la cadena. `PieceMoved` se publica cuando
-la posición final ya está resuelta. En capturas Fondue, `PiecesMelted` aporta la
-jugada y la lista inmutable de `(Square, Piece)` eliminadas, incluida la víctima
-original y la atacante en su destino (dos entradas en la misma casilla).
-Después se publica `GameEnded(GameStatus.KingMelted)` si cayó el rey rival;
-`ChessGame.Winner` identifica al ganador. Undo/Redo conserva tablero, modo,
-resultado, relojes e historial como una sola jugada. Para nueva partida crear
-otro tablero inicial con el modo seleccionado.
+- Al seleccionar una pieza y pasar por encima de un **destino legal que captura una pieza no peón**, el tablero marca las casillas exactas que se derriten. El destino marca el sacrificio del atacante; los peones vecinos no aparecen en el efecto.
+- Las capturas de peones se muestran como capturas normales. El panel lateral distingue \`JAQUE POR FONDUE\` únicamente si existe una amenaza real de derretimiento del rey, identificando el objetivo.
+- Si el jugador intenta una captura ilegal, el panel explica si la propia captura derretiría su rey o si lo dejaría en jaque.
+- \`Board.Mode\` se conserva con Undo/Redo, mementos, nueva partida, guardado y carga; la UI **nunca** aplica las reglas ni decide qué piezas desaparecerán. \`GameRules.MeltingSquares(board, move)\` proporciona la vista previa exacta para una jugada que la UI ya verificó como legal.
+- \`PiecesMelted\` se emite **solo** en capturas de una pieza no peón; la lista incluye tanto víctima como atacante (dos entradas para el mismo destino) y vecinos que efectivamente desaparecen. Las capturas normales publican \`PieceMoved\`, sin \`PiecesMelted\`.
+- El overlay de \`KingMelted\` se muestra después del efecto visual del tablero. Una promoción que se derrite no publica \`PromotionOccurred\`.
 
-El `GodotEventBus` actual ya redibuja con `PieceMoved`/`StateChanged`; para
-animar la lista de `PiecesMelted`, MAT-299 debe agregar su puente en el bus.
-También debe añadir `KingMelted` al texto de fin de partida y el selector de
-modo. Una promoción que se derrite no publica `PromotionOccurred`.
+## Demostraciones / regresiones
 
-FEN representa solo la posición: al cargar un FEN para este modo aplicar
-`WithMode(GameMode.Fondue)`. PGN incluye `[Variant "Fondue"]` y conserva el modo.
-Stockfish estándar no conoce Fondue: usar humano contra humano o `RandomAI`.
-Las posiciones preparadas de Fondue admiten amenazas indirectas al rey del
-jugador que no mueve, para demostrar la victoria; conservan la validación de
-reyes, piezas, enroques, al paso y jaque directo del importador.
+1. **Captura normal de peón (sin efecto):** posición
+   \`rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1\`.
+   \`e5d6\` es legal y conserva el peón blanco en d6. \`e5e6\` tampoco causa un jaque por amenaza a f7, porque f7 tiene un peón.
+2. **Derretimiento local sin cadena:** posición
+   \`7k/8/2p2n2/3rB3/8/8/8/K2R4 w - - 0 1\`.
+   \`d1d5\` derrite torre negra d5, torre blanca atacante y alfil blanco e5. El peón c6 sobrevive por inmunidad y el caballo f6 sobrevive porque está fuera del radio de la captura.
+3. **Victoria por pieza no peón:** posición
+   \`7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1\`.
+   \`g1g7\` derrite el caballo negro, la torre blanca y el rey h8; el peón f6 permanece. La misma posición con negras al turno tiene jaque por Fondue: la captura amenazada es g7.
 
-## Demo reproducible
+## Compatibilidad
 
-FEN inicial: `7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1`.
-En modo Fondue jugar `d1d5`: desaparecen el peón d5, la torre que captura,
-el alfil e5 y el caballo f6. La diagonal e5-f6 demuestra la cadena.
+FEN codifica la posición; al cargar una posición de este modo aplicar \`WithMode(GameMode.Fondue)\`. PGN incluye \`[Variant "Fondue"]\`. Stockfish estándar desconoce estas reglas: en el menú se habilita humano contra humano, sin activar Stockfish.
 
-Para mostrar victoria: `7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1`.
-Jugar `g1g7`: el derretimiento llega a h8 y gana blancas. Deshacer restaura
-el rey negro y rehacer vuelve a mostrar la victoria.
-
-## Decisiones de implementación
-
-Se reutilizan el tablero inmutable, el generador y el caretaker existentes.
-Un modo en el tablero hace que las simulaciones, la IA aleatoria y el historial
-apliquen las mismas reglas. No se duplica `ChessGame` ni se agrega un segundo
-motor; las pantallas quedan en MAT-299.
+**Cambios respecto de Fondue 1.0:** desaparece la propagación ilimitada, los peones vecinos sobreviven, las capturas de peones son normales y el indicador de jaque deja de reaccionar a ellas. Los guardados y partidas históricas que usaban capturas con cadena se interpretarán según el nuevo reglamento; no se mezclan ambos sistemas.
