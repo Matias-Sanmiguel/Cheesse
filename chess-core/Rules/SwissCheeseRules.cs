@@ -22,7 +22,8 @@ public static class SwissCheeseRules
     });
 
     private static readonly object GenerationLock = new();
-    private static ulong? _previousGeneratedMask;
+    private const int RecentLayoutLimit = 16;
+    private static readonly Queue<ulong> RecentLayouts = new();
 
     // One representative from each of 16 symmetric pairs in ranks 3 to 6.
     private static readonly Square[] PairStarts =
@@ -51,13 +52,18 @@ public static class SwissCheeseRules
 
         lock (GenerationLock)
         {
-            // Exclude the previous layout while the game is running, including rematches.
-            var choices = possible.Length > 1 && _previousGeneratedMask is ulong last
-                ? possible.Where(mask => mask != last).ToArray()
-                : possible;
+            // Keep several rematches visibly different; recover gracefully for
+            // custom analysis positions with very few possible hole patterns.
+            var choices = possible.Where(mask => !RecentLayouts.Contains(mask)).ToArray();
+            if (choices.Length == 0 && RecentLayouts.Count > 0)
+            {
+                ulong previous = RecentLayouts.Last();
+                choices = possible.Where(mask => mask != previous).ToArray();
+            }
             if (choices.Length == 0) choices = possible;
             ulong selected = choices[RandomNumberGenerator.GetInt32(choices.Length)];
-            _previousGeneratedMask = selected;
+            RecentLayouts.Enqueue(selected);
+            if (RecentLayouts.Count > RecentLayoutLimit) RecentLayouts.Dequeue();
             return FromMask(selected);
         }
     }
