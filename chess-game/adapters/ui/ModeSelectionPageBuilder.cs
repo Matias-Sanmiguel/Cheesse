@@ -21,11 +21,11 @@ internal static class ModeSelectionPageBuilder
     [
         new("CLASICO", "classic", "AJEDREZ TRADICIONAL", true, 30),
         new("REY DE LA PICADA", "picada", "LLEVA AL REY AL CENTRO", true, 24),
-        new("QUESO SUIZO", "swiss", "EVITA LOS AGUJEROS", false, 28),
+        new("QUESO SUIZO", "swiss", "EVITA LOS AGUJEROS", true, 28),
         new("FONDUE", "fondue", "CAPTURAS QUE DERRITEN", false, 32)
     ];
 
-    public static void Build(Control page, Action onClassic, Action onPicada, Action onBack)
+    public static void Build(Control page, Action onClassic, Action onPicada, Action onSwiss, Action onBack)
     {
         page.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         page.AddChild(new TextureRect
@@ -59,7 +59,7 @@ internal static class ModeSelectionPageBuilder
             const int firstX = 81;
             const int stepX = 330;
             int x = firstX + i * stepX;
-            Action? selected = i switch { 0 => onClassic, 1 => onPicada, _ => null };
+            Action? selected = i switch { 0 => onClassic, 1 => onPicada, 2 => onSwiss, _ => null };
             BuildCard(page, i, Modes[i], new Vector2(x, 329), selected);
             page.AddChild(PixelUiSkin.Label("Description" + i, Modes[i].Summary,
                 new Vector2(x - 9, 697), new Vector2(CardSize.X + 18, 61), 19,
@@ -87,7 +87,7 @@ internal static class ModeSelectionPageBuilder
             MouseDefaultCursorShape = mode.Available
                 ? Control.CursorShape.PointingHand : Control.CursorShape.Arrow,
             TooltipText = mode.Available
-                ? "Iniciar una partida de ajedrez clasico"
+                ? "Iniciar modo: " + mode.Name
                 : mode.Name + ": proximamente",
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest
         };
