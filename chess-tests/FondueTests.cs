@@ -384,7 +384,7 @@ public class FondueTests
             Is.EqualTo(new Piece(PieceType.Queen, PlayerColor.White)));
         Assert.That(bishop.Board.At(Square("b7")), Is.Null);
 
-        var queen = Fondue("7k/8/8/q2nR1B1/8/8/8/K7 w - - 0 1");
+        var queen = Fondue("7k/8/8/q2nR1B1/8/8/8/7K w - - 0 1");
         Assert.That(queen.TryMove(Move("e5", "d5")), Is.True);
         Assert.That(queen.LegalMoves(), Does.Contain(Move("a5", "g5")));
         Assert.That(queen.TryMove(Move("a5", "g5")), Is.True);
@@ -419,7 +419,7 @@ public class FondueTests
             Is.EqualTo(new Piece(PieceType.Knight, PlayerColor.Black)));
         Assert.That(jumping.Board.HotSquare, Is.Null);
 
-        var landing = Fondue("7k/5n2/8/3nR3/8/8/8/K7 w - - 0 1");
+        var landing = Fondue("7k/8/5n2/3nR3/8/8/8/K7 w - - 0 1");
         Assert.That(landing.TryMove(Move("e5", "d5")), Is.True);
         Assert.That(GameRules.HeatContact(landing.Board, Move("f6", "d5")),
             Is.EqualTo(Square("d5")));
