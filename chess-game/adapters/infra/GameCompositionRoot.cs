@@ -29,13 +29,14 @@ public partial class GameCompositionRoot : Node
     private int _searchGeneration;
     private int _gameOverRevision;
     private Board? _delayedResultBoard;
-    private bool _engineEnabled, _engineFailed;
+    private bool _engineEnabled, _engineFailed, _engineInstalling;
     private Move? _announcedClaim;
     private PlayerColor _resigningSide;
     public ChessGame? CurrentGame { get; private set; }
     public bool AgainstStockfish => _engineEnabled;
     public bool AgainstRandom => AgainstStockfish;
     public bool IsThinking { get; private set; }
+    public bool IsInstallingEngine => _engineInstalling;
     private bool HasModal => _promotionDialog.Visible || _resignDialog.Visible || _claimDialog.Visible || _importDialog.Visible || _exportDialog.Visible;
 
     public override void _Ready()
@@ -92,7 +93,7 @@ public partial class GameCompositionRoot : Node
     public override void _Process(double delta)
     {
         if (CurrentGame is not { } game) return;
-        if (_menu.Visible || HasModal || game.Caretaker.CanRedo || _engineFailed)
+        if (_menu.Visible || HasModal || game.Caretaker.CanRedo || _engineFailed || _engineInstalling)
         {
             game.PauseClock();
             _ingame.RefreshClocks();
@@ -159,10 +160,13 @@ public partial class GameCompositionRoot : Node
         _engineEnabled = _repository.AgainstStockfish && game.Mode == GameMode.Standard;
         _repository.AgainstStockfish = _engineEnabled;
         _engineFailed = false;
+        _engineInstalling = false;
         _board.Attach(game, _bus);
         _board.SetVisualTheme(_repository.Theme);
         _ingame.Attach(game);
         _panel.Attach(game, game.Caretaker, _bus, AgainstStockfish, () => _repository.HasSave);
+        _panel.SetEngineError(null);
+        _panel.SetEnginePreparing(false);
         _panel.SetDifficulty(_repository.EngineElo);
         _input.Attach(game, _board, _promotionDialog, ApplyMove,
             () => game.State.AcceptsMoves && !HasModal && !IsThinking && (!AgainstStockfish || game.Turn == PlayerColor.White));
@@ -194,8 +198,31 @@ public partial class GameCompositionRoot : Node
         _panel.SetThinking(true);
         try
         {
+            string name = OperatingSystem.IsWindows() ? "stockfish.exe" : "stockfish";
+            string bundled = Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath())!, "engines", name);
+            string project = ProjectSettings.GlobalizePath("res://engines/" + name);
+            string perUser = ProjectSettings.GlobalizePath("user://engines/" + name);
+            var installed = StockfishEngineInstaller.FindExisting(name,
+                Environment.GetEnvironmentVariable("CHEESSE_STOCKFISH_PATH"),
+                [bundled, project, perUser], Environment.GetEnvironmentVariable("PATH"));
+
+            if (installed is null)
+            {
+                _engineInstalling = true;
+                _panel.SetEnginePreparing(true);
+                _panel.SetMessage("Descargando Stockfish 19 oficial por primera vez. Solo se necesita una vez.");
+                var package = StockfishEngineInstaller.OfficialPackage();
+                installed = await StockfishEngineInstaller.InstallAsync(
+                    perUser, package, cancellation.Token);
+                if (generation != _searchGeneration || !ReferenceEquals(CurrentGame, game) ||
+                    _menu.Visible || !AgainstStockfish)
+                    return;
+                _engineInstalling = false;
+                _panel.SetEnginePreparing(false);
+                _panel.SetMessage("");
+            }
             var remaining = game.TimeControl.InitialSeconds == 0 ? 500 : Math.Clamp((int)(game.ClockState.BlackSeconds * 1000 / 30), 20, 700);
-            var ai = new StockfishAI(StockfishPath(), _repository.EngineElo, remaining);
+            var ai = new StockfishAI(installed, _repository.EngineElo, remaining);
             var move = await ai.ChooseMoveAsync(game, cancellation.Token);
             if (generation != _searchGeneration || !ReferenceEquals(CurrentGame, game) ||
                 !ReferenceEquals(game.Board, expectedBoard) || !game.State.AcceptsMoves || !AgainstStockfish || _menu.Visible)
@@ -204,15 +231,27 @@ public partial class GameCompositionRoot : Node
             _panel.SetThinking(false);
             if (!game.ClaimDraw(PlayerColor.Black, move)) ApplyMove(move);
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error) when (error is IOException or InvalidOperationException or TimeoutException or System.ComponentModel.Win32Exception)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error)
         {
+            // Includes network errors, missing executables, wrong architectures,
+            // corrupt downloads and UCI protocol errors. Never strand Black's
+            // turn silently with an unobserved exception from async void.
             if (generation == _searchGeneration && ReferenceEquals(CurrentGame, game))
             {
                 _engineFailed = true;
                 game.PauseClock();
-                _panel.SetMessage("Stockfish no pudo responder. Desactivá el motor para seguir entre humanos o volvé a intentar.");
-                GD.PushWarning("Stockfish: " + error.Message);
+                var detail = error switch
+                {
+                    FileNotFoundException => "La ruta configurada de Stockfish no existe.",
+                    HttpRequestException => "No se pudo descargar Stockfish. Revisá tu conexión.",
+                    InvalidDataException => "La descarga de Stockfish falló la verificación de seguridad.",
+                    UnauthorizedAccessException => "No se pudo guardar el motor. Revisá los permisos.",
+                    NotSupportedException => error.Message,
+                    _ => "Stockfish no pudo iniciar o responder: " + error.Message
+                };
+                _panel.SetEngineError(detail + " Reintentá cambiando el nivel o apagando y activando Stockfish.");
+                GD.PushWarning("Stockfish: " + error);
             }
         }
         finally
@@ -220,30 +259,27 @@ public partial class GameCompositionRoot : Node
             if (generation == _searchGeneration)
             {
                 IsThinking = false;
+                _engineInstalling = false;
                 _searchCancellation = null;
+                _panel.SetEnginePreparing(false);
                 _panel.SetThinking(false);
             }
             cancellation.Dispose();
         }
     }
 
-    private static string StockfishPath()
-    {
-        var configured = System.Environment.GetEnvironmentVariable("CHEESSE_STOCKFISH_PATH");
-        if (!string.IsNullOrWhiteSpace(configured)) return configured;
-        var name = OperatingSystem.IsWindows() ? "stockfish.exe" : "stockfish";
-        var packaged = Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath())!, "engines", name);
-        if (File.Exists(packaged)) return packaged;
-        return ProjectSettings.GlobalizePath("res://engines/" + name);
-    }
-
-    private void CancelSearch()
+     private void CancelSearch()
     {
         _searchGeneration++;
         _searchCancellation?.Cancel();
         _searchCancellation = null;
         IsThinking = false;
-        if (_panel is not null && _panel.IsNodeReady()) _panel.SetThinking(false);
+        _engineInstalling = false;
+        if (_panel is not null && _panel.IsNodeReady())
+        {
+            _panel.SetEnginePreparing(false);
+            _panel.SetThinking(false);
+        }
     }
 
     private void ApplyMove(Move move)
@@ -283,6 +319,7 @@ public partial class GameCompositionRoot : Node
         enabled &= CurrentGame?.Mode == GameMode.Standard;
         _repository.AgainstStockfish = _engineEnabled = enabled;
         _engineFailed = false;
+        _panel.SetEngineError(null);
         _input.ClearSelection();
         _panel.SetRandomOpponent(enabled);
         _bus.NotifyStateChanged();
@@ -293,6 +330,7 @@ public partial class GameCompositionRoot : Node
         CancelSearch();
         _repository.EngineElo = elo;
         _engineFailed = false;
+        _panel.SetEngineError(null);
         _panel.SetMessage("Nivel de Stockfish actualizado.");
     }
 
