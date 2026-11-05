@@ -272,7 +272,28 @@ public partial class ReleaseTests : Node
                 "landing on heat burns the rook alone and cools the square");
             Check(hotBoard.ShowsFondueMeltFx,
                 "landing on heat plays the melt and steam particles");
+            Check(hotBoard.CoolingHotSquare == Square("d5"),
+                "expired heat enters a visual cooldown, not an instant disappearance");
             await Capture("fondue-hot-burn");
+            await ToSignal(GetTree().CreateTimer(BoardView.FondueHeatFadeSeconds + 0.15),
+                SceneTreeTimer.SignalName.Timeout);
+            Check(hotBoard.CoolingHotSquare is null,
+                "heat overlay fades completely after cooling without remaining dangerous");
+
+            Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
+                "Fondue heat crossing fixture can restart");
+            Play(root, "d1d5");
+            await Frames();
+            Play(root, "d7d3");
+            await Frames();
+            Check(root.CurrentGame!.Board.At(Square("d7")) is null &&
+                  root.CurrentGame.Board.At(Square("d3")) is null &&
+                  root.CurrentGame.Board.HotSquare is null &&
+                  hotBoard.CoolingHotSquare == Square("d5"),
+                "rook can move through hot tile but dies on d5 before reaching d3");
+            Check(hotBoard.ShowsFondueMeltFx,
+                "burning mid-path plays melt effects at the hazardous square");
+            await Capture("fondue-hot-cross");
 
             Check(root.ImportGameText(fondueHeatDemo, ".pgn"),
                 "Fondue heat fixture can restart for expiry test");
