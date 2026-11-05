@@ -37,6 +37,9 @@ public static class GameTextFiles
 
     public static string Export(ChessGame game, string extension) => extension.ToLowerInvariant() switch
     {
+        // Standard FEN cannot represent blocked squares: never silently lose a random layout.
+        ".fen" when game.Mode == GameMode.QuesoSuizo =>
+            throw new FormatException("Queso Suizo requiere exportar a PGN para conservar los agujeros."),
         ".fen" => FenSerializer.Write(game.Board) + "\n",
         ".pgn" => SanNotation.ToPgn(game),
         _ => throw new FormatException("Elegí la extensión .fen o .pgn."),
