@@ -32,3 +32,7 @@ jobs:
           dotnet-version: "8.0.x"
       - name: Validate engine discovery and ZIP/TAR installer on Windows
         run: dotnet test chess-tests/Chess.Tests.csproj --filter FullyQualifiedName~StockfishEngineInstallerTests --verbosity normal
+      - name: Download and run real official Windows Stockfish 19
+        env:
+          CHEESSE_RUN_REAL_INSTALLER: "1"
+        run: dotnet test chess-tests/Chess.Tests.csproj --filter FullyQualifiedName~Official_windows_archive_installs_and_plays_an_actual_move --verbosity normal
