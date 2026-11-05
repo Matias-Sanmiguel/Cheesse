@@ -109,9 +109,9 @@ public partial class MenuTests : Node
             Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
                 "JUGAR consistently reopens the unchanged mode-selection screen");
             Check(!root.GetNode<Button>(Modes + "Mode1").Disabled &&
-                  root.GetNode<Button>(Modes + "Mode2").Disabled &&
+                  !root.GetNode<Button>(Modes + "Mode2").Disabled &&
                   root.GetNode<Button>(Modes + "Mode3").Disabled,
-                "Rey de la Picada is available, Swiss and Fondue remain locked");
+                "Picada and Swiss are available; Fondue remains locked");
             var modePage = root.GetNode<Control>("Menu/Stage/ModesPage");
             Check(modePage.HasNode("BrickWall") && modePage.HasNode("Back") &&
                   modePage.HasNode("GameLogo"),
@@ -149,15 +149,28 @@ public partial class MenuTests : Node
                     "mode " + i + " has independent editable description below the card");
             }
             Check(root.GetNode<Label>(Modes + "Mode0/State").Text == "JUGAR" &&
-                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR",
-                "classic and Picada are playable with dynamic JUGAR labels");
-            foreach (var locked in new[] { "Mode2", "Mode3" })
+                  root.GetNode<Label>(Modes + "Mode1/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode2/State").Text == "JUGAR",
+                "classic, Picada and Swiss are playable with dynamic JUGAR labels");
+            foreach (var locked in new[] { "Mode3" })
             {
                 Check(root.GetNode<Button>(Modes + locked).GetNode<Label>("State").Text == "PROXIMAMENTE" &&
                       root.GetNode<Button>(Modes + locked).HasNode("LockIcon"),
                     locked + " is visibly locked with dynamic copy, without navigation");
             }
 
+            Check(ResourceLoader.Exists("res://assets/ui/overlays/hole_overlay.png"),
+                "Swiss holes use the supplied 48x48 overlay without editing the asset");
+            Press(root, Modes + "Mode2");
+            Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
+                  root.GetNode<MenuView>("Menu").SelectedMode == GameMode.QuesoSuizo &&
+                  root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("AGUJEROS"),
+                "Swiss mode opens setup with its own blocked-square rule");
+            Check(root.GetNode<Button>("Menu/Stage/SetupPage/Options/Random").Disabled,
+                "unsupported standard Stockfish cannot be started in Swiss mode");
+            Press(root, "Menu/Stage/SetupPage/Back");
+            Check(root.GetNode<Control>("Menu/Stage/ModesPage").Visible,
+                "Swiss setup back preserves mode selection");
             Press(root, Modes + "Mode1");
             Check(root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                   root.GetNode<MenuView>("Menu").SelectedMode == GameMode.ReyDeLaPicada,
