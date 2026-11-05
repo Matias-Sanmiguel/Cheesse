@@ -10,7 +10,7 @@ namespace Cheesse.Game.Adapters.Ui;
 /// </summary>
 internal static class ModeRulesPageBuilder
 {
-    private const string LogoRoot = "res://assets/ui/logos/modes/principal_240x80/";
+    private const string LogoRoot = "res://assets/ui/logos/modes/alternativo_192x64/";
 
     private readonly record struct Rules(
         string Logo, string Objective, string Summary, string[] Steps);
@@ -87,10 +87,10 @@ internal static class ModeRulesPageBuilder
         page.AddChild(parchment);
         parchment.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-        // Native 240x80 assets, displayed at exactly x2; no stretching/cropping.
+        // Native 192x64 assets, displayed at exactly x3; no stretching/cropping.
         page.AddChild(PixelUiSkin.Image("ModeLogo",
             LogoRoot + "mode_clasico.png",
-            new Vector2(480, 112), new Vector2(480, 160), 2));
+            new Vector2(432, 95), new Vector2(576, 192), 3));
 
         page.AddChild(PixelUiSkin.Label("Section", "REGLAS DEL MODO",
             new Vector2(235, 300), new Vector2(970, 43), 26,
@@ -145,7 +145,7 @@ internal static class ModeRulesPageBuilder
         if (!RuleCards.TryGetValue(mode, out var rules))
             throw new ArgumentOutOfRangeException(nameof(mode));
         var logo = page.GetNode<TextureRect>("ModeLogo");
-        logo.Texture = PixelUiSkin.Texture(LogoRoot + rules.Logo, 2);
+        logo.Texture = PixelUiSkin.Texture(LogoRoot + rules.Logo, 3);
         page.GetNode<Label>("Objective").Text = rules.Objective;
         page.GetNode<Label>("Summary").Text = rules.Summary;
         for (int i = 0; i < rules.Steps.Length; i++)
