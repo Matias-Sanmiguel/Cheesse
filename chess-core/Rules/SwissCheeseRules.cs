@@ -30,6 +30,10 @@ public static class SwissCheeseRules
          from file in Enumerable.Range(0, 8)
          select new Square(file, rank)).ToArray();
 
+    // Opening legal-move validation happens once, not on every new/rematch game.
+    private static readonly Lazy<ulong[]> SafeOpeningLayouts = new(() =>
+        FindLayouts(FenSerializer.Load(FenSerializer.InitialPosition), true));
+
     /// <summary>
     /// Generate a new layout; never repeat the immediately preceding generation.
     /// Only central ranks may contain holes. Reject patterns that block opening
@@ -38,9 +42,29 @@ public static class SwissCheeseRules
     public static IReadOnlyList<Square> Generate(Board board)
     {
         ArgumentNullException.ThrowIfNull(board);
-        var possible = new List<ulong>();
         bool isStartingPosition = FenSerializer.Write(board) == FenSerializer.InitialPosition;
+        var possible = isStartingPosition
+            ? SafeOpeningLayouts.Value
+            : FindLayouts(board, false);
+        if (possible.Length == 0)
+            throw new InvalidOperationException("No hay una distribución segura de agujeros para esta posición.");
 
+        lock (GenerationLock)
+        {
+            // Exclude the previous layout while the game is running, including rematches.
+            var choices = possible.Length > 1 && _previousGeneratedMask is ulong last
+                ? possible.Where(mask => mask != last).ToArray()
+                : possible;
+            if (choices.Length == 0) choices = possible;
+            ulong selected = choices[RandomNumberGenerator.GetInt32(choices.Length)];
+            _previousGeneratedMask = selected;
+            return FromMask(selected);
+        }
+    }
+
+    private static ulong[] FindLayouts(Board board, bool testOpening)
+    {
+        var possible = new List<ulong>();
         for (int i = 0; i < PairStarts.Length - 2; i++)
         for (int j = i + 1; j < PairStarts.Length - 1; j++)
         for (int k = j + 1; k < PairStarts.Length; k++)
@@ -53,25 +77,11 @@ public static class SwissCheeseRules
             };
             if (holes.Any(hole => board.At(hole) is not null) || !HasOpenCorridors(holes))
                 continue;
-            if (isStartingPosition && !HasPlayableOpening(board.WithSwissHoles(holes)))
+            if (testOpening && !HasPlayableOpening(board.WithSwissHoles(holes)))
                 continue;
             possible.Add(ToMask(holes));
         }
-
-        if (possible.Count == 0)
-            throw new InvalidOperationException("No hay una distribución segura de agujeros para esta posición.");
-
-        lock (GenerationLock)
-        {
-            // Exclude the previous layout while the game is running, including rematches.
-            var choices = possible.Count > 1 && _previousGeneratedMask is ulong last
-                ? possible.Where(mask => mask != last).ToArray()
-                : possible.ToArray();
-            if (choices.Length == 0) choices = possible.ToArray();
-            ulong selected = choices[RandomNumberGenerator.GetInt32(choices.Length)];
-            _previousGeneratedMask = selected;
-            return FromMask(selected);
-        }
+        return possible.ToArray();
     }
 
     /// <summary>
