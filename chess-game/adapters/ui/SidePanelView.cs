@@ -89,6 +89,12 @@ public partial class SidePanelView : PanelContainer
     public override void _ExitTree() { if (_bus is not null) _bus.StateChanged -= Refresh; }
     public void SetRandomOpponent(bool enabled)
     {
+        // Standard Stockfish has no concept of Swiss holes or other variant rules.
+        bool supported = _game?.Mode == GameMode.Standard;
+        _random.Disabled = !supported;
+        _random.TooltipText = supported ? "Jugar contra Stockfish" :
+            "Stockfish estándar no admite las reglas de este modo.";
+        enabled &= supported;
         _againstStockfish = enabled;
         _random.SetPressedNoSignal(enabled);
         _random.Modulate = enabled ? Colors.White : new Color("a89b83");
