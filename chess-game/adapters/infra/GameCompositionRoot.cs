@@ -155,7 +155,7 @@ public partial class GameCompositionRoot : Node
         CancelSearch();
         CurrentGame?.PauseClock();
         CurrentGame = game;
-        _engineEnabled = _repository.AgainstStockfish;
+        _engineEnabled = _repository.AgainstStockfish && game.Mode == GameMode.Standard;
         _engineFailed = false;
         _board.Attach(game, _bus);
         _board.SetVisualTheme(_repository.Theme);
@@ -278,6 +278,7 @@ public partial class GameCompositionRoot : Node
     private void SetStockfishOpponent(bool enabled)
     {
         CancelSearch();
+        enabled &= CurrentGame?.Mode == GameMode.Standard;
         _repository.AgainstStockfish = _engineEnabled = enabled;
         _engineFailed = false;
         _input.ClearSelection();
