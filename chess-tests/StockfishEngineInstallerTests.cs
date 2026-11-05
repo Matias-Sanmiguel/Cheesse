@@ -23,9 +23,23 @@ public sealed class StockfishEngineInstallerTests
     }
 
     [TearDown]
-    public void TearDown()
+    public async Task TearDown()
     {
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
+        // Windows can temporarily pin a freshly executed .exe (AV/indexing)
+        // even after Stockfish closes. This is a runner cleanup race, not a
+        // failed UCI response. Retry cleanup rather than failing the test.
+        for (int attempt = 0; attempt < 25; attempt++)
+        {
+            try
+            {
+                if (Directory.Exists(_directory))
+                    Directory.Delete(_directory, recursive: true);
+                return;
+            }
+            catch (IOException) when (OperatingSystem.IsWindows() && attempt < 24) { }
+            catch (UnauthorizedAccessException) when (OperatingSystem.IsWindows() && attempt < 24) { }
+            await Task.Delay(150);
+        }
     }
 
     [Test]
