@@ -1,3 +1,4 @@
+using Chess.Core.Events;
 using Chess.Core.Ports;
 using Godot;
 
@@ -20,6 +21,9 @@ public partial class GodotEventBus : Node, IEventPublisher
     [Signal]
     public delegate void StateChangedEventHandler();
 
+    // Domain payload stays typed C#: visual effects never recalculate the melt chain.
+    public event Action<PiecesMelted>? PiecesMeltedPublished;
+
     public void NotifyStateChanged() => EmitSignal(SignalName.StateChanged);
 
     public void Publish<T>(T domainEvent)
@@ -37,6 +41,9 @@ public partial class GodotEventBus : Node, IEventPublisher
                 break;
             case Chess.Core.Events.PromotionOccurred:
                 EmitSignal(SignalName.PromotionOccurred);
+                break;
+            case PiecesMelted melted:
+                PiecesMeltedPublished?.Invoke(melted);
                 break;
             default:
                 return;
