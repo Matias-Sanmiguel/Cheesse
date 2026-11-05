@@ -38,6 +38,31 @@ public class FondueTests
     }
 
     [Test]
+    public void Screenshot_pawn_capture_exposes_queen_chain_while_push_checks_black_king()
+    {
+        // Reproduces the screenshot: white e5, black c5/d6, full back ranks,
+        // black queen d8 and white pawn d2 protecting the king e1 from a cascade.
+        const string fen = "rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1";
+        var game = Fondue(fen);
+        var capture = Move("e5", "d6");
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
+        Assert.That(MoveGenerator.Generate(game.Board, PlayerColor.White), Does.Contain(capture),
+            "e5xd6 is a geometrically valid capture");
+        Assert.That(game.LegalMoves(), Does.Not.Contain(capture),
+            "but it exposes the white king to the queen's d-file capture chain");
+        var hypothetical = game.Board.WithMove(capture);
+        Assert.That(GameRules.KingMeltingThreats(hypothetical, PlayerColor.White),
+            Does.Contain(Move("d8", "d2")),
+            "after d6 melts the black queen can capture d2 and melt the king on e1");
+        Assert.That(game.TryMove(capture), Is.False);
+        Assert.That(game.TryMove(Move("e5", "e6")), Is.True);
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Check));
+        Assert.That(GameRules.KingMeltingThreats(game.Board, PlayerColor.Black),
+            Does.Contain(Move("e6", "f7")),
+            "white pawn e6 can capture f7 and melt the black king on e8");
+    }
+
+    [Test]
     public void Normal_chess_capture_keeps_attacker_and_neighbors()
     {
         var game = Create("7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1");
