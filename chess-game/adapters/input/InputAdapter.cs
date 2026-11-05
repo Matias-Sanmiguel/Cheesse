@@ -148,7 +148,7 @@ public partial class InputAdapter : Node
         bool ownKingSurvives = Enumerable.Range(0, 64).Any(index =>
             next.At(Square.FromIndex(index)) == new Piece(PieceType.King, _game.Turn));
         if (!ownKingSurvives)
-            return "Captura ilegal en Fondue: la cadena derretiría tu propio rey.";
+            return "Captura ilegal en Fondue: el efecto local derretiría tu propio rey.";
 
         var threats = GameRules.KingMeltingThreats(next, _game.Turn);
         if (threats.Count > 0)
