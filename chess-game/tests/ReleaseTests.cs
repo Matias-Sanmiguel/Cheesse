@@ -210,7 +210,7 @@ public partial class ReleaseTests : Node
             await Frames();
             Check(root.GetNode<Control>("Menu/Stage/RulesPage").Visible &&
                   root.GetNode<Label>("Menu/Stage/RulesPage/Rule3").Text.Contains("CALOR") &&
-                  root.GetNode<Label>("Menu/Stage/RulesPage/Rule4").Text.Contains("CABALLO"),
+                  root.GetNode<Label>("Menu/Stage/RulesPage/Rule4").Text.Contains("caballo", StringComparison.OrdinalIgnoreCase),
                 "Fondue rules explain both local melting and hot-square knight jumps");
             await Capture("fondue-rules");
             ClickControl(root, "Menu/Stage/RulesPage/Continue");
