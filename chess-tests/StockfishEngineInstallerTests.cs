@@ -106,7 +106,7 @@ public sealed class StockfishEngineInstallerTests
         canceled.Cancel();
         var archive = MakeZip("stockfish/official-engine", "engine"u8.ToArray());
         using var client = new HttpClient(new ResponseHandler(archive));
-        Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        Assert.ThrowsAsync<TaskCanceledException>(async () =>
             await StockfishEngineInstaller.InstallAsync(Destination,
                 Package(archive, "stockfish/official-engine", true),
                 canceled.Token, client));
