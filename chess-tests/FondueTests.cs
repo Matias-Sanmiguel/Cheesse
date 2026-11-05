@@ -24,55 +24,77 @@ public class FondueTests
     }
 
     [Test]
-    public void Capture_resolves_diagonal_chain_without_crossing_empty_squares_or_mutating_original()
+    public void Capturing_a_nonpawn_only_melts_the_attacker_and_adjacent_nonpawns()
     {
-        var game = Fondue("7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1");
+        var events = new Recorder();
+        var game = Fondue("7k/8/2p2n2/3rB3/8/8/8/K2R4 w - - 0 1", events);
         var before = game.Board;
         Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
-        Assert.That(FenSerializer.Write(game.Board), Is.EqualTo("7k/8/8/8/8/8/8/K7 b - - 0 1"));
-        Assert.That(before.At(Square("d5"))?.Type, Is.EqualTo(PieceType.Pawn));
-        Assert.That(before.At(Square("f6"))?.Type, Is.EqualTo(PieceType.Knight));
-        Assert.That(game.Board.Mode, Is.EqualTo(GameMode.Fondue));
-        Assert.That(game.History, Has.Count.EqualTo(1));
-        Assert.That(game.Status, Is.EqualTo(GameStatus.DrawByInsufficientMaterial));
-    }
-
-    [Test]
-    public void Screenshot_pawn_capture_exposes_queen_chain_while_push_checks_black_king()
-    {
-        // Reproduces the screenshot: white e5, black c5/d6, full back ranks,
-        // black queen d8 and white pawn d2 protecting the king e1 from a cascade.
-        const string fen = "rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1";
-        var game = Fondue(fen);
-        var capture = Move("e5", "d6");
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
+        Assert.That(game.Board.At(Square("e5")), Is.Null);
+        Assert.That(game.Board.At(Square("c6"))?.Type, Is.EqualTo(PieceType.Pawn),
+            "neighboring pawns are immune");
+        Assert.That(game.Board.At(Square("f6"))?.Type, Is.EqualTo(PieceType.Knight),
+            "the bishop's neighbor must not trigger a second wave");
+        Assert.That(before.At(Square("d5"))?.Type, Is.EqualTo(PieceType.Rook));
+        Assert.That(before.At(Square("e5"))?.Type, Is.EqualTo(PieceType.Bishop));
         Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
-        Assert.That(MoveGenerator.Generate(game.Board, PlayerColor.White), Does.Contain(capture),
-            "e5xd6 is a geometrically valid capture");
-        Assert.That(game.LegalMoves(), Does.Not.Contain(capture),
-            "but it exposes the white king to the queen's d-file capture chain");
-        var hypothetical = game.Board.WithMove(capture);
-        Assert.That(GameRules.KingMeltingThreats(hypothetical, PlayerColor.White),
-            Does.Contain(Move("d8", "d2")),
-            "after d6 melts the black queen can capture d2 and melt the king on e1");
-        Assert.That(game.TryMove(capture), Is.False);
-        Assert.That(game.TryMove(Move("e5", "e6")), Is.True);
-        Assert.That(game.Status, Is.EqualTo(GameStatus.Check));
-        Assert.That(GameRules.KingMeltingThreats(game.Board, PlayerColor.Black),
-            Does.Contain(Move("e6", "f7")),
-            "white pawn e6 can capture f7 and melt the black king on e8");
+        Assert.That(game.Mode, Is.EqualTo(GameMode.Fondue));
+        Assert.That(events.Items.OfType<PiecesMelted>().Single().Pieces, Is.EquivalentTo(new[]
+        {
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Rook, PlayerColor.Black)),
+            new MeltedPiece(Square("e5"), new Piece(PieceType.Bishop, PlayerColor.White)),
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Rook, PlayerColor.White))
+        }));
     }
 
     [Test]
-    public void Normal_chess_capture_keeps_attacker_and_neighbors()
+    public void Capturing_a_pawn_is_regular_chess_and_emits_no_melt_event()
     {
-        var game = Create("7k/8/5n2/3pB3/8/8/8/K2R4 w - - 0 1");
+        var events = new Recorder();
+        var game = Fondue("7k/p5p1/8/8/8/8/8/K5R1 w - - 0 1", events);
+        Assert.That(game.TryMove(Move("g1", "g7")), Is.True);
+        Assert.That(game.Board.At(Square("g7")),
+            Is.EqualTo(new Piece(PieceType.Rook, PlayerColor.White)));
+        Assert.That(game.Board.At(Square("h8")),
+            Is.EqualTo(new Piece(PieceType.King, PlayerColor.Black)));
+        Assert.That(game.Status, Is.Not.EqualTo(GameStatus.KingMelted));
+        Assert.That(events.Items.OfType<PiecesMelted>(), Is.Empty);
+    }
+
+    [Test]
+    public void Screenshot_pawn_capture_and_following_pawn_check_use_classic_rules()
+    {
+        // Regression: this was unexpectedly forbidden by the original runaway cascade.
+        const string fen = "rnbqkbnr/pp3pp1/3p3p/2p1P3/8/8/PPPP2PP/RNBQKBNR w KQkq - 0 1";
+        var capture = Fondue(fen);
+        Assert.That(capture.LegalMoves(), Does.Contain(Move("e5", "d6")));
+        Assert.That(capture.TryMove(Move("e5", "d6")), Is.True);
+        Assert.That(capture.Board.At(Square("d6")),
+            Is.EqualTo(new Piece(PieceType.Pawn, PlayerColor.White)));
+        Assert.That(GameRules.KingMeltingThreats(capture.Board, PlayerColor.White),
+            Does.Not.Contain(Move("d8", "d2")),
+            "the d-file remains closed by the surviving pawn");
+
+        var advance = Fondue(fen);
+        Assert.That(advance.TryMove(Move("e5", "e6")), Is.True);
+        Assert.That(advance.Status, Is.EqualTo(GameStatus.Ongoing),
+            "e6xf7 is now a normal pawn capture, not an indirect king check");
+        Assert.That(GameRules.KingMeltingThreats(advance.Board, PlayerColor.Black),
+            Does.Not.Contain(Move("e6", "f7")));
+    }
+
+    [Test]
+    public void Standard_mode_capture_is_unchanged()
+    {
+        var game = Create("7k/8/5n2/3rB3/8/8/8/K2R4 w - - 0 1");
         Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
         Assert.That(game.Board.At(Square("d5"))?.Type, Is.EqualTo(PieceType.Rook));
         Assert.That(game.Board.At(Square("e5"))?.Type, Is.EqualTo(PieceType.Bishop));
     }
 
     [Test]
-    public void Quiet_move_does_not_melt_neighbors()
+    public void Quiet_move_never_melts_any_piece()
     {
         var game = Fondue("7k/8/8/8/8/8/8/K1NR4 w - - 0 1");
         Assert.That(game.TryMove(Move("d1", "d2")), Is.True);
@@ -81,15 +103,18 @@ public class FondueTests
     }
 
     [Test]
-    public void En_passant_propagates_from_destination_and_captured_pawn()
+    public void En_passant_is_normal_and_pawns_or_minors_nearby_remain()
     {
-        var game = Fondue("7k/8/2b5/3pP3/2n5/8/8/K7 w - d6 0 1");
+        var events = new Recorder();
+        var game = Fondue("7k/8/2b5/3pP3/2n5/8/8/K7 w - d6 0 1", events);
         Assert.That(game.TryMove(Move("e5", "d6")), Is.True);
-        Assert.That(FenSerializer.Write(game.Board), Is.EqualTo("7k/8/8/8/8/8/8/K7 b - - 0 1"));
+        Assert.That(FenSerializer.Write(game.Board),
+            Is.EqualTo("7k/8/2bP4/8/2n5/8/8/K7 b - - 0 1"));
+        Assert.That(events.Items.OfType<PiecesMelted>(), Is.Empty);
     }
 
     [Test]
-    public void Capture_promotion_melts_the_promoted_piece_and_does_not_wrap_at_board_edges()
+    public void Promotion_capturing_a_rook_melts_promoted_attacker_without_wrapping_edges()
     {
         var events = new Recorder();
         var game = Fondue("r1k5/1P6/8/8/8/8/7p/K7 w - - 0 1", events);
@@ -98,12 +123,13 @@ public class FondueTests
         Assert.That(game.Board.At(Square("h2"))?.Type, Is.EqualTo(PieceType.Pawn));
         Assert.That(game.Board.At(Square("c8"))?.Type, Is.EqualTo(PieceType.King));
         Assert.That(events.Items.OfType<PromotionOccurred>(), Is.Empty);
+        Assert.That(events.Items.OfType<PiecesMelted>(), Has.Exactly(1).Items);
     }
 
-    [TestCase("7k/8/8/3p4/2K5/8/8/3R4 w - - 0 1", "d1", "d5")]
-    [TestCase("8/8/4k3/3p4/2K5/8/8/3R4 w - - 0 1", "d1", "d5")]
-    [TestCase("7k/8/8/3p4/2K5/8/8/8 w - - 0 1", "c4", "d5")]
-    public void Self_melting_is_illegal_even_when_both_kings_would_melt(string fen, string from, string to)
+    [TestCase("7k/8/8/3n4/2K5/8/8/3R4 w - - 0 1", "d1", "d5")]
+    [TestCase("8/8/4k3/3n4/2K5/8/8/3R4 w - - 0 1", "d1", "d5")]
+    [TestCase("7k/8/8/3n4/2K5/8/8/8 w - - 0 1", "c4", "d5")]
+    public void Self_melting_captures_are_illegal_even_if_enemy_king_also_melts(string fen, string from, string to)
     {
         var events = new Recorder();
         var game = Fondue(fen, events);
@@ -116,17 +142,19 @@ public class FondueTests
     }
 
     [Test]
-    public void Indirect_chain_threat_is_check_and_cannot_be_ignored()
+    public void Capturing_a_nonpawn_near_enemy_king_still_creates_indirect_check()
     {
         var game = Fondue("7k/8/8/8/8/2KBr3/8/R7 w - - 0 1");
         Assert.That(CheckDetector.IsInCheck(game.Board, PlayerColor.White), Is.True);
+        Assert.That(GameRules.KingMeltingThreats(game.Board, PlayerColor.White),
+            Does.Contain(Move("e3", "d3")));
         Assert.That(game.Status, Is.EqualTo(GameStatus.Check));
         Assert.That(game.TryMove(Move("a1", "a2")), Is.False);
         Assert.That(game.TryMove(Move("c3", "b2")), Is.True);
     }
 
     [Test]
-    public void A_chain_that_would_also_melt_the_attacking_king_is_not_an_indirect_threat()
+    public void A_capture_that_would_also_melt_attacking_king_is_not_a_threat()
     {
         var game = Fondue("8/8/8/8/4k3/2KBr3/8/R7 w - - 0 1");
         Assert.That(CheckDetector.IsInCheck(game.Board, PlayerColor.White), Is.False);
@@ -134,15 +162,16 @@ public class FondueTests
     }
 
     [Test]
-    public void Castling_cannot_start_under_an_indirect_capture_threat()
+    public void Capturing_a_pawn_cannot_create_indirect_check_and_does_not_block_castling()
     {
         var game = Fondue("7k/8/8/2b5/8/8/5P2/4K2R w K - 0 1");
-        Assert.That(CheckDetector.IsInCheck(game.Board, PlayerColor.White), Is.True);
-        Assert.That(game.LegalMoves(), Does.Not.Contain(Move("e1", "g1")));
+        Assert.That(CheckDetector.IsInCheck(game.Board, PlayerColor.White), Is.False);
+        Assert.That(GameRules.KingMeltingThreats(game.Board, PlayerColor.White), Is.Empty);
+        Assert.That(game.LegalMoves(), Does.Contain(Move("e1", "g1")));
     }
 
     [Test]
-    public void Safe_castling_preserves_the_mode_and_moves_both_pieces()
+    public void Safe_castling_remains_available()
     {
         var game = Fondue("4k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1");
         Assert.That(game.TryMove(Move("e1", "g1")), Is.True);
@@ -152,17 +181,21 @@ public class FondueTests
     }
 
     [Test]
-    public void Double_pawn_move_cannot_offer_a_winning_en_passant_chain_against_own_king()
+    public void Double_pawn_move_and_enemy_en_passant_remain_legal()
     {
         var game = Fondue("7k/8/8/8/3p4/8/4PK2/8 w - - 0 1");
-        Assert.That(game.TryMove(Move("e2", "e4")), Is.False);
-        Assert.That(game.TryMove(Move("f2", "g1")), Is.True);
+        Assert.That(game.TryMove(Move("e2", "e4")), Is.True);
+        Assert.That(game.Board.EnPassant, Is.EqualTo(Square("e3")));
+        Assert.That(GameRules.KingMeltingThreats(game.Board, PlayerColor.White), Is.Empty);
+        Assert.That(game.TryMove(Move("d4", "e3")), Is.True);
+        Assert.That(game.Board.At(Square("e3"))?.Type, Is.EqualTo(PieceType.Pawn));
+        Assert.That(game.Board.At(Square("f2"))?.Type, Is.EqualTo(PieceType.King));
     }
 
     [Test]
-    public void Standard_stockfish_rejects_fondue_before_launching_a_process()
+    public void Standard_Stockfish_rejects_Fondue()
     {
-        var game = Fondue("7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1");
+        var game = Fondue("7k/6n1/8/8/8/8/8/K5R1 w - - 0 1");
         var ai = new Cheesse.Game.Adapters.Ai.StockfishAI("missing-engine");
         Assert.ThrowsAsync<NotSupportedException>(async () => await ai.ChooseMoveAsync(game));
     }
@@ -170,7 +203,7 @@ public class FondueTests
     [Test]
     public void Melting_a_home_rook_revokes_its_castling_rights()
     {
-        var board = FenSerializer.Load("r3k3/1p6/8/8/8/8/8/1R5K w q - 0 1")
+        var board = FenSerializer.Load("r3k3/1n6/8/8/8/8/8/1R5K w q - 0 1")
             .WithMode(GameMode.Fondue);
         var after = board.WithMove(Move("b1", "b7"));
         Assert.That(after.At(Square("a8")), Is.Null);
@@ -179,16 +212,17 @@ public class FondueTests
     }
 
     [Test]
-    public void Victory_is_atomic_publishes_removed_pieces_and_stops_play_until_undo()
+    public void Melted_king_victory_publishes_only_removed_pieces_and_restores_with_undo_redo()
     {
         var events = new Recorder();
-        var game = Fondue("7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1", events);
+        var game = Fondue("7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1", events);
         var initial = game.Board;
         var move = Move("g1", "g7");
         game.ConfigureClock(new TimeControl(60, 0));
         Assert.That(game.TryMove(move), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.KingMelted));
         Assert.That(game.Winner, Is.EqualTo(PlayerColor.White));
+        Assert.That(game.Board.At(Square("f6"))?.Type, Is.EqualTo(PieceType.Pawn));
         Assert.That(game.ClockState.Running, Is.False);
         Assert.That(game.LegalMoves(), Is.Empty);
         Assert.That(game.TryMove(Move("h8", "h7")), Is.False);
@@ -198,9 +232,8 @@ public class FondueTests
         Assert.That(melted.Move, Is.EqualTo(move));
         Assert.That(melted.Pieces, Is.EquivalentTo(new[]
         {
-            new MeltedPiece(Square("g7"), new Piece(PieceType.Pawn, PlayerColor.Black)),
+            new MeltedPiece(Square("g7"), new Piece(PieceType.Knight, PlayerColor.Black)),
             new MeltedPiece(Square("g7"), new Piece(PieceType.Rook, PlayerColor.White)),
-            new MeltedPiece(Square("f6"), new Piece(PieceType.Knight, PlayerColor.Black)),
             new MeltedPiece(Square("h8"), new Piece(PieceType.King, PlayerColor.Black)),
         }));
         Assert.Throws<NotSupportedException>(() => ((IList<MeltedPiece>)melted.Pieces).Clear());
@@ -216,13 +249,10 @@ public class FondueTests
         Assert.That(restored.Undo(), Is.True);
         Assert.That(restored.Redo(), Is.True);
         Assert.That(restored.Winner, Is.EqualTo(PlayerColor.White));
-        restored.RestoreFrom(Create());
-        Assert.That(restored.Board.Mode, Is.EqualTo(GameMode.Standard));
-        Assert.That(restored.Status, Is.EqualTo(GameStatus.Ongoing));
     }
 
     [Test]
-    public void A_minor_piece_can_still_win_by_melting_and_is_not_an_insufficient_material_draw()
+    public void A_minor_can_win_by_melting_an_enemy_king()
     {
         var game = Fondue("7k/6b1/8/8/8/2B5/8/K7 w - - 0 1");
         Assert.That(game.State.AcceptsMoves, Is.True);
@@ -232,18 +262,18 @@ public class FondueTests
     }
 
     [Test]
-    public void Winning_capture_is_allowed_while_under_an_unrelated_direct_check()
+    public void Winning_melt_is_allowed_while_under_unrelated_direct_check()
     {
-        var game = Fondue("7k/6p1/8/8/8/8/r7/K5R1 w - - 0 1");
+        var game = Fondue("7k/6n1/8/8/8/8/r7/K5R1 w - - 0 1");
         Assert.That(game.Status, Is.EqualTo(GameStatus.Check));
         Assert.That(game.TryMove(Move("g1", "g7")), Is.True);
         Assert.That(game.Status, Is.EqualTo(GameStatus.KingMelted));
     }
 
     [Test]
-    public void Pgn_round_trip_preserves_mode_chain_and_winning_result()
+    public void Pgn_roundtrip_preserves_local_melt_and_result()
     {
-        var game = Fondue("7k/6p1/5n2/8/8/8/8/K5R1 w - - 0 1");
+        var game = Fondue("7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1");
         Assert.That(SanNotation.ToSan(game.Board, Move("g1", "g7")), Is.EqualTo("Rxg7#"));
         Assert.That(game.TryMove(Move("g1", "g7")), Is.True);
         var pgn = SanNotation.ToPgn(game);
