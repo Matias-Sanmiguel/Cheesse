@@ -23,9 +23,13 @@ public sealed class Board
 
     public GameMode Mode { get; }
 
+    // Domain-owned topology; UI merely draws the same holes.
+    public bool IsBlocked(Square square) => Mode == GameMode.QuesoSuizo && SwissCheeseRules.IsHole(square);
+
     public Board WithMode(GameMode mode)
     {
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        if (mode == GameMode.QuesoSuizo) SwissCheeseRules.ValidatePosition(this);
         return new Board((Piece?[])_squares.Clone(), Castling, EnPassant,
             Turn, HalfmoveClock, FullmoveNumber, mode);
     }
@@ -55,6 +59,8 @@ public sealed class Board
 
     public Board WithPiece(Square square, Piece? piece)
     {
+        if (piece is not null && IsBlocked(square))
+            throw new InvalidOperationException("No se puede colocar una pieza dentro de un agujero.");
         var next = (Piece?[])_squares.Clone();
         next[square.Index] = piece;
         return new Board(next, Castling, EnPassant, Turn, HalfmoveClock, FullmoveNumber, Mode);
@@ -67,6 +73,8 @@ public sealed class Board
 
     public Board WithMove(Move move)
     {
+        if (IsBlocked(move.From) || IsBlocked(move.To))
+            throw new InvalidOperationException("No se puede mover una pieza desde o hacia un agujero.");
         var next = (Piece?[])_squares.Clone();
 
         Piece? piece = next[move.From.Index];
