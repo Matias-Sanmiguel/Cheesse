@@ -370,32 +370,6 @@ public partial class MenuView : Control
         return button;
     }
 
-    // The two style pictograms are baked into the supplied 73x28 card sprites.
-    // Lift only their left artwork by one native pixel (4 screen pixels), preserving
-    // the original button frame, caption layout and all four card states.
-    private static readonly Dictionary<string, Texture2D> StyleCardTextures = new();
-
-    private static Texture2D? StyleCardTexture(string design, string state)
-    {
-        string key = design + "_" + state;
-        if (StyleCardTextures.TryGetValue(key, out var cached)) return cached;
-
-        var source = PixelUiSkin.Texture(SetupAssets + "cards/" + key + "_73x28.png");
-        if (source is null) return null;
-
-        var image = source.GetImage();
-        var emblem = image.GetRegion(new Rect2I(5, 5, 23, 18));
-        // Reconstruct the untouched horizontal background behind the old icon.
-        for (int y = 4; y < 23; y++)
-        {
-            var background = image.GetPixel(32, y);
-            for (int x = 5; x < 28; x++) image.SetPixel(x, y, background);
-        }
-        image.BlitRect(emblem, new Rect2I(0, 0, 23, 18), new Vector2I(5, 4));
-        image.Resize(73 * 4, 28 * 4, Image.Interpolation.Nearest);
-        return StyleCardTextures[key] = ImageTexture.CreateFromImage(image);
-    }
-
     private Button MakeStyleCard(string name, string label, string design, int index,
         Vector2 position, Action onSelected)
     {
@@ -415,7 +389,6 @@ public partial class MenuView : Control
         var cardArt = PixelUiSkin.Image("CardArt",
             SetupAssets + "cards/" + design + "_idle_73x28.png",
             Vector2.Zero, new Vector2(292, 112), 4);
-        cardArt.Texture = StyleCardTexture(design, "idle");
         button.AddChild(cardArt);
         // Center text in the visible 24px card face, excluding the
         // 4px drop shadow. Preserve the original illustration in the PNG.
@@ -426,7 +399,8 @@ public partial class MenuView : Control
         caption.AutowrapMode = TextServer.AutowrapMode.Off;
         button.AddChild(caption);
 
-        void ShowState(string state) => cardArt.Texture = StyleCardTexture(design, state);
+        void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
+            SetupAssets + "cards/" + design + "_" + state + "_73x28.png", 4);
         bool Selected() => _appearance.Selected == index;
         button.MouseEntered += () => ShowState(Selected() ? "selected" : "hover");
         button.MouseExited += () => ShowState(Selected() ? "selected" : "idle");
@@ -439,8 +413,9 @@ public partial class MenuView : Control
     private static void SetStyleCardSelected(Button card, bool selected)
     {
         string design = card.Name.ToString() == "ClassicStyle" ? "classic" : "picada";
-        card.GetNode<TextureRect>("CardArt").Texture = StyleCardTexture(
-            design, selected ? "selected" : "idle");
+        card.GetNode<TextureRect>("CardArt").Texture = PixelUiSkin.Texture(
+            SetupAssets + "cards/" + design + "_" +
+            (selected ? "selected" : "idle") + "_73x28.png", 4);
     }
 
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
