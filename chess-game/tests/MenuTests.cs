@@ -205,7 +205,7 @@ public partial class MenuTests : Node
                 var actionButton = setupOptions.GetNode<Button>(action);
                 var actionIcon = actionButton.GetNode<TextureRect>("ActionIcon");
                 Check(actionButton.Icon is null && actionIcon.Texture is not null &&
-                      actionIcon.Position.IsEqualApprox(new Vector2(18, 8)) &&
+                      actionIcon.Position.IsEqualApprox(new Vector2(18, 6)) &&
                       actionIcon.Size.IsEqualApprox(new Vector2(32, 32)) &&
                       actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
                     action + " icon fits inside its 48px button without blocking input");
