@@ -18,3 +18,7 @@ superpowers/
 /dist/
 /.release-cache/
 /chess-game/engines/
+
+# Godot misidentifies UI inventory CSVs as localization resources.
+# Ignore stale generated translations exclusively under UI documentation.
+/chess-game/docs/ui/**/*.translation
