@@ -62,6 +62,7 @@ public partial class GameCompositionRoot : Node
         _ingame.InstallForeground(this, _menu);
 
         _input = GetNode<InputAdapter>("Input");
+        _input.MoveRejected += message => _panel.SetMessage(message);
         _promotionDialog = GetNode<PromotionDialog>("PromotionDialog");
         _gameOver = GetNode<GameOverOverlay>("GameOverOverlay");
         CreateDialogs();
