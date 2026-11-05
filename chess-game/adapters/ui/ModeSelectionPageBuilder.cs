@@ -119,7 +119,7 @@ internal static class ModeSelectionPageBuilder
             "components/cta_locked_76x10.png";
         Art("ActionPlate", cta, new Vector2(10, 99), new Vector2(76, 10));
         button.AddChild(PixelUiSkin.Label("State",
-            mode.Available ? "JUGAR" : "PROXIMAMENTE",
+            mode.Available ? "VER REGLAS" : "PROXIMAMENTE",
             new Vector2(10 * PixelScale, 98 * PixelScale), new Vector2(76 * PixelScale, 11 * PixelScale),
             17, pixel: true, alignment: HorizontalAlignment.Center,
             weight: UiFontWeight.Medium));
