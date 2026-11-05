@@ -24,6 +24,19 @@ public static class GameRules
             : [];
     }
 
+    /// <summary>
+    /// Exact local impact of a Fondue capture, before committing the move.
+    /// Pawn captures return no melting squares. The view must only ask for
+    /// legal moves, as this prediction does not validate legality.
+    /// </summary>
+    public static IReadOnlyList<Square> MeltingSquares(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.Preview(board, move)
+            : [];
+    }
+
 
     public static GameStatus Evaluate(Board board, PlayerColor side) =>
         Evaluate(board, side, null);
