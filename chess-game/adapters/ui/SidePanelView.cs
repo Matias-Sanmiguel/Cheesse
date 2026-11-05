@@ -130,13 +130,21 @@ public partial class SidePanelView : PanelContainer
             ? GameRules.KingMeltingThreats(_game.Board, _game.Turn)
             : Array.Empty<Move>();
         bool meltCheck = fondueThreats.Count > 0;
+        Square? hot = _game.Mode == GameMode.Fondue ? _game.Board.HotSquare : null;
         _status.Text = _thinking ? "STOCKFISH PENSANDO…" :
-            meltCheck ? "JAQUE POR FONDUE" : StatusText(_game.Status).ToUpperInvariant();
-        _status.TooltipText = meltCheck
+            meltCheck ? "JAQUE POR FONDUE" :
+            _game.Status == GameStatus.Ongoing && hot is Square burning
+                ? "CALIENTE: " + burning
+                : StatusText(_game.Status).ToUpperInvariant();
+        string statusTip = meltCheck
             ? "El rival puede capturar en " +
               string.Join(", ", fondueThreats.Select(move => move.To.ToString()).Distinct()) +
               " y derretir a tu rey. Tenés que impedir esa captura o mover el rey."
             : StatusText(_game.Status);
+        if (hot is Square danger)
+            statusTip += " | " + danger +
+                " está caliente hasta que termine esta jugada. Si una pieza aterriza ahí, se derrite; cruzarla o saltarla es seguro.";
+        _status.TooltipText = statusTip;
         _statusDot.Modulate = _game.Status switch
         {
             GameStatus.Ongoing => new Color("5abf69"),
