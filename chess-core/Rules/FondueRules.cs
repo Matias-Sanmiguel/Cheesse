@@ -28,6 +28,31 @@ internal static class FondueRules
         CapturedSquare(board, move) is Square captured &&
         board.At(captured) is Piece { Type: not PieceType.Pawn };
 
+    // A hot tile only burns a piece that FINISHES on it. Knights and sliding
+    // pieces can pass/jump over it. Castling can move two pieces: the rook's
+    // destination must be checked as well.
+    internal static Square? HotLanding(Board board, Move move)
+    {
+        if (board.Mode != GameMode.Fondue || board.HotSquare is not Square hot)
+            return null;
+        if (move.To == hot) return hot;
+
+        if (board.At(move.From) is not Piece { Type: PieceType.King } king ||
+            move.From.File != 4 || move.To.Rank != move.From.Rank ||
+            (move.To.File != 2 && move.To.File != 6))
+            return null;
+
+        int homeRank = king.Color == PlayerColor.White ? 0 : 7;
+        if (move.From.Rank != homeRank) return null;
+
+        bool shortSide = move.To.File == 6;
+        var rookFrom = new Square(shortSide ? 7 : 0, homeRank);
+        var rookTo = new Square(shortSide ? 5 : 3, homeRank);
+        return rookTo == hot &&
+            board.At(rookFrom) is Piece { Type: PieceType.Rook } rook &&
+            rook.Color == king.Color ? hot : null;
+    }
+
     private static IReadOnlyList<Square> MeltSquares(Board moved, Square destination)
     {
         var affected = new List<Square> { destination }; // victim + attacker
