@@ -143,7 +143,7 @@ public partial class SidePanelView : PanelContainer
             : StatusText(_game.Status);
         if (hot is Square danger)
             statusTip += " | " + danger +
-                " está caliente hasta que termine esta jugada. Si una pieza aterriza ahí, se derrite; cruzarla o saltarla es seguro.";
+                " está caliente hasta que termine esta jugada. Solo el caballo puede saltarla; cualquier otra pieza que cruce o termine ahí se derrite (el rey no puede sacrificarse).";
         _status.TooltipText = statusTip;
         _statusDot.Modulate = _game.Status switch
         {
