@@ -166,10 +166,11 @@ public partial class ReleaseTests : Node
             Check(root.GetNode<CheckButton>(Settings + "Random").Disabled &&
                   !root.AgainstStockfish,
                 "unsupported Stockfish toggle stays disabled in Swiss mode");
-            Play(root, "e2e4");
+            var swissOpening = root.CurrentGame.LegalMoves().First();
+            Play(root, swissOpening.From.ToString() + swissOpening.To.ToString());
             await Frames();
             Check(root.CurrentGame.History.Count == 1 &&
-                  !root.CurrentGame.LegalMoves().Any(move => move.To == new Square(2, 5)),
+                  root.CurrentGame.LegalMoves().All(move => !root.CurrentGame.Board.IsBlocked(move.To)),
                 "Swiss game accepts legal moves but never offers blocked destinations");
             await Capture("swiss-board");
 
