@@ -24,16 +24,32 @@ play an alternative move or finish Redo to resume. Triple repetition and fifty m
 require a claim; fivefold repetition and seventy-five moves end the game automatically.
 Against Stockfish, use a rule-based draw claim rather than an agreement offer.
 
-To run from source, install **Godot 4.7.2 .NET** and the **.NET 8 SDK**. Prepare the engine:
+To run from source, install **Godot 4.7.2 .NET** and the **.NET 8 SDK**:
 
 ```sh
-python3 scripts/release.py --engines-only
 dotnet build Cheesse.sln
 godot-mono --path chess-game --editor
 ```
 
-Use your Godot .NET executable name in place of `godot-mono` if different, then press F5
-in Godot to run the project. The ordinary Godot editor does not support C# projects.
+Use your Godot .NET executable name in place of `godot-mono` if different, then press F5.
+The ordinary Godot editor does not support C# projects.
+
+**Stockfish from the editor:** The engine executable is intentionally excluded from Git
+(`chess-game/engines/`). If it is missing, choosing **CONTRA STOCKFISH** and making the
+first White move **automatically downloads the pinned official Stockfish 19 engine**,
+checks the full archive's SHA-256 and installs only the executable in Godot's
+`user://engines/` directory. The sidebar shows `PREPARANDO STOCKFISH` on that first
+turn. Later games reuse the installed engine offline. This works on Windows and Linux
+x86-64. A packaged release keeps using its included engine first, so it does not need
+an internet connection.
+
+For a machine without internet, you can still prepare the engine in advance with
+`python scripts/release.py --engines-only`, install Stockfish in your system PATH,
+or set `CHEESSE_STOCKFISH_PATH` to its full executable path. An invalid override
+is reported explicitly; CHEESSE does **not** silently substitute random moves.
+If initial download/startup fails, the panel shows `ERROR STOCKFISH` and a message
+instead of leaving the black turn apparently frozen. Once the connection/path
+is fixed, change Stockfish difficulty or toggle the opponent off/on to retry.
 
 To build both release folders:
 
