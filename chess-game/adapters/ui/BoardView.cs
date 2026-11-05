@@ -51,10 +51,15 @@ public partial class BoardView : Node2D
     private Texture2D? _checkOverlay;
     private Texture2D? _goalOverlay;
     private Texture2D? _holeOverlay;
+    private Texture2D? _heatOverlay;
+    private Texture2D? _steamTexture;
+    private Texture2D? _fondueDropTexture;
     private Texture2D? _picadaLightTile;
     private Texture2D? _picadaDarkTile;
     private double _goalPulseTime;
     private double _goalRedrawClock;
+    private double _fondueHeatTime;
+    private double _fondueHeatRedrawClock;
     private Node2D? _picadaVictoryFx;
     private Node2D? _fondueMeltFx;
 
@@ -67,6 +72,7 @@ public partial class BoardView : Node2D
     public bool ShowsPicadaGoals => _game?.Mode == GameMode.ReyDeLaPicada;
     public bool ShowsSwissHoles => _game?.Mode == GameMode.QuesoSuizo;
     public bool ShowsFondueMeltFx => _fondueMeltFx is not null && GodotObject.IsInstanceValid(_fondueMeltFx);
+    public Square? VisibleHotSquare => _game?.Mode == GameMode.Fondue ? _game.Board.HotSquare : null;
     internal bool UsesFlatTiles => _lightTile is null && _darkTile is null;
 
     public override void _Ready()
@@ -87,6 +93,9 @@ public partial class BoardView : Node2D
         _checkOverlay = LoadTextureIfExists(root + "check_highlight.png");
         _goalOverlay = LoadTextureIfExists(root + "goal_square.png");
         _holeOverlay = LoadTextureIfExists(root + "hole_overlay.png");
+        _heatOverlay = LoadTextureIfExists(root + "heat_overlay.png");
+        _steamTexture = LoadTextureIfExists("res://assets/fx/steam_16x16.png");
+        _fondueDropTexture = LoadTextureIfExists("res://assets/fx/fondue_drop_16x16.png");
         // Dedicated 48x48 pixel-art goals; only used for the four center squares in Picada.
         const string picadaTiles = "res://assets/ui/picada_goals/";
         _picadaLightTile = LoadTextureIfExists(picadaTiles + "light_tile.png");
@@ -113,6 +122,8 @@ public partial class BoardView : Node2D
         _observedLastMove = game.History.Count == 0 ? null : game.History[^1];
         _goalPulseTime = 0;
         _goalRedrawClock = 0;
+        _fondueHeatTime = 0;
+        _fondueHeatRedrawClock = 0;
         _fondueHoverSquare = null;
 
         bus.StateChanged += OnStateChanged;
@@ -154,6 +165,19 @@ public partial class BoardView : Node2D
         {
             _fondueHoverSquare = hover;
             QueueRedraw();
+        }
+
+        // Residual heat pulses slowly on the opponent's response turn.
+        if (Visible && _game?.Mode == GameMode.Fondue &&
+            _game.Board.HotSquare is not null)
+        {
+            _fondueHeatTime += delta;
+            _fondueHeatRedrawClock += delta;
+            if (_fondueHeatRedrawClock >= 0.125)
+            {
+                _fondueHeatRedrawClock %= 0.125;
+                QueueRedraw();
+            }
         }
 
         // Pixel-art pulse at 8 fps, only while a Picada match is active.
@@ -309,8 +333,8 @@ public partial class BoardView : Node2D
         if (removedSquares.Length == 0) return;
 
         var meltedTile = LoadTextureIfExists("res://assets/ui/overlays/melted_square.png");
-        var steam = LoadTextureIfExists("res://assets/fx/steam_16x16.png");
-        var drop = LoadTextureIfExists("res://assets/fx/fondue_drop_16x16.png");
+        var steam = _steamTexture;
+        var drop = _fondueDropTexture;
         var fx = new Node2D
         {
             Name = "FondueMeltFx",
@@ -571,6 +595,7 @@ public partial class BoardView : Node2D
     {
         DrawBoard();
         DrawLastMove();
+        DrawFondueHeat();
         DrawPicadaGoals();
         DrawSwissHoles();
         DrawCheckOverlay();
@@ -612,6 +637,31 @@ public partial class BoardView : Node2D
         if (_lastMove is not Move move) return;
         DrawOverlay(move.From, _lastFromOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
         DrawOverlay(move.To, _lastToOverlay, new Color(0.78f, 0.58f, 0.25f, 0.35f));
+    }
+
+    // Original heat_overlay.png at native pixel-art scaling. The orange
+    // glow and steam are purely decorative: the Board alone owns hot timing.
+    private void DrawFondueHeat()
+    {
+        if (VisibleHotSquare is not Square square) return;
+        var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
+        float pulse = 0.5f + 0.5f * Mathf.Sin((float)_fondueHeatTime * 6f);
+        DrawRect(rect, new Color(1f, 0.35f, 0.06f, 0.11f + 0.09f * pulse));
+        if (_heatOverlay is not null)
+            DrawTextureRect(_heatOverlay, rect, false,
+                new Color(1f, 1f, 1f, 0.70f + 0.27f * pulse));
+        DrawRect(rect.Grow(-4f), new Color(1f, 0.40f, 0.12f, 0.66f + 0.27f * pulse),
+            false, 3f);
+
+        if (_steamTexture is not null)
+        {
+            float lift = 9f * pulse;
+            var smokeRect = new Rect2(GetSquarePosition(square) +
+                new Vector2(SquareSize * 0.33f, -12f - lift),
+                new Vector2(SquareSize * 0.34f, SquareSize * 0.34f));
+            DrawTextureRect(_steamTexture, smokeRect, false,
+                new Color(1f, 0.92f, 0.77f, 0.48f + 0.27f * pulse));
+        }
     }
 
     private void DrawPicadaGoals()
@@ -678,6 +728,15 @@ public partial class BoardView : Node2D
         if (_game?.Mode != GameMode.Fondue || _selectedSquare is not Square from ||
             _fondueHoverSquare is not Square to || !_legalDestinations.Contains(to))
             return;
+        if (_game.Board.HotSquare == to)
+        {
+            // Landing here will melt the moving piece, but jumping or
+            // sliding across this tile is harmless.
+            var danger = new Rect2(GetSquarePosition(to),
+                new Vector2(SquareSize, SquareSize)).Grow(-8f);
+            DrawRect(danger, new Color(0.98f, 0.18f, 0.10f, 0.95f), false, 5f);
+            return;
+        }
         var move = _game.LegalMoves().Where(candidate =>
             candidate.From == from && candidate.To == to).ToArray();
         if (move.Length == 0) return;
