@@ -349,15 +349,83 @@ public class FondueTests
     }
 
     [Test]
-    public void Sliding_over_heat_is_safe_but_landing_on_it_is_not()
+    public void Rook_crossing_heat_burns_before_capturing_piece_beyond()
     {
-        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
-        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
-        Assert.That(game.LegalMoves(), Does.Contain(Move("d7", "d3")));
-        Assert.That(game.TryMove(Move("d7", "d3")), Is.True);
+        var events = new Recorder();
+        var game = Fondue("7k/3r4/8/3nR3/8/3B4/8/K7 w - - 0 1", events);
+        Assert.That(game.TryMove(Move("e5", "d5")), Is.True);
+        var crossing = Move("d7", "d3");
+        Assert.That(GameRules.HeatContact(game.Board, crossing), Is.EqualTo(Square("d5")));
+        Assert.That(GameRules.HeatBurnsMover(game.Board, crossing), Is.True);
+        Assert.That(game.LegalMoves(), Does.Contain(crossing),
+            "Crossing hot terrain is legal even when it sacrifices the rook.");
+        Assert.That(game.TryMove(crossing), Is.True);
+        Assert.That(game.Board.At(Square("d7")), Is.Null);
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
         Assert.That(game.Board.At(Square("d3")),
-            Is.EqualTo(new Piece(PieceType.Rook, PlayerColor.Black)));
+            Is.EqualTo(new Piece(PieceType.Bishop, PlayerColor.White)),
+            "Piece beyond the hot square cannot be captured by a rook that burned on the way.");
         Assert.That(game.Board.HotSquare, Is.Null);
+        Assert.That(game.Board.HalfmoveClock, Is.Zero);
+        Assert.That(events.Items.OfType<PiecesMelted>().Last().Pieces, Is.EquivalentTo(new[]
+        {
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Rook, PlayerColor.Black))
+        }));
+    }
+
+    [Test]
+    public void Bishop_and_queen_cannot_cross_hot_square_safely()
+    {
+        var bishop = Fondue("7k/1b6/8/3nR3/8/5Q2/8/K7 w - - 0 1");
+        Assert.That(bishop.TryMove(Move("e5", "d5")), Is.True);
+        Assert.That(bishop.LegalMoves(), Does.Contain(Move("b7", "f3")));
+        Assert.That(bishop.TryMove(Move("b7", "f3")), Is.True);
+        Assert.That(bishop.Board.At(Square("f3")),
+            Is.EqualTo(new Piece(PieceType.Queen, PlayerColor.White)));
+        Assert.That(bishop.Board.At(Square("b7")), Is.Null);
+
+        var queen = Fondue("7k/8/8/q2nR1B1/8/8/8/K7 w - - 0 1");
+        Assert.That(queen.TryMove(Move("e5", "d5")), Is.True);
+        Assert.That(queen.LegalMoves(), Does.Contain(Move("a5", "g5")));
+        Assert.That(queen.TryMove(Move("a5", "g5")), Is.True);
+        Assert.That(queen.Board.At(Square("a5")), Is.Null);
+        Assert.That(queen.Board.At(Square("g5")),
+            Is.EqualTo(new Piece(PieceType.Bishop, PlayerColor.White)));
+        Assert.That(queen.Board.HotSquare, Is.Null);
+    }
+
+    [Test]
+    public void Pawn_double_step_crossing_heat_burns_without_reaching_destination()
+    {
+        var game = Fondue("7k/3p4/3n4/8/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d6")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.EqualTo(Square("d6")));
+        Assert.That(game.LegalMoves(), Does.Contain(Move("d7", "d5")));
+        Assert.That(game.TryMove(Move("d7", "d5")), Is.True);
+        Assert.That(game.Board.At(Square("d7")), Is.Null);
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
+        Assert.That(game.Board.EnPassant, Is.Null);
+        Assert.That(game.Board.HotSquare, Is.Null);
+    }
+
+    [Test]
+    public void Knight_is_the_only_piece_that_can_jump_heat_but_landing_still_burns_it()
+    {
+        var jumping = Fondue("7k/2n5/8/3nR3/8/8/8/K7 w - - 0 1");
+        Assert.That(jumping.TryMove(Move("e5", "d5")), Is.True);
+        Assert.That(GameRules.HeatContact(jumping.Board, Move("c7", "e6")), Is.Null);
+        Assert.That(jumping.TryMove(Move("c7", "e6")), Is.True);
+        Assert.That(jumping.Board.At(Square("e6")),
+            Is.EqualTo(new Piece(PieceType.Knight, PlayerColor.Black)));
+        Assert.That(jumping.Board.HotSquare, Is.Null);
+
+        var landing = Fondue("7k/5n2/8/3nR3/8/8/8/K7 w - - 0 1");
+        Assert.That(landing.TryMove(Move("e5", "d5")), Is.True);
+        Assert.That(GameRules.HeatContact(landing.Board, Move("f6", "d5")),
+            Is.EqualTo(Square("d5")));
+        Assert.That(landing.TryMove(Move("f6", "d5")), Is.True);
+        Assert.That(landing.Board.At(Square("d5")), Is.Null);
+        Assert.That(landing.Board.At(Square("f6")), Is.Null);
     }
 
     [Test]
