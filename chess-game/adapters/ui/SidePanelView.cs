@@ -125,7 +125,17 @@ public partial class SidePanelView : PanelContainer
         _turn.Text = _game.Status is GameStatus.PicadaVictory or GameStatus.KingMelted
             ? (_game.Winner == PlayerColor.White ? "GANAN BLANCAS" : "GANAN NEGRAS")
             : _game.Turn == PlayerColor.White ? "TURNO: BLANCAS" : "TURNO: NEGRAS";
-        _status.Text = _thinking ? "STOCKFISH PENSANDO…" : StatusText(_game.Status).ToUpperInvariant();
+        var fondueThreats = _game.Mode == GameMode.Fondue && _game.Status == GameStatus.Check
+            ? GameRules.KingMeltingThreats(_game.Board, _game.Turn)
+            : [];
+        bool meltCheck = fondueThreats.Count > 0;
+        _status.Text = _thinking ? "STOCKFISH PENSANDO…" :
+            meltCheck ? "JAQUE POR FONDUE" : StatusText(_game.Status).ToUpperInvariant();
+        _status.TooltipText = meltCheck
+            ? "El rival puede capturar en " +
+              string.Join(", ", fondueThreats.Select(move => move.To.ToString()).Distinct()) +
+              " y derretir a tu rey. Tenés que impedir esa captura o mover el rey."
+            : StatusText(_game.Status);
         _statusDot.Modulate = _game.Status switch
         {
             GameStatus.Ongoing => new Color("5abf69"),
