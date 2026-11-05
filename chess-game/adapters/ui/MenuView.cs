@@ -109,7 +109,7 @@ public partial class MenuView : Control
     {
         // Secondary pages use the compact new logo; the home page gets the full-size one.
         _subpageLogo = PixelUiSkin.Image("CompactLogo", "logos/logo_cheese_compact.png",
-            new Vector2(528, 75), new Vector2(384, 96), 3);
+            new Vector2(500, 75), new Vector2(441, 96), 3);
         _stage.AddChild(_subpageLogo);
     }
 
@@ -117,9 +117,9 @@ public partial class MenuView : Control
     {
         _home = MakePage("HomePage");
 
-        // Full-size 192x64 native logo at x4; do not trim or interpolate it.
+        // Full-size 219x64 CHEESSE logo at x4; centered without stretching.
         _home.AddChild(PixelUiSkin.Image("HomeLogo", "logos/logo_cheese.png",
-            new Vector2(336, 56), new Vector2(768, 256), 4));
+            new Vector2(282, 56), new Vector2(876, 256), 4));
 
         // Single entry point for a new game: Home -> Modes -> Setup.
         // Saves are still resumed from the setup screen.

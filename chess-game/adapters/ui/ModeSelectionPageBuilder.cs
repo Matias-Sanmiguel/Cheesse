@@ -40,9 +40,9 @@ internal static class ModeSelectionPageBuilder
             MouseFilter = Control.MouseFilterEnum.Ignore,
         });
 
-        // Compact 128x32 logo at exact x3, centered above the mode heading.
+        // Compact 147x32 CHEESSE logo at exact x3, centered above the mode heading.
         page.AddChild(PixelUiSkin.Image("GameLogo", "logos/logo_cheese_compact.png",
-            new Vector2(528, 75), new Vector2(384, 96), 3));
+            new Vector2(500, 75), new Vector2(441, 96), 3));
         page.AddChild(PixelUiSkin.Label("Heading", "ELEGIR MODO DE JUEGO",
             new Vector2(320, 188), new Vector2(800, 50), 32,
             pixel: true, light: true, alignment: HorizontalAlignment.Center,

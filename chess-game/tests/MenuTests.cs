@@ -45,8 +45,12 @@ public partial class MenuTests : Node
             Check(root.GetNode<Button>(Setup + "Continue").Disabled, "Continue disabled without a save");
             Check(!root.GetNode<InputAdapter>("Input").IsProcessingUnhandledInput(), "no chess input in menu");
 
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese.png"), "new 192x64 logo imported");
-            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png"), "new 128x32 compact logo imported");
+            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese.png") &&
+                  GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese.png")!.GetSize() == new Vector2(219, 64),
+                "updated 219x64 CHEESSE logo imported");
+            Check(ResourceLoader.Exists("res://assets/ui/logos/logo_cheese_compact.png") &&
+                  GD.Load<Texture2D>("res://assets/ui/logos/logo_cheese_compact.png")!.GetSize() == new Vector2(147, 32),
+                "updated 147x32 CHEESSE compact logo imported");
             Check(ResourceLoader.Exists("res://assets/backgrounds/menu_background.png"), "new 360x225 tavern background imported");
             Check(ResourceLoader.Exists("res://assets/ui/modes/mode_fondue_icon.png"), "four mode illustrations imported");
             foreach (string variant in new[] { "Regular", "Medium", "SemiBold", "Bold" })
@@ -71,7 +75,10 @@ public partial class MenuTests : Node
             Check(root.GetNode<Label>("SidePanel/Margin/Content/Turn").GetThemeFont("font") ==
                   PixelUiSkin.FontFor(UiFontWeight.SemiBold), "HUD turn label uses SemiBold");
             Check(root.GetNode<Control>("Menu").HasNode("Stage/PixelBackground"), "stage uses new pixel background");
-            Check(root.GetNode<Control>("Menu").HasNode("Stage/HomePage/HomeLogo"), "main logo is on landing page");
+            var homeLogo = root.GetNode<TextureRect>("Menu/Stage/HomePage/HomeLogo");
+            Check(homeLogo.Position.IsEqualApprox(new Vector2(282, 56)) &&
+                  homeLogo.Size.IsEqualApprox(new Vector2(876, 256)),
+                "main CHEESSE logo uses 219x64 art at native x4 scale and stays centered");
             Check(root.GetNode<Button>(Home + "NewGame").Text == "JUGAR" &&
                   !root.HasNode(Home + "Modes") &&
                   root.GetNode<Button>(Home + "Settings").Text == "CONFIGURACION" &&
@@ -117,9 +124,9 @@ public partial class MenuTests : Node
                   modePage.HasNode("GameLogo"),
                 "mode selection has its own pixel-art backdrop, compact logo and navigation");
             var modeLogo = modePage.GetNode<TextureRect>("GameLogo");
-            Check(modeLogo.Position.IsEqualApprox(new Vector2(528, 75)) &&
-                  modeLogo.Size.IsEqualApprox(new Vector2(384, 96)),
-                "mode logo uses the compact 128x32 artwork at x3 scale");
+            Check(modeLogo.Position.IsEqualApprox(new Vector2(500, 75)) &&
+                  modeLogo.Size.IsEqualApprox(new Vector2(441, 96)),
+                "mode logo uses the compact 147x32 artwork at x3 scale");
             Check(modePage.GetNode<Button>("Back").Position.IsEqualApprox(new Vector2(66, 86)) &&
                   modePage.GetNode<Label>("Heading").Position.Y >= 188,
                 "back button stays in the header and heading is separated from the logo");
