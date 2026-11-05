@@ -154,12 +154,13 @@ public partial class GameOverOverlay : CanvasLayer
 
         AddSprite(_content, "WinnerRibbon", "02_panel/winner_ribbon_180x24.png",
             18, 65, 180, 24);
-        // Restore the original 12x12 transparent piece icon, centered in the
-        // ribbon medallion. Never overlay the full-size board king sprite.
+        // Keep the original 12x12 chess icon; center it together with the
+        // result text as one group, not separately at opposite ribbon ends.
         _winnerIcon = AddIcon(_content, "WinnerIcon", "04_icons/white_12x12.png",
             29, 71, 12, 12);
         _title = AddText(_content, "Title", "GANARON BLANCAS", 45, 70, 142, 13, 32,
             new Color("fff0c8"), UiFontWeight.Bold);
+        CenterWinnerContent();
 
         AddSprite(_content, "ReasonRibbon", "02_panel/result_reason_158x13.png",
             29, 93, 158, 13);
@@ -184,6 +185,23 @@ public partial class GameOverOverlay : CanvasLayer
             () => { Hide(); EmitSignal(SignalName.MainMenuRequested); });
     }
 
+    private void CenterWinnerContent()
+    {
+        // Center the combined icon + caption inside the 180px ribbon.
+        // Measure the actual font so white/black wins and draws all stay centered.
+        const int ribbonLeft = 18, ribbonWidth = 180, iconWidth = 12, gap = 4;
+        var font = _title.GetThemeFont("font");
+        int fontSize = _title.GetThemeFontSize("font_size");
+        int captionWidth = Mathf.CeilToInt(font.GetStringSize(
+            _title.Text, HorizontalAlignment.Left, -1, fontSize).X / PixelScale) + 2;
+        int groupWidth = iconWidth + gap + captionWidth;
+        int groupLeft = ribbonLeft + (ribbonWidth - groupWidth) / 2;
+
+        _winnerIcon.Position = Size(groupLeft, 71);
+        _title.Position = Size(groupLeft + iconWidth + gap, 70);
+        _title.Size = Size(captionWidth, 13);
+    }
+
     public void ShowResult(ChessGame game, int elapsedSeconds = 0)
     {
         if (game.Status is GameStatus.Ongoing or GameStatus.Check) return;
@@ -195,6 +213,7 @@ public partial class GameOverOverlay : CanvasLayer
 
         _title.Text = decisive ? "GANARON " + (winnerIsWhite ? "BLANCAS" : "NEGRAS") : "PARTIDA EN TABLAS";
         _title.AddThemeFontSizeOverride("font_size", decisive ? 32 : 29);
+        CenterWinnerContent();
         _winnerIcon.Texture = Texture("04_icons/" +
             (!decisive ? "trophy" : winnerIsWhite ? "white" : "black") + "_12x12.png");
         _reason.Text = game.Status switch
