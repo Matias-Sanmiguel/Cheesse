@@ -38,6 +38,26 @@ public static class GameRules
     }
 
 
+    /// <summary>
+    /// Return the heated tile a candidate move touches, even when the player
+    /// asked to travel beyond it. For previews/animation only; the core decides
+    /// piece survival and whether the move is legal.
+    /// </summary>
+    public static Square? HeatContact(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue
+            ? FondueRules.HotLanding(board, move)
+            : null;
+    }
+
+    public static bool HeatBurnsMover(Board board, Move move)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return board.Mode == GameMode.Fondue &&
+            FondueRules.HotBurnsMover(board, move);
+    }
+
     public static GameStatus Evaluate(Board board, PlayerColor side) =>
         Evaluate(board, side, null);
 
