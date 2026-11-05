@@ -218,7 +218,7 @@ public partial class MenuTests : Node
                 var actionButton = setupOptions.GetNode<Button>(action);
                 var actionIcon = actionButton.GetNode<TextureRect>("ActionIcon");
                 Check(actionButton.Icon is null && actionIcon.Texture is not null &&
-                      actionIcon.Position.IsEqualApprox(new Vector2(18, 8)) &&
+                      actionIcon.Position.IsEqualApprox(new Vector2(18, 6)) &&
                       actionIcon.Size.IsEqualApprox(new Vector2(32, 32)) &&
                       actionIcon.MouseFilter == Control.MouseFilterEnum.Ignore,
                     action + " icon fits inside its 48px button without blocking input");
@@ -226,7 +226,7 @@ public partial class MenuTests : Node
             foreach (var state in new[] { "idle", "hover", "pressed", "selected" })
             {
                 var picture = GD.Load<Texture2D>(
-                    "res://assets/ui/setup_v4/cards/picada_" + state + "_73x28.png")!.GetImage();
+                    "res://assets/ui/setup_v4/cards/picada_v4_" + state + "_73x28.png")!.GetImage();
                 Check(picture.GetWidth() > 0 && picture.GetHeight() > 0 &&
                       picture.GetWidth() * 28 == picture.GetHeight() * 73,
                     "Picada " + state + " preserves its 73:28 pixel-art aspect ratio");
@@ -263,7 +263,7 @@ public partial class MenuTests : Node
                   !setupOptions.GetNode<OptionButton>("ThemeFields/White").Disabled &&
                   !setupOptions.GetNode<OptionButton>("ThemeFields/Black").Disabled &&
                   setupOptions.GetNode<Button>("PicadaStyle").GetNode<TextureRect>("CardArt").Texture ==
-                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_selected_73x28.png", 4),
+                      PixelUiSkin.Texture("res://assets/ui/setup_v4/cards/picada_v4_selected_73x28.png", 4),
                 "Picada style selects V4 artwork and enables existing theme dropdowns");
             Check(root.GetNode<OptionButton>(Setup + "Appearance").Selected == 1 &&
                   root.GetNode<Label>("Menu/Stage/SetupPage/Preview/RuleTag").Text.Contains("D4"),
