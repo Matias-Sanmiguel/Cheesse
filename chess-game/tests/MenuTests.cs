@@ -170,8 +170,8 @@ public partial class MenuTests : Node
                   !root.GetNode<Button>(Modes + "Mode" + i).HasNode("LockIcon")),
                 "all four cards use the available CTA without lock icons");
 
-            // Every rules board must show the EXACT supplied 240x80 logo
-            // at x2 scale, the correct objective and five distinct rules.
+            // Every rules board must show the EXACT supplied 192x64 logo
+            // at x3 scale, the correct objective and five distinct rules.
             foreach (var (index, mode, file, phrase) in new[]
             {
                 (0, GameMode.Classic, "mode_clasico.png", "JAQUE MATE"),
@@ -183,15 +183,15 @@ public partial class MenuTests : Node
                 Press(root, Modes + "Mode" + index);
                 var rules = root.GetNode<Control>("Menu/Stage/RulesPage");
                 var logo = rules.GetNode<TextureRect>("ModeLogo");
-                var asset = "res://assets/ui/logos/modes/principal_240x80/" + file;
+                var asset = "res://assets/ui/logos/modes/alternativo_192x64/" + file;
                 var source = GD.Load<Texture2D>(asset);
                 Check(rules.Visible && !root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                       root.GetNode<MenuView>("Menu").SelectedMode == mode,
                     "mode " + index + " stops at rules, not gameplay");
-                Check(source is not null && source.GetSize() == new Vector2(240, 80) &&
-                      logo.Texture == PixelUiSkin.Texture(asset, 2) &&
-                      logo.Size.IsEqualApprox(new Vector2(480, 160)),
-                    "mode " + index + " uses its supplied native logo x2, without stretching");
+                Check(source is not null && source.GetSize() == new Vector2(192, 64) &&
+                      logo.Texture == PixelUiSkin.Texture(asset, 3) &&
+                      logo.Size.IsEqualApprox(new Vector2(576, 192)),
+                    "mode " + index + " uses its supplied native logo x3, without stretching");
                 Check(rules.GetNode<Label>("Objective").Text.Contains(phrase) &&
                       rules.GetNode<Label>("Summary").Text.Length > 20 &&
                       Enumerable.Range(0, 5).All(n =>
