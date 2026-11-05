@@ -6,6 +6,8 @@ public static class AttackDetector
 {
     public static bool IsAttacked(Board board, Square square, PlayerColor by)
     {
+        ArgumentNullException.ThrowIfNull(board);
+        if (board.IsBlocked(square)) return false;
         for (var index = 0; index < 64; index++)
         {
             var from = Square.FromIndex(index);
@@ -49,7 +51,8 @@ public static class AttackDetector
         // The first occupied target is attacked, even when it holds a friendly piece.
         while (file != to.File || rank != to.Rank)
         {
-            if (board.At(new Square(file, rank)) is not null)
+            var between = new Square(file, rank);
+            if (board.IsBlocked(between) || board.At(between) is not null)
                 return false;
 
             file += fileStep;
