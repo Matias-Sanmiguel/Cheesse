@@ -406,10 +406,14 @@ public partial class MenuView : Control
         void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
             SetupAssets + "cards/" + design + "_" + state + "_73x28.png", 4);
         bool Selected() => _appearance.Selected == index;
-        button.MouseEntered += () => ShowState(Selected() ? "selected" : "hover");
-        button.MouseExited += () => ShowState(Selected() ? "selected" : "idle");
+        // The Picada "selected" texture adds a second gold frame around its icon.
+        // Keep the original icon proportions and use the lighter hover art for
+        // selection, without changing any source asset or its 73x28 sizing.
+        string SelectedState() => design == "picada" ? "hover" : "selected";
+        button.MouseEntered += () => ShowState(Selected() ? SelectedState() : "hover");
+        button.MouseExited += () => ShowState(Selected() ? SelectedState() : "idle");
         button.ButtonDown += () => ShowState("pressed");
-        button.ButtonUp += () => ShowState(Selected() ? "selected" : "hover");
+        button.ButtonUp += () => ShowState(Selected() ? SelectedState() : "hover");
         button.Pressed += onSelected;
         return button;
     }
@@ -419,7 +423,7 @@ public partial class MenuView : Control
         string design = card.Name.ToString() == "ClassicStyle" ? "classic" : "picada";
         card.GetNode<TextureRect>("CardArt").Texture = PixelUiSkin.Texture(
             SetupAssets + "cards/" + design + "_" +
-            (selected ? "selected" : "idle") + "_73x28.png", 4);
+            (selected ? design == "picada" ? "hover" : "selected" : "idle") + "_73x28.png", 4);
     }
 
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
