@@ -162,19 +162,27 @@ public partial class PersistenceTests : Node
         repository.AgainstStockfish = false;
         var source = new ChessGame(new Events(), repository, new Clock(), GameMode.QuesoSuizo);
         source.ConfigureClock(new TimeControl(300, 3));
-        Play(source, "e2e4", "e7e6", "g1h3");
+        // Choose actual Swiss-legal moves; the holes vary between matches.
+        for (int ply = 0; ply < 3; ply++)
+        {
+            var next = source.LegalMoves().First();
+            Check(source.TryMove(next), "random Swiss opening remains playable");
+        }
+        var originalHoles = Chess.Core.Rules.SwissCheeseRules.Format(source.Board.SwissHoles);
         var expected = Snapshot(source);
         repository.Save(source);
 
         var target = Create(repository);
         Check(repository.Load(target), "Swiss game save loads");
-        Check(target.Mode == GameMode.QuesoSuizo && target.Board.IsBlocked(new Square(2, 2)),
-            "Swiss holes and variant survive save/load");
+        Check(target.Mode == GameMode.QuesoSuizo &&
+              Chess.Core.Rules.SwissCheeseRules.Format(target.Board.SwissHoles) == originalHoles,
+            "Swiss exact random hole layout and variant survive save/load");
         Check(Snapshot(target) == expected && target.History.Count == 3,
             "Swiss PGN moves and board are restored exactly");
         Check(target.TimeControl == new TimeControl(300, 3), "Swiss clock is preserved");
-        Check(target.Undo() && target.Mode == GameMode.QuesoSuizo && target.Board.IsBlocked(new Square(4, 4)),
-            "Swiss holes remain intact after undo");
+        Check(target.Undo() && target.Mode == GameMode.QuesoSuizo &&
+              Chess.Core.Rules.SwissCheeseRules.Format(target.Board.SwissHoles) == originalHoles,
+            "Swiss exact random holes remain intact after undo");
         Check(target.Redo() && Snapshot(target) == expected, "Swiss redo restores original history");
     }
 
