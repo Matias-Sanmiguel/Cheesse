@@ -499,7 +499,7 @@ public partial class BoardView : Node2D
     private void DrawSwissHoles()
     {
         if (!ShowsSwissHoles) return;
-        foreach (var square in SwissCheeseRules.Holes)
+        foreach (var square in _game!.Board.SwissHoles)
         {
             var rect = new Rect2(GetSquarePosition(square), new Vector2(SquareSize, SquareSize));
             if (_holeOverlay is not null)
