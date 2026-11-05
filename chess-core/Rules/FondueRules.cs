@@ -57,12 +57,19 @@ internal static class FondueRules
         return board.WithCastling(rights);
     }
 
-    internal static bool IsThreatened(Board board, PlayerColor side)
+    internal static bool IsThreatened(Board board, PlayerColor side) =>
+        !HasKing(board, side) || KingMeltingCaptures(board, side).Count > 0;
+
+    // Expose exactly the opposing capture destinations responsible for a
+    // Fondue check. The UI uses this same authoritative rule for its hints;
+    // normal chess moves and the engine's legality remain unchanged.
+    internal static IReadOnlyList<Move> KingMeltingCaptures(Board board, PlayerColor side)
     {
         var opponent = side == PlayerColor.White ? PlayerColor.Black : PlayerColor.White;
-        if (!HasKing(board, side)) return true;
-        if (!HasKing(board, opponent)) return false;
+        if (!HasKing(board, side) || !HasKing(board, opponent))
+            return [];
 
+        var captures = new List<Move>();
         // Generate geometry using standard mode to avoid recursively testing castling/check.
         // En passant is available only to the side whose turn the position records.
         var geometry = board.WithMode(GameMode.Standard);
@@ -72,8 +79,9 @@ internal static class FondueRules
             if (board.At(move.To) is Piece { Type: PieceType.King } ||
                 CapturedSquare(geometry, move) is null) continue;
             var after = board.WithMove(move);
-            if (HasKing(after, opponent) && !HasKing(after, side)) return true;
+            if (HasKing(after, opponent) && !HasKing(after, side))
+                captures.Add(move);
         }
-        return false;
+        return captures;
     }
 }
