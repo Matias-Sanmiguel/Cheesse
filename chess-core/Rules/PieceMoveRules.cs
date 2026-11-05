@@ -15,6 +15,7 @@ public abstract class SlidingMoveRule : IPieceMoveRule
             while (file is >= 0 and < 8 && rank is >= 0 and < 8)
             {
                 var target = new Square(file, rank);
+                if (board.IsBlocked(target)) break;
                 var occupant = board.At(target);
                 if (occupant is null || occupant.Value.Color != side)
                     moves.Add(new Move(from, target));
@@ -76,6 +77,7 @@ internal static class StepMoves
             var rank = from.Rank + dy;
             if (file is < 0 or >= 8 || rank is < 0 or >= 8) continue;
             var target = new Square(file, rank);
+            if (board.IsBlocked(target)) continue;
             if (board.At(target) is not Piece occupant || occupant.Color != side)
                 moves.Add(new Move(from, target));
         }
@@ -92,13 +94,13 @@ public sealed class PawnMoveRule : IPieceMoveRule
         var nextRank = from.Rank + direction;
         if (nextRank is < 0 or >= 8 || nextRank == (side == PlayerColor.White ? 7 : 0)) return;
         var forward = new Square(from.File, nextRank);
-        if (board.At(forward) is null)
+        if (!board.IsBlocked(forward) && board.At(forward) is null)
         {
             moves.Add(new Move(from, forward));
             if (from.Rank == (side == PlayerColor.White ? 1 : 6))
             {
                 var doubleForward = new Square(from.File, from.Rank + 2 * direction);
-                if (board.At(doubleForward) is null)
+                if (!board.IsBlocked(doubleForward) && board.At(doubleForward) is null)
                     moves.Add(new Move(from, doubleForward));
             }
         }
@@ -107,7 +109,7 @@ public sealed class PawnMoveRule : IPieceMoveRule
             var file = from.File + dx;
             if (file is < 0 or >= 8) continue;
             var target = new Square(file, nextRank);
-            if (board.At(target) is Piece occupant && occupant.Color != side)
+            if (!board.IsBlocked(target) && board.At(target) is Piece occupant && occupant.Color != side)
                 moves.Add(new Move(from, target));
         }
     }
