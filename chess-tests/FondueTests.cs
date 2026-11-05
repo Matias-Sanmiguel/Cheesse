@@ -302,6 +302,120 @@ public class FondueTests
     }
 
     [Test]
+    public void Hot_square_burns_landing_piece_only_once_and_undo_redo_restore_the_hazard()
+    {
+        var events = new Recorder();
+        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1", events);
+        var initial = game.Board;
+        Assert.That(initial.HotSquare, Is.Null);
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        var afterMelt = game.Board;
+        Assert.That(afterMelt.HotSquare, Is.EqualTo(Square("d5")));
+        Assert.That(afterMelt.At(Square("d5")), Is.Null);
+        Assert.That(game.Status, Is.EqualTo(GameStatus.Ongoing));
+        Assert.That(game.LegalMoves(), Does.Contain(Move("d7", "d5")),
+            "A rook can voluntarily land on hot tile at the price of the piece.");
+
+        Assert.That(game.TryMove(Move("d7", "d5")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.Null, "Heat ends with the opponent's response.");
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
+        Assert.That(game.Board.HalfmoveClock, Is.Zero, "Burning a rook resets the 50-move counter.");
+        Assert.That(events.Items.OfType<PiecesMelted>().Count(), Is.EqualTo(2));
+        Assert.That(events.Items.OfType<PiecesMelted>().Last().Pieces, Is.EquivalentTo(new[]
+        {
+            new MeltedPiece(Square("d5"), new Piece(PieceType.Rook, PlayerColor.Black))
+        }), "Landing on heat is a single-piece burn, never a second 3x3 blast.");
+
+        Assert.That(game.Undo(), Is.True);
+        Assert.That(game.Board, Is.SameAs(afterMelt));
+        Assert.That(game.Board.HotSquare, Is.EqualTo(Square("d5")));
+        Assert.That(game.Redo(), Is.True);
+        Assert.That(game.Board.HotSquare, Is.Null);
+        Assert.That(game.Undo() && game.Undo(), Is.True);
+        Assert.That(game.Board, Is.SameAs(initial));
+        Assert.That(game.Redo() && game.Redo(), Is.True);
+        Assert.That(game.Board.HotSquare, Is.Null);
+    }
+
+    [Test]
+    public void Heat_cools_after_just_one_reply_without_a_piece_landing_on_it()
+    {
+        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.EqualTo(Square("d5")));
+        Assert.That(game.TryMove(Move("h8", "h7")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.Null);
+        Assert.That(game.Mode, Is.EqualTo(GameMode.Fondue));
+    }
+
+    [Test]
+    public void Sliding_over_heat_is_safe_but_landing_on_it_is_not()
+    {
+        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        Assert.That(game.LegalMoves(), Does.Contain(Move("d7", "d3")));
+        Assert.That(game.TryMove(Move("d7", "d3")), Is.True);
+        Assert.That(game.Board.At(Square("d3")),
+            Is.EqualTo(new Piece(PieceType.Rook, PlayerColor.Black)));
+        Assert.That(game.Board.HotSquare, Is.Null);
+    }
+
+    [Test]
+    public void A_new_melt_refreshes_heat_instead_of_leaving_multiple_hot_tiles()
+    {
+        var game = Fondue("7k/3rB3/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.EqualTo(Square("d5")));
+        Assert.That(game.TryMove(Move("d7", "e7")), Is.True);
+        Assert.That(game.Board.HotSquare, Is.EqualTo(Square("e7")));
+        Assert.That(game.Board.At(Square("e7")), Is.Null);
+        Assert.That(game.Board.At(Square("d5")), Is.Null);
+    }
+
+    [Test]
+    public void King_cannot_sacrifice_itself_on_a_hot_tile()
+    {
+        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        var mock = game.Board.WithPiece(Square("h8"), null)
+            .WithPiece(Square("d4"), new Piece(PieceType.King, PlayerColor.Black));
+        Assert.That(MoveGenerator.Generate(mock, PlayerColor.Black),
+            Does.Contain(Move("d4", "d5")));
+        Assert.That(MoveGenerator.Legal(mock, PlayerColor.Black),
+            Does.Not.Contain(Move("d4", "d5")));
+    }
+
+    [Test]
+    public void Standard_positions_do_not_generate_or_keep_hot_tiles()
+    {
+        var normal = Create("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(normal.TryMove(Move("d1", "d5")), Is.True);
+        Assert.That(normal.Board.HotSquare, Is.Null);
+        Assert.That(normal.Board.At(Square("d5"))?.Type, Is.EqualTo(PieceType.Rook));
+
+        var fondue = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(fondue.TryMove(Move("d1", "d5")), Is.True);
+        Assert.That(fondue.Board.WithMode(GameMode.Standard).HotSquare, Is.Null);
+        Assert.That(fondue.Board.WithMode(GameMode.Fondue).HotSquare,
+            Is.EqualTo(Square("d5")));
+    }
+
+    [Test]
+    public void Pgn_round_trip_reconstructs_current_hot_tile_from_move_history()
+    {
+        var game = Fondue("7k/3r4/8/3n4/8/8/8/K2R4 w - - 0 1");
+        Assert.That(game.TryMove(Move("d1", "d5")), Is.True);
+        var pgn = SanNotation.ToPgn(game);
+        var history = SanNotation.FromPgn(pgn, out var initial, out var result);
+        var ports = Create();
+        var restored = new ChessGame(ports.Events, ports.Repository, ports.Clock, initial);
+        foreach (var move in history) Assert.That(restored.TryMove(move), Is.True);
+        Assert.That(restored.Board.HotSquare, Is.EqualTo(Square("d5")));
+        Assert.That(restored.TryMove(Move("d7", "d5")), Is.True);
+        Assert.That(restored.Board.HotSquare, Is.Null);
+    }
+
+    [Test]
     public void Pgn_roundtrip_preserves_local_melt_and_result()
     {
         var game = Fondue("7k/6n1/5p2/8/8/8/8/K5R1 w - - 0 1");
