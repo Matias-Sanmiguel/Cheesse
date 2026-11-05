@@ -166,9 +166,9 @@ public partial class MenuTests : Node
                     "mode " + i + " has independent editable description below the card");
             }
             Check(Enumerable.Range(0, 4).All(i =>
-                  root.GetNode<Label>(Modes + "Mode" + i + "/State").Text == "JUGAR" &&
+                  root.GetNode<Label>(Modes + "Mode" + i + "/State").Text == "VER REGLAS" &&
                   !root.GetNode<Button>(Modes + "Mode" + i).HasNode("LockIcon")),
-                "all four cards use the available CTA without lock icons");
+                "all four cards invite players to view rules without lock icons");
 
             // Every rules board must show the EXACT supplied 192x64 logo
             // at x3 scale, the correct objective and five distinct rules.
@@ -188,7 +188,7 @@ public partial class MenuTests : Node
                 Check(rules.Visible && !root.GetNode<Control>("Menu/Stage/SetupPage").Visible &&
                       root.GetNode<MenuView>("Menu").SelectedMode == mode,
                     "mode " + index + " stops at rules, not gameplay");
-                Check(source is not null && source.GetSize() == new Vector2(192, 64) &&
+                Check(source is not null && source.GetWidth() == 192 && source.GetHeight() == 64 &&
                       logo.Texture == PixelUiSkin.Texture(asset, 3) &&
                       logo.Size.IsEqualApprox(new Vector2(576, 192)),
                     "mode " + index + " uses its supplied native logo x3, without stretching");
