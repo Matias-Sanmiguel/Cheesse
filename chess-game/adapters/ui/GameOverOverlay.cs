@@ -160,6 +160,7 @@ public partial class GameOverOverlay : CanvasLayer
             29, 71, 12, 12);
         _title = AddText(_content, "Title", "GANARON BLANCAS", 45, 70, 142, 13, 32,
             new Color("fff0c8"), UiFontWeight.Bold);
+        CenterWinnerRow();
 
         AddSprite(_content, "ReasonRibbon", "02_panel/result_reason_158x13.png",
             29, 93, 158, 13);
@@ -184,6 +185,26 @@ public partial class GameOverOverlay : CanvasLayer
             () => { Hide(); EmitSignal(SignalName.MainMenuRequested); });
     }
 
+    private void CenterWinnerRow()
+    {
+        // Treat the piece and winner text as a single centered unit inside the
+        // 180x24 ribbon. Text is measured with the actual active pixel font.
+        const float ribbonLeft = 18f;
+        const float ribbonWidth = 180f;
+        const float iconWidth = 12f;
+        const float gap = 4f;
+        int fontSize = _title.GetThemeFontSize("font_size");
+        float textPixels = _title.GetThemeFont("font").GetStringSize(
+            _title.Text, HorizontalAlignment.Left, -1, fontSize).X;
+        float textWidth = Mathf.Min(155f, Mathf.Ceil(textPixels / PixelScale) + 2f);
+        float groupWidth = iconWidth + gap + textWidth;
+        float iconLeft = ribbonLeft + Mathf.Round((ribbonWidth - groupWidth) / 2f);
+
+        _winnerIcon.Position = Size(iconLeft, 71);
+        _title.Position = Size(iconLeft + iconWidth + gap, 70);
+        _title.Size = Size(textWidth, 13);
+    }
+
     public void ShowResult(ChessGame game, int elapsedSeconds = 0)
     {
         if (game.Status is GameStatus.Ongoing or GameStatus.Check) return;
@@ -195,6 +216,7 @@ public partial class GameOverOverlay : CanvasLayer
 
         _title.Text = decisive ? "GANARON " + (winnerIsWhite ? "BLANCAS" : "NEGRAS") : "PARTIDA EN TABLAS";
         _title.AddThemeFontSizeOverride("font_size", decisive ? 32 : 29);
+        CenterWinnerRow();
         _winnerIcon.Texture = Texture("04_icons/" +
             (!decisive ? "trophy" : winnerIsWhite ? "white" : "black") + "_12x12.png");
         _reason.Text = game.Status switch
