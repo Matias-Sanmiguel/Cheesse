@@ -93,7 +93,10 @@ public static class GameRules
             .Any(move => !CheckDetector.IsInCheck(board.WithMove(move), side));
         if (!canCaptureEnPassant)
             fields[3] = "-";
+        // Different Swiss boards must not share a repetition identity.
         var mode = board.Mode == GameMode.Standard ? "" : board.Mode + ":";
+        if (board.Mode == GameMode.QuesoSuizo)
+            mode += SwissCheeseRules.Format(board.SwissHoles) + ":";
         return mode + string.Join(" ", fields.Take(4));
     }
 
