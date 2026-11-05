@@ -370,7 +370,7 @@ public partial class MenuView : Control
             new Vector2(575, 48), onPressed, fontSize: 26);
         button.AddChild(PixelUiSkin.Image("ActionIcon",
             "icons/" + icon + "_16x16.png",
-            new Vector2(18, 8), new Vector2(32, 32), 2));
+            new Vector2(18, 4), new Vector2(32, 32), 2));
         return button;
     }
 
@@ -406,14 +406,11 @@ public partial class MenuView : Control
         void ShowState(string state) => cardArt.Texture = PixelUiSkin.Texture(
             SetupAssets + "cards/" + design + "_" + state + "_73x28.png", 4);
         bool Selected() => _appearance.Selected == index;
-        // The Picada "selected" texture adds a second gold frame around its icon.
-        // Keep the original icon proportions and use the lighter hover art for
-        // selection, without changing any source asset or its 73x28 sizing.
-        string SelectedState() => design == "picada" ? "hover" : "selected";
-        button.MouseEntered += () => ShowState(Selected() ? SelectedState() : "hover");
-        button.MouseExited += () => ShowState(Selected() ? SelectedState() : "idle");
+        // Use each original card state as supplied in the V4 asset pack.
+        button.MouseEntered += () => ShowState(Selected() ? "selected" : "hover");
+        button.MouseExited += () => ShowState(Selected() ? "selected" : "idle");
         button.ButtonDown += () => ShowState("pressed");
-        button.ButtonUp += () => ShowState(Selected() ? SelectedState() : "hover");
+        button.ButtonUp += () => ShowState(Selected() ? "selected" : "hover");
         button.Pressed += onSelected;
         return button;
     }
@@ -423,7 +420,7 @@ public partial class MenuView : Control
         string design = card.Name.ToString() == "ClassicStyle" ? "classic" : "picada";
         card.GetNode<TextureRect>("CardArt").Texture = PixelUiSkin.Texture(
             SetupAssets + "cards/" + design + "_" +
-            (selected ? design == "picada" ? "hover" : "selected" : "idle") + "_73x28.png", 4);
+            (selected ? "selected" : "idle") + "_73x28.png", 4);
     }
 
     private static OptionButton MakeOption(string name, Vector2 position, Vector2 size)
