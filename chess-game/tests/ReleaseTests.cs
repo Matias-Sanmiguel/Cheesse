@@ -119,6 +119,37 @@ public partial class ReleaseTests : Node
             Play(root, "d2d4");
             await WaitUntil(() => root.CurrentGame!.History.Count == 2);
             Check(root.CurrentGame!.Turn == PlayerColor.White, "real bundled Stockfish replies legally");
+
+            // Regression: a locally misconfigured engine must display the
+            // underlying reason rather than leaving the black turn frozen.
+            // The existing white move must survive a retry.
+            string? configuredEngine = System.Environment.GetEnvironmentVariable("CHEESSE_STOCKFISH_PATH");
+            try
+            {
+                System.Environment.SetEnvironmentVariable("CHEESSE_STOCKFISH_PATH",
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                        "cheesse-stockfish-intentionally-missing.exe"));
+                root.StartStockfishGame();
+                Play(root, "e2e4");
+                var engineError = root.GetNode<ConfirmationDialog>("StockfishErrorDialog");
+                await WaitUntil(() => engineError.Visible);
+                Check(engineError.DialogText.Contains("CHEESSE_STOCKFISH_PATH") &&
+                      engineError.DialogText.Contains("DETALLE TECNICO") &&
+                      root.CurrentGame!.History.Count == 1 &&
+                      root.CurrentGame.Turn == PlayerColor.Black,
+                    "error dialog reveals the missing engine, without losing the white move");
+
+                System.Environment.SetEnvironmentVariable("CHEESSE_STOCKFISH_PATH", configuredEngine);
+                engineError.EmitSignal(ConfirmationDialog.SignalName.Confirmed);
+                await WaitUntil(() => root.CurrentGame!.History.Count == 2);
+                Check(!engineError.Visible && root.CurrentGame!.Turn == PlayerColor.White,
+                    "retry preserves the game and completes Black's pending reply");
+            }
+            finally
+            {
+                System.Environment.SetEnvironmentVariable("CHEESSE_STOCKFISH_PATH", configuredEngine);
+            }
+
             root.ShowMenu();
             var remaining = root.CurrentGame.ClockState;
             await Frames();

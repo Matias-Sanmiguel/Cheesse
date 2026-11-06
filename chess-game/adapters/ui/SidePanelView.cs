@@ -34,7 +34,8 @@ public partial class SidePanelView : PanelContainer
     private Label _moves = null!, _help = null!;
     private TextureRect _statusDot = null!;
     private int _renderedCount = -1;
-    private bool _againstStockfish, _thinking;
+    private bool _againstStockfish, _thinking, _enginePreparing;
+    private string? _engineError;
 
     public override void _Ready()
     {
@@ -103,6 +104,13 @@ public partial class SidePanelView : PanelContainer
     }
     public void SetDifficulty(int elo) => _difficulty.Select(Math.Max(0, Array.IndexOf(MenuView.EngineElos, elo)));
     public void SetThinking(bool thinking) { _thinking = thinking; Refresh(); }
+    public void SetEnginePreparing(bool preparing) { _enginePreparing = preparing; Refresh(); }
+    public void SetEngineError(string? message)
+    {
+        _engineError = message;
+        SetMessage(message ?? "");
+        Refresh();
+    }
     public void SetMessage(string message)
     {
         _message.Text = message;
@@ -131,7 +139,9 @@ public partial class SidePanelView : PanelContainer
             : Array.Empty<Move>();
         bool meltCheck = fondueThreats.Count > 0;
         Square? hot = _game.Mode == GameMode.Fondue ? _game.Board.HotSquare : null;
-        _status.Text = _thinking ? "STOCKFISH PENSANDO…" :
+        _status.Text = _engineError is not null ? "ERROR STOCKFISH" :
+            _enginePreparing ? "PREPARANDO STOCKFISH…" :
+            _thinking ? "STOCKFISH PENSANDO…" :
             meltCheck ? "JAQUE POR FONDUE" :
             _game.Status == GameStatus.Ongoing && hot is Square burning
                 ? "CALIENTE: " + burning
@@ -144,8 +154,12 @@ public partial class SidePanelView : PanelContainer
         if (hot is Square danger)
             statusTip += " | " + danger +
                 " está caliente hasta que termine esta jugada. Solo el caballo puede saltarla; cualquier otra pieza que cruce o termine ahí se derrite (el rey no puede sacrificarse).";
-        _status.TooltipText = statusTip;
-        _statusDot.Modulate = _game.Status switch
+        _status.TooltipText = _engineError ?? (_enginePreparing
+            ? "Descargando y verificando el motor Stockfish oficial por única vez."
+            : statusTip);
+        _statusDot.Modulate = _engineError is not null
+            ? new Color("c95859")
+            : _game.Status switch
         {
             GameStatus.Ongoing => new Color("5abf69"),
             GameStatus.Check => new Color("e6af47"),
