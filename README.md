@@ -1,78 +1,94 @@
-# Cheesse
+# CHEESSE
 
-Variant development: [Fondue rules, API and demo positions](docs/fondue.md).
+**Trabajo práctico de Ingeniería de Software** — juego de ajedrez de escritorio desarrollado con **Godot 4.7.2 .NET y C# (.NET 8)**.
 
-A desktop chess game for playing against Stockfish 19.
+El proyecto incluye el ajedrez clásico y tres variantes con reglas propias. Se puede jugar entre dos personas en una misma computadora; el modo clásico también permite jugar contra **Stockfish 19**.
 
-Run the package for your computer:
+## Modos de juego
 
-- **Linux x86-64:** open `Cheesse-linux-x64`, then run `./Cheesse.x86_64`.
-- **Windows x86-64:** open `Cheesse-windows-x64`, then double-click `Cheesse.exe`.
+| Modo | Objetivo y reglas principales |
+| --- | --- |
+| **Clásico** | Ajedrez tradicional: movimientos FIDE, jaque, jaque mate, enroque, promoción, captura al paso y tablas. |
+| **Rey de la Picada** | Además de las victorias habituales, se gana al llevar legalmente el rey a d4, e4, d5 o e5. |
+| **Queso Suizo** | Se generan seis agujeros aleatorios que bloquean casillas y trayectorias. Se comprueba que ambos bandos puedan desarrollar sus piezas. |
+| **Fondue** | Capturar una pieza que no sea un peón derrite atacante, víctima y piezas no peón adyacentes (3×3, sin reacción en cadena). La casilla queda caliente durante la siguiente jugada rival; solo el caballo puede saltarla sin quemarse. |
 
-Keep the whole folder together. Both packages include the .NET runtime and Stockfish;
-players do not need Godot, .NET, Python, or a separate engine installation.
-Choose human-vs-human or Stockfish (you play White), a time control and a difficulty.
-Click a piece and its destination. The side panel shows both clocks and the SAN move
-history. It offers Undo/Redo (Ctrl+Z), save/load including clocks, resignation, and draw
-agreement or claims. Stockfish has four approximate strength levels; it runs offline.
+El jugador puede consultar las reglas de cada modo desde el menú antes de comenzar la partida.
 
-Import/export opens a file picker for FEN positions or PGN games. Imports open in
-human analysis mode without a clock; FEN carries only a position, while PGN also carries
-moves and a result. Saves retain the exact game, engine settings, and clocks. Existing
-v1 saves are still supported. Timers pause in menus, dialogs and history review;
-play an alternative move or finish Redo to resume. Triple repetition and fifty moves
-require a claim; fivefold repetition and seventy-five moves end the game automatically.
-Against Stockfish, use a rule-based draw claim rather than an agreement offer.
+## Otras funcionalidades
 
-To run from source, install **Godot 4.7.2 .NET** and the **.NET 8 SDK**:
+- Selección de tablero, piezas y rival; interfaz pixel art.
+- Reloj configurable, historial de movimientos y controles de partida.
+- Deshacer/rehacer; guardar y continuar partidas.
+- Importación y exportación de posiciones **FEN** y partidas **PGN**.
+- Niveles de dificultad para Stockfish en **Clásico**. El motor estándar no se utiliza para las variantes con reglas especiales.
 
-```sh
+## Requisitos y ejecución desde el código
+
+- **Godot 4.7.2 .NET** (la edición normal de Godot no carga proyectos C#).
+- **.NET SDK 8**.
+- Windows o Linux x86-64 para la instalación automática de Stockfish.
+
+Desde la raíz del repositorio:
+
+~~~sh
+dotnet restore Cheesse.sln
 dotnet build Cheesse.sln
+~~~
+
+Abrir `chess-game/project.godot` con **Godot .NET** y ejecutar la escena principal con **F5**. Alternativamente, si Godot .NET está en el `PATH`:
+
+~~~sh
 godot-mono --path chess-game --editor
-```
+~~~
 
-Use your Godot .NET executable name in place of `godot-mono` if different, then press F5.
-The ordinary Godot editor does not support C# projects.
+**Stockfish:** no se versiona su ejecutable dentro del repositorio. En la primera partida clásica contra el motor, CHEESSE busca una instalación local y, si hace falta, descarga y verifica la versión oficial para reutilizarla. Esto requiere conexión solamente la primera vez. También se puede configurar `CHEESSE_STOCKFISH_PATH` con la ruta de un ejecutable existente.
 
-**Stockfish from the editor:** The engine executable is intentionally excluded from Git
-(`chess-game/engines/`). If it is missing, choosing **CONTRA STOCKFISH** and making the
-first White move **automatically downloads the pinned official Stockfish 19 engine**,
-checks the full archive's SHA-256 and installs only the executable in Godot's
-`user://engines/` directory. The sidebar shows `PREPARANDO STOCKFISH` on that first
-turn. Later games reuse the installed engine offline. This works on Windows and Linux
-x86-64. A packaged release keeps using its included engine first, so it does not need
-an internet connection.
+## Organización del proyecto
 
-For a machine without internet, you can still prepare the engine in advance with
-`python scripts/release.py --engines-only`, install Stockfish in your system PATH,
-or set `CHEESSE_STOCKFISH_PATH` to its full executable path. An invalid override
-is reported explicitly; CHEESSE does **not** silently substitute random moves.
-If initial download/startup fails, the panel shows `ERROR STOCKFISH` and a message
-instead of leaving the black turn apparently frozen. Once the connection/path
-is fixed, change Stockfish difficulty or toggle the opponent off/on to retry.
+| Directorio | Contenido |
+| --- | --- |
+| `chess-core/` | Modelo, reglas, casos de uso y contratos; sin dependencias de Godot. |
+| `chess-game/` | Escenas, interfaz, assets y adaptadores de Godot, Stockfish y persistencia. |
+| `chess-tests/` | Tests unitarios del dominio y de reglas. |
+| `chess-game-tests/` | Tests de integración del juego y persistencia en Godot. |
+| `scripts/` | Preparación de motores, exportación y pruebas de los paquetes. |
+| `third-party/` | Avisos de licencia y procedencia de dependencias externas. |
+| `docs/ARQUITECTURA.md` | Justificación del diseño y relación con los conceptos de la materia. |
 
-To build both release folders:
+La solución principal es `Cheesse.sln`. El núcleo se mantiene independiente del motor gráfico para permitir pruebas sin abrir Godot.
 
-```sh
-python3 scripts/release.py --godot godot-mono
-```
+## Pruebas
 
-The Python script uses only the standard library. It downloads pinned official Stockfish
-archives and only the needed Godot .NET export templates, verifies SHA-256 checksums,
-generates ignored export presets, and exports self-contained packages into
-`dist/Cheesse-linux-x64/` and `dist/Cheesse-windows-x64/`, plus `.tar.gz` and `.zip` archives.
-Existing verified downloads in
-`.release-cache/` are reused. `--platform linux` or `--platform windows` builds one target;
-`--prepare-only` downloads and configures without exporting. The build machine needs
-Python 3.9+, the .NET 8 SDK, Godot 4.7.2 .NET, and internet access on the first build.
-No shared Godot templates are overwritten. The game build is reproducible from pinned
-dependencies; final executable bytes may differ with SDK patch versions and timestamps.
+Pruebas unitarias y de la solución:
 
-Run the release tooling checks with `python3 -m unittest discover -s scripts -p 'test_*.py'`.
-Stockfish's GPLv3 license and exact source details are in [third-party](third-party/Stockfish-SOURCE.txt),
-and the source archive is included in each release. Its neural-network weights come from
-the official engine; this project performs no neural-network training.
+~~~sh
+dotnet test Cheesse.sln
+~~~
 
-Godot's [C# requirements](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_basics.html)
-and [export guide](https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html)
-describe the editor, SDK, runtime, and export-template requirements.
+Pruebas de integración del juego (requieren Python 3 y Godot .NET; el runner admite indicar la ruta del ejecutable):
+
+~~~sh
+python scripts/release.py --engines-only
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene MenuTests
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene MvpTests
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene ReleaseTests
+~~~
+
+Las pruebas de interfaz se ejecutan en un entorno aislado y no modifican la partida guardada del usuario. Hay validaciones automatizadas en **GitHub Actions** para .NET y la integración de Godot. Las instrucciones para todas las suites están en [chess-game-tests/README.md](chess-game-tests/README.md).
+
+## Generar un ejecutable
+
+El script de exportación prepara dependencias oficiales verificadas y genera los paquetes para Windows y Linux:
+
+~~~sh
+python scripts/release.py --godot godot-mono
+~~~
+
+Los resultados se guardan en `dist/` (ignorado por Git). Los paquetes incluyen las dependencias necesarias para ejecutar el juego.
+
+## Licencias de terceros
+
+El código propio del TPO se entrega junto con los recursos del juego. El motor **Stockfish** se distribuye por separado bajo **GPLv3**; su licencia y fuente están documentadas en `third-party/`. La tipografía **Pixelify Sans** conserva su licencia **SIL Open Font License** en `chess-game/assets/ui/fonts/OFL.txt`. También se incluyen los avisos correspondientes a Godot.
+
+Este repositorio contiene el **código fuente del juego de escritorio**; no incluye un servidor web ni un despliegue de Kubernetes.

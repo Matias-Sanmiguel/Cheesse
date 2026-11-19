@@ -1,75 +1,48 @@
-# Persistence integration tests
+# Pruebas de integración
 
-These tests run the production FileSaveRepository source inside Godot .NET, using
-an isolated user:// directory for the "Cheesse Persistence Tests" project.
-They never access the normal Cheesse save.
+Este directorio contiene las pruebas que requieren **Godot .NET** y las escenas reales del juego. Los tests unitarios del dominio están en `chess-tests/`.
 
-Build with the same Godot .NET SDK as chess-game:
+## Requisitos
 
-    dotnet build chess-game-tests/Chess.Game.PersistenceTests.csproj
+- Godot **4.7.2 .NET** y SDK **.NET 8**.
+- Python 3 para el runner multiplataforma.
+- Para las pruebas contra el motor real: preparar Stockfish con `python scripts/release.py --engines-only`, desde la raíz del repositorio.
 
-With the Godot .NET executable on PATH, run these commands in order:
+## Interfaz y jugabilidad
 
-    godot --headless --path chess-game-tests -- --save
-    godot --headless --path chess-game-tests -- --load
+Desde la raíz del proyecto, con el ejecutable de Godot .NET en el `PATH`:
 
-The first process saves and exits. The second process loads that save, verifies
-the restored game, and runs the remaining persistence checks. It exits with
-code 1 on failure and code 0 on success. To run the checks without the
-cross-process scenario, use:
+~~~sh
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene MenuTests
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene SidePanelTests
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene MvpTests
+python chess-game-tests/RunUiTests.py --godot godot-mono --scene ReleaseTests
+~~~
 
-    godot --headless --path chess-game-tests -- --run
+En Windows se puede pasar la ruta completa a Godot .NET:
 
-Coverage includes FEN fields, custom starting positions, PGN history, legal moves,
-castling, en passant, promotions, check, mate, stalemate, fifty-move and
-repetition draws, Undo, missing/corrupt/inconsistent saves, overwrite, and
-preserving the previous save on a Windows file replacement failure.
+~~~powershell
+./chess-game-tests/RunMenuTests.ps1 -Godot "C:/ruta/Godot_console.exe" -TestScene MenuTests
+~~~
 
-## Main menu integration tests
+El runner compila el proyecto y ejecuta la escena de prueba dentro de un entorno aislado (guardados y caché independientes). Los tests verifican navegación, movimientos, controles, estados de partida y motor Stockfish.
 
-Run from PowerShell, passing the Godot .NET console executable:
+## Persistencia
 
-    ./chess-game-tests/RunMenuTests.ps1 -Godot 'C:/path/to/Godot_console.exe'
+Para comprobar el guardado y la carga entre procesos diferentes:
 
-This builds the production game and runs its actual scenes and assembly inside
-an ignored sandbox with a separate user:// directory (Cheesse Menu Tests).
-It checks startup, human turns, Stockfish replies, save/continue, persisted opponent
-mode, old saves, corrupt/missing saves, and resetting to a fresh game. Mouse
-input travels through the viewport and the scene buttons emit their real signals.
-The script fails if the test scene does not finish successfully.
+~~~sh
+dotnet build chess-game-tests/Chess.Game.PersistenceTests.csproj
+godot-mono --headless --path chess-game-tests -- --save
+godot-mono --headless --path chess-game-tests -- --load
+~~~
 
-## Side panel integration tests
+También se puede ejecutar la suite en un único proceso con `-- --run`.
 
-    ./chess-game-tests/RunMenuTests.ps1 -Godot 'C:/path/to/Godot_console.exe' -TestScene SidePanelTests
+## Pruebas unitarias
 
-The isolated Godot test verifies layout at 1440x900, buttons, command/caretaker
-Undo and Redo, bus updates for turn/check/mate, save/load/new game, Stockfish-black
-toggle, branching history, and the actual white/black pixels of the SVG atlas.
+~~~sh
+dotnet test Cheesse.sln
+~~~
 
-## Cross-platform UI runner
-
-With Python 3 and Godot .NET (the standard Godot executable cannot load C#):
-
-    python chess-game-tests/RunUiTests.py --godot godot-mono --scene MenuTests
-    python chess-game-tests/RunUiTests.py --godot godot-mono --scene SidePanelTests
-    python chess-game-tests/RunUiTests.py --godot godot-mono --scene MvpTests
-    python chess-game-tests/RunUiTests.py --godot godot-mono --scene ReleaseTests
-
-Each scene runs the production assembly and resources in an ignored sandbox with
-its own user directory. The runner checks both exit status and the PASS marker.
-The MVP scene checks off-board/illegal clicks, both players, Ctrl+Z, Undo/Redo
-across mate and draws, winner/rematch, underpromotion/cancellation, input blocking,
-and resizing to 1280x720. The pixel art layout uses a 1440x900 canvas and scales
-with the window. Persistence tests also verify that loading (including rejected
-saves) does not emit domain events for historical moves.
-
-Prepare the bundled engine first with `python scripts/release.py --engines-only`.
-The runners resolve that native binary automatically; override it with
-`CHEESSE_STOCKFISH_PATH` when necessary. The ReleaseTests scene exercises live clocks,
-expiration, Stockfish cancellation/reply, move history, resignation/draw agreement,
-FEN/PGN import/export and retaining current settings for another game. The persistence
-suite covers v2 clock/outcome metadata, rejected edited positions and legacy saves.
-
-Run native engine coverage in NUnit with:
-
-    CHEESSE_STOCKFISH_PATH="$PWD/chess-game/engines/stockfish" dotnet test chess-tests/Chess.Tests.csproj
+Los workflows de GitHub Actions ejecutan las comprobaciones de .NET y de interfaz antes de integrar cambios. Ver [README principal](../README.md).
