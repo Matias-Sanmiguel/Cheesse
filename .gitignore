@@ -1,10 +1,13 @@
+# .NET y editores
 bin/
 obj/
 .vs/
 .idea/
+.vscode/
 *.user
 *.suo
 
+# Godot: cache y archivos generados (los *.import y *.uid si se versionan)
 .godot/
 .import/
 export.cfg
@@ -12,13 +15,13 @@ export_presets.cfg
 .mono/
 mono_crash.*.json
 
-superpowers/
-.superpowers/
-
+# Exportaciones y motores descargados
 /dist/
 /.release-cache/
 /chess-game/engines/
 
-# Godot misidentifies UI inventory CSVs as localization resources.
-# Ignore stale generated translations exclusively under UI documentation.
-/chess-game/docs/ui/**/*.translation
+# Python y sistema operativo
+__pycache__/
+.pytest_cache/
+.DS_Store
+Thumbs.db
