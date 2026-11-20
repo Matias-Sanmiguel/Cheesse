@@ -33,18 +33,18 @@ class Board {
 }
 
 class Piece {
-  <<record struct>>
+  <<struct>>
   +PieceType Type
   +PlayerColor Color
 }
 class Square {
-  <<record struct>>
+  <<struct>>
   +int File
   +int Rank
   +int Index
 }
 class Move {
-  <<record struct>>
+  <<struct>>
   +Square From
   +Square To
   +PieceType Promotion
