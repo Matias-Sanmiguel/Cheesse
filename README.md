@@ -58,6 +58,10 @@ godot-mono --path chess-game --editor
 
 La solución principal es `Cheesse.sln`. El núcleo se mantiene independiente del motor gráfico para permitir pruebas sin abrir Godot.
 
+## Entregables de Ingeniería de Software
+
+Los cuatro requisitos de la consigna están reunidos en **[Entregables del TPO](docs/ENTREGABLES.md)**: código fuente, diagrama UML de clases, tests unitarios del núcleo y decisiones de diseño en formato *qué / por qué / cuándo se romperían*.
+
 ## Pruebas
 
 Pruebas unitarias y de la solución:
